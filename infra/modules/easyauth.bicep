@@ -37,6 +37,11 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     globalValidation: {
       unauthenticatedClientAction: easyAuthMode
       redirectToProvider: 'azureActiveDirectory'
+      // Exclude runtime management paths so portal + ARM proxy calls are not blocked
+      excludedPaths: [
+        '/runtime/webhooks/*'
+        '/hostruntime/*'
+      ]
     }
     identityProviders: {
       azureActiveDirectory: {
