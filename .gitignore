@@ -1,0 +1,31 @@
+# Build outputs
+*.json.bak
+infra/*.json
+
+# Secrets and local config
+.env
+*.pfx
+*.pem
+local.settings.json
+
+# IDE
+.vs/
+.vscode/
+*.code-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Evidence artifacts (large binaries)
+docs/evidence/screenshots/*.png
+docs/evidence/screenshots/*.jpg
+docs/evidence/api-responses/*.json
+!docs/evidence/api-responses/.gitkeep
+!docs/evidence/screenshots/.gitkeep
+
+# Terraform (if used)
+.terraform/
+*.tfstate*
+third_party/
+infra/*.json
