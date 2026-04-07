@@ -37,6 +37,7 @@ var tags = {
 // 1. Storage Account
 // ══════════════════════════════════════════════════════════════
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  #disable-next-line BCP334
   name: storageAccountName
   location: location
   tags: tags

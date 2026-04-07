@@ -155,6 +155,60 @@ For production workloads, **Mitigation 2 (APIM-fronted)** is recommended. It pro
 
 For dev/test or quick proof-of-concept, **Mitigation 1 (excludedPaths)** is the fastest path to unblock portal access while keeping Easy Auth active on API trigger routes.
 
+---
+
+## Finding 4: Shared Key Policy Creates Platform Deadlock for Logic App Standard
+
+### Observation
+
+In subscriptions with Azure Policy (or Defender for Cloud) enforcing `allowSharedKeyAccess: false` on all storage accounts, **Logic App Standard cannot start its workflow runtime**.
+
+### Root Cause
+
+| Requirement | Status |
+|---|---|
+| Logic App Standard needs `AzureWebJobsStorage` connection string | ✅ Required — managed identity NOT supported for host storage |
+| Connection strings use storage account shared keys | ✅ Required by the runtime |
+| Subscription policy enforces `allowSharedKeyAccess: false` | 🔴 Immediately reverts any attempt to enable shared keys |
+| **Result** | 🔴 **Logic App Standard workflow runtime returns 503 — cannot start** |
+
+### Evidence
+
+- `az storage account update --allow-shared-key-access true` → exits 0 but value stays `false`
+- Creating NEW storage accounts with `allowSharedKeyAccess: true` → reverted within 15 seconds
+- Setting `AzureWebJobsStorage__accountName` + `__credential=managedidentity` → runtime 503 (not supported)
+- `az logicapp create` fails: "Creation of storage file share failed with: (403) Forbidden"
+- ARM REST PUT for Logic App site with identity-based storage → IIS starts (401) but hostruntime 503
+- GitHub Issue: [AzureWebJobsStorage__accountname not Working](https://github.com/Azure/logicapps/issues/1114)
+- Stack Overflow: [Extension bundle doesn't support managed identity storage](https://stackoverflow.com/questions/79244366)
+
+### Impact for Customer
+
+If the customer enforces `allowSharedKeyAccess: false` across their subscription (common in enterprise security policies), they **cannot deploy Logic App Standard** without:
+
+1. **Policy exemption** for Logic App storage accounts (recommended for now)
+2. **Wait for Microsoft GA** of managed identity host storage support for Logic App Standard
+3. **Use Logic App Consumption** (Microsoft-managed storage, no customer storage account needed)
+4. **Key Vault reference** for connection string (still uses shared keys under the hood — blocked by same policy)
+
+### Recommendation
+
+This is a **platform limitation**, not a configuration error. Advise the customer to:
+- Request a **scoped policy exemption** for storage accounts tagged for Logic App Standard use
+- Track [GitHub Issue #1114](https://github.com/Azure/logicapps/issues/1114) for managed identity support
+- Consider this as additional justification for the **APIM-fronted architecture** — even if Easy Auth + excludedPaths is used, the storage policy must be resolved first
+
+---
+
+## Summary of All Findings
+
+| # | Finding | Severity | Impact |
+|---|---------|----------|--------|
+| 1 | Easy Auth Return401 blocks hostruntime management endpoints | Critical | Portal manageability lost (A1–A4) |
+| 2 | ARM vs hostruntime endpoint classification | Informational | Pure ARM operations unaffected; data-plane blocked |
+| 3 | excludedPaths mitigates hostruntime blocking | Informational | Surgical fix preserves auth on triggers |
+| 4 | Shared key policy + Logic App Standard = deadlock | Critical | Cannot deploy Logic App Standard in policy-governed subscriptions |
+
 ## Appendix
 
 - Screenshots: `docs/evidence/screenshots/`
