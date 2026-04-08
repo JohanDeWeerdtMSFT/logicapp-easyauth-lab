@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Hub — Logic App Standard Security Labs</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="../architecture/executive-summary.html">Executive Summary</a>
+      <a href="../evidence/index.html">Evidence</a>
+      <a href="index.html" class="active">Operations</a>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <main class="content page-intro">
+      <ol class="breadcrumb">
+        <li><a href="../index.html">Home</a></li>
+        <li>Operations</li>
+      </ol>
+
+      <h1>Operations Hub</h1>
+      <p class="subtitle">Operational inventory, platform alignment, and day-2 considerations</p>
+
+      <p>
+        This section consolidates the operational view of the two labs. It is meant to answer
+        what is deployed, what the current scan proves, and which production guidance is evidence-backed
+        versus forward-looking architecture advice.
+      </p>
+
+      <div class="card-grid">
+        <a href="inventory.html" class="card card-link">
+          <h3>Resource Inventory</h3>
+          <p>Resource-by-resource inventory for both lab resource groups, including App Service Plan,
+            Logic App Standard, storage, monitoring, API Management, and managed identities.</p>
+        </a>
+
+        <a href="waf-caf-alignment.html" class="card card-link">
+          <h3>WAF &amp; CAF Alignment</h3>
+          <p>Well-Architected and Cloud Adoption Framework considerations, rewritten to distinguish
+            observed controls from optional production extensions.</p>
+        </a>
+      </div>
+
+      <h2>Operational Notes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Current Evidence</th>
+            <th>Operational Relevance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Portal manageability</td>
+            <td>Lab 1 validated under <code>AllowAnonymous</code>; Lab 2 validated with Easy Auth disabled</td>
+            <td>Critical for run history, callback URL retrieval, and troubleshooting</td>
+          </tr>
+          <tr>
+            <td>Backend isolation</td>
+            <td>Lab 2 validated through backend access restrictions</td>
+            <td>Explains why bypass behavior differs from caller authentication at APIM</td>
+          </tr>
+          <tr>
+            <td>Network topology</td>
+            <td>No VNet or Private Endpoint artifacts in current scans</td>
+            <td>Any VNet or Private Endpoint guidance should be framed as an optional production design</td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    Logic App Standard — Security Labs · Operations Hub · 2026-04-08
+  </footer>
+
+</body>
+</html>

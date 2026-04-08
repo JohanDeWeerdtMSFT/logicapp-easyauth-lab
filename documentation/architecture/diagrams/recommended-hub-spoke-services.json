@@ -1,0 +1,162 @@
+[
+  {
+    "id": "subscription",
+    "name": "Azure Subscription",
+    "type": "subscription",
+    "resourceGroup": "Management",
+    "details": ["Logical container for all resources", "Single billing boundary"]
+  },
+  {
+    "id": "hub-vnet",
+    "name": "Hub VNet\n10.0.0.0/16",
+    "type": "vnet",
+    "resourceGroup": "rg-network-hub",
+    "details": ["AzureFirewall subnet: 10.0.0.0/26", "Gateway subnet: 10.0.1.0/27", "Bastion subnet: 10.0.2.0/27"]
+  },
+  {
+    "id": "firewall",
+    "name": "Azure Firewall\n(Standard)",
+    "type": "firewall",
+    "resourceGroup": "rg-network-hub",
+    "details": ["Inspects all outbound traffic", "DNAT rules for inbound", "Network + Application Rules"]
+  },
+  {
+    "id": "spoke1-vnet",
+    "name": "Spoke 1 VNet\n10.1.0.0/16",
+    "type": "vnet",
+    "resourceGroup": "rg-app-spoke1",
+    "details": ["App Subnet: 10.1.1.0/24", "Private Endpoint Subnet: 10.1.2.0/24", "Route to Hub via Firewall"]
+  },
+  {
+    "id": "spoke2-vnet",
+    "name": "Spoke 2 VNet\n10.2.0.0/16",
+    "type": "vnet",
+    "resourceGroup": "rg-app-spoke2",
+    "details": ["App Subnet: 10.2.1.0/24", "Private Endpoint Subnet: 10.2.2.0/24", "Route to Hub via Firewall"]
+  },
+  {
+    "id": "nsg-spoke1",
+    "name": "NSG (Spoke 1)\nApp Subnet",
+    "type": "nsg",
+    "resourceGroup": "rg-app-spoke1",
+    "details": ["Inbound: HTTPS from APIM only", "Outbound: Internet via Firewall", "DenyAll as default"]
+  },
+  {
+    "id": "nsg-pe",
+    "name": "NSG\nPrivate Endpoint Subnet",
+    "type": "nsg",
+    "resourceGroup": "rg-app-spoke1",
+    "details": ["Inbound from App Subnet only", "Outbound: Any (Azure services)"]
+  },
+  {
+    "id": "logicapp1",
+    "name": "Logic App Standard\n(Spoke 1)",
+    "type": "logic_app",
+    "sku": "Standard WS1",
+    "private": false,
+    "resourceGroup": "rg-app-spoke1",
+    "details": [
+      "Deployed in App Subnet (10.1.1.0/24)",
+      "Easy Auth + Token validation",
+      "No public inbound endpoint",
+      "Outbound via Firewall only"
+    ]
+  },
+  {
+    "id": "logicapp2",
+    "name": "Logic App Standard\n(Spoke 2)",
+    "type": "logic_app",
+    "sku": "Standard WS1",
+    "private": false,
+    "resourceGroup": "rg-app-spoke2",
+    "details": [
+      "Deployed in App Subnet (10.2.1.0/24)",
+      "APIM + validate-jwt pattern",
+      "Access restricted by Network NSG",
+      "Outbound via Firewall only"
+    ]
+  },
+  {
+    "id": "storage1",
+    "name": "Storage Account 1\n(Spoke 1 backing)",
+    "type": "storage",
+    "resourceGroup": "rg-app-spoke1",
+    "details": [
+      "Private: True (PE endpoints)",
+      "Firewall: Deny by default",
+      "Allow from Spoke 1 PE Subnet only",
+      "Private DNS: storage.azure.com"
+    ]
+  },
+  {
+    "id": "storage2",
+    "name": "Storage Account 2\n(Spoke 2 backing)",
+    "type": "storage",
+    "resourceGroup": "rg-app-spoke2",
+    "details": [
+      "Private: True (PE endpoints)",
+      "Firewall: Deny by default",
+      "Allow from Spoke 2 PE Subnet only",
+      "Private DNS: storage.azure.com"
+    ]
+  },
+  {
+    "id": "pe1-blob",
+    "name": "PE (Blob)\nSpoke 1",
+    "type": "pe",
+    "resourceGroup": "rg-app-spoke1",
+    "details": ["NIC in PE Subnet 10.1.2.x", "Private IP resolves storage.blob.core.windows.net"]
+  },
+  {
+    "id": "pe1-queue",
+    "name": "PE (Queue)\nSpoke 1",
+    "type": "pe",
+    "resourceGroup": "rg-app-spoke1",
+    "details": ["NIC in PE Subnet 10.1.2.x", "Private IP resolves storage.queue.core.windows.net"]
+  },
+  {
+    "id": "keyvault1",
+    "name": "Key Vault\n(Spoke 1)",
+    "type": "keyvault",
+    "resourceGroup": "rg-app-spoke1",
+    "details": [
+      "Private endpoint enabled",
+      "Firewall allows PE subnet",
+      "MI access from Logic App"
+    ]
+  },
+  {
+    "id": "apim",
+    "name": "APIM\n(Shared Gateway)",
+    "type": "apim",
+    "sku": "Standard",
+    "resourceGroup": "rg-apim",
+    "details": [
+      "Internal mode (Private Endpoint)",
+      "validate-jwt inbound policy",
+      "Routes to both spokes",
+      "Azure Public IP for demo"
+    ]
+  },
+  {
+    "id": "appinsights",
+    "name": "Application Insights\n(Shared)",
+    "type": "app_insights",
+    "resourceGroup": "rg-shared-monitoring",
+    "details": ["Telemetry from all Logic Apps", "APIM diagnostics", "Private Link enabled"]
+  },
+  {
+    "id": "client",
+    "name": "Client / End User\n(Internet)",
+    "type": "user",
+    "resourceGroup": "External",
+    "details": ["Public internet access", "Connects to APIM public IP", "or AGIC ingress controller"]
+  },
+  {
+    "id": "entra",
+    "name": "Microsoft Entra ID",
+    "type": "entra_id",
+    "resourceGroup": "Identity",
+    "details": ["Token issuer", "APIM client app registration", "Logic App audience"]
+  }
+]

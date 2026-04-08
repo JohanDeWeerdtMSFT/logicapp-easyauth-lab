@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logic App Standard — Security Labs</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="site-header">
+    <a class="logo" href="index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="architecture/executive-summary.html">Executive Summary</a>
+      <a href="evidence/index.html">Evidence</a>
+      <a href="operations/index.html">Operations</a>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="content page-intro">
+
+      <h1>Logic App Standard — Security Labs</h1>
+      <p class="subtitle">Three pillars for securing Logic App Standard at enterprise scale</p>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- THREE PILLAR CARDS                                      -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <h2>The Three Security Pillars</h2>
+      <div class="card-grid">
+
+        <a href="architecture/lab1-easyauth.html" class="card card-link">
+          <h3>🔐 Pillar 1: Easy Auth (Identity)</h3>
+          <p>Enable Easy Auth with AllowAnonymous on every app. Portal works. Tokens enforced.</p>
+          <p><span class="badge badge-pass">Validated ✅</span></p>
+        </a>
+
+        <a href="architecture/lab2-apim.html" class="card card-link">
+          <h3>🌐 Pillar 2: APIM (Centralized Gateway)</h3>
+          <p>Centralize JWT validation at APIM. No per-app Easy Auth needed at scale.</p>
+          <p><span class="badge badge-pass">Validated ✅</span></p>
+        </a>
+
+        <a href="architecture/pillar3-networking.html" class="card card-link">
+          <h3>🛡️ Pillar 3: Service Endpoints (Network)</h3>
+          <p>VNet + Service Endpoints + storage firewall. Zero IPs consumed. No Private Endpoints needed.</p>
+          <p><span class="badge badge-pass">Validated ✅</span></p>
+        </a>
+
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- IP COMPARISON HIGHLIGHT                                 -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div class="callout callout-success">
+        <strong>IP Address Impact</strong>
+        Traditional approach: <strong>1000 IPs</strong> for 200 apps.
+        With all three pillars: <strong>1 IP</strong>.
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- MANAGED CONNECTORS CALLOUT                              -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div class="callout callout-info">
+        <strong>Managed Connectors Are Unaffected</strong>
+        Managed connectors (Office 365, SharePoint, file connector, etc.) are hosted by Microsoft
+        in multitenant Azure and are <strong>NOT</strong> affected by VNet integration, APIM, or
+        storage firewalls. They continue to work as normal.
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- NAVIGATION                                              -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <h2>Documentation</h2>
+      <div class="card-grid">
+
+        <a href="architecture/diagrams/recommended-hub-spoke-architecture.html" class="card card-link" target="_blank" rel="noopener">
+          <h3>🏗️ Hub-Spoke Architecture</h3>
+          <p>Visual diagram with Azure icons showing recommended topology: firewalls, VNets,
+            private endpoints, APIM, and security controls. <em>Interactive — drag nodes.</em></p>
+        </a>
+
+        <a href="architecture/executive-summary.html" class="card card-link">
+          <h3>📋 Executive Summary</h3>
+          <p>Problem statement, solution overview, key findings, and recommendation matrix.</p>
+        </a>
+
+        <a href="architecture/decision-guidance.html" class="card card-link">
+          <h3>🧭 Decision Guidance</h3>
+          <p>Trade-offs and criteria for choosing between pillars and patterns.</p>
+        </a>
+
+          <a href="architecture/request-flow-comparison.html" class="card card-link">
+            <h3>🔄 Request & Data Flow</h3>
+            <p>Customer-facing explanation of where routing, authentication, and access control happen in each lab.</p>
+          </a>
+
+        <a href="evidence/findings.html" class="card card-link">
+          <h3>🔬 Evidence &amp; Findings</h3>
+          <p>Detailed test results, HTTP traces, and per-track validation artifacts.</p>
+        </a>
+
+        <a href="operations/waf-caf-alignment.html" class="card card-link">
+          <h3>📐 WAF / CAF Alignment</h3>
+          <p>Mapping to Azure Well-Architected Framework and Cloud Adoption Framework.</p>
+        </a>
+
+        <a href="operations/inventory.html" class="card card-link">
+          <h3>📦 Resource Inventory</h3>
+          <p>Full resource listing across both lab resource groups.</p>
+        </a>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    Logic App Standard — Security Labs &middot; Internal Documentation &middot; Last updated 2026-04-08
+  </footer>
+
+</body>
+</html>

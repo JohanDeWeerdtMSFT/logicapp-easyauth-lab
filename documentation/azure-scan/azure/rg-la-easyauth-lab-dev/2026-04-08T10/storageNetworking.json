@@ -1,0 +1,15 @@
+{
+  "allowSharedKeyAccess": false,
+  "bypass": "AzureServices",
+  "defaultAction": "Deny",
+  "ipRules": [],
+  "name": "laeasyauthlabdevdaaq6t5x",
+  "publicNetworkAccess": "Enabled",
+  "virtualNetworkRules": [
+    {
+      "action": "Allow",
+      "state": "Succeeded",
+      "virtualNetworkResourceId": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "client",
+    "name": "Client / API Consumer",
+    "type": "user",
+    "resourceGroup": "External",
+    "details": ["HTTP request with Entra bearer token", "Token issued for APIM audience"]
+  },
+  {
+    "id": "entra",
+    "name": "Microsoft Entra ID",
+    "type": "entra_id",
+    "resourceGroup": "Identity",
+    "details": ["Issues Entra tokens for APIM audience", "App registrations for client + APIM"]
+  },
+  {
+    "id": "apim",
+    "name": "API Management\n(apimgt-dev-01)",
+    "type": "apim",
+    "sku": "Developer / Standard",
+    "resourceGroup": "rg-apimgt-dev-01",
+    "details": [
+      "Inbound: validate-jwt policy",
+      "Checks issuer, audience, required claims",
+      "Returns 401 for invalid/missing token",
+      "Forwards validated request to backend",
+      "System-assigned managed identity"
+    ]
+  },
+  {
+    "id": "logicapp",
+    "name": "Logic App Standard\n(rg-la-easyauth-lab-apim-dev)",
+    "type": "logic_app",
+    "sku": "Standard WS1",
+    "private": false,
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "details": [
+      "Easy Auth disabled (authsettingsV2.platform.enabled = false)",
+      "IP access restrictions: allow APIM outbound IP only",
+      "Direct caller bypass returns 401",
+      "workflow trigger: standard SAS still present"
+    ]
+  },
+  {
+    "id": "storage",
+    "name": "Storage Account\n(Logic App backend)",
+    "type": "storage",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "details": ["Stores workflow definitions", "Blob + Queue + Table"]
+  },
+  {
+    "id": "keyvault",
+    "name": "Key Vault",
+    "type": "keyvault",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "details": ["Secrets management", "Managed identity access from Logic App"]
+  },
+  {
+    "id": "appinsights",
+    "name": "Application Insights",
+    "type": "app_insights",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "details": ["APIM + Logic App telemetry", "Diagnostic log workspace"]
+  }
+]

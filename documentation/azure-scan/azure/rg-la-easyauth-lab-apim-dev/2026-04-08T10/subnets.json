@@ -1,0 +1,51 @@
+[
+  {
+    "addressPrefix": "10.20.1.0/26",
+    "delegations": [
+      {
+        "actions": [
+          "Microsoft.Network/virtualNetworks/subnets/action"
+        ],
+        "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
+        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/delegations/0",
+        "name": "0",
+        "provisioningState": "Succeeded",
+        "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+        "serviceName": "Microsoft.Web/serverFarms",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations"
+      }
+    ],
+    "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp",
+    "name": "snet-logicapp",
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "serviceAssociationLinks": [
+      {
+        "allowDelete": false,
+        "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
+        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
+        "link": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-apim-dev-plan",
+        "linkedResourceType": "Microsoft.Web/serverfarms",
+        "locations": [],
+        "name": "AppServiceLink",
+        "provisioningState": "Succeeded",
+        "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+        "type": "Microsoft.Network/virtualNetworks/subnets/serviceAssociationLinks"
+      }
+    ],
+    "serviceEndpoints": [
+      {
+        "locations": [
+          "westeurope",
+          "northeurope"
+        ],
+        "provisioningState": "Succeeded",
+        "service": "Microsoft.Storage"
+      }
+    ],
+    "type": "Microsoft.Network/virtualNetworks/subnets"
+  }
+]

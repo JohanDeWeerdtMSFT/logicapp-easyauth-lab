@@ -1,0 +1,38 @@
+[
+  {
+    "from": "client",
+    "to": "entra",
+    "label": "1. Authenticate",
+    "type": "security"
+  },
+  {
+    "from": "entra",
+    "to": "client",
+    "label": "2. Bearer token",
+    "type": "security"
+  },
+  {
+    "from": "client",
+    "to": "logicapp",
+    "label": "3. HTTPS + Bearer token",
+    "type": "api"
+  },
+  {
+    "from": "logicapp",
+    "to": "storage",
+    "label": "4. Blob / Queue / Table",
+    "type": "data"
+  },
+  {
+    "from": "logicapp",
+    "to": "keyvault",
+    "label": "5. Get secrets (MI)",
+    "type": "security"
+  },
+  {
+    "from": "logicapp",
+    "to": "appinsights",
+    "label": "6. Telemetry",
+    "type": "data"
+  }
+]

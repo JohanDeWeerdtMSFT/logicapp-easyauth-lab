@@ -54,17 +54,35 @@ Even when called through ARM (`management.azure.com`), operations like `listCall
 ERROR: Unauthorized(You do not have permission to view this directory or page.)
 ```
 
-### Track B — Trigger Security
+### Track B — Trigger Security (AllowAnonymous + allowedPrincipals)
 
-| Timestamp | Scenario ID | HTTP Status | Correlation ID | Notes |
-|-----------|-------------|-------------|----------------|-------|
-|           | B1          |             |                |       |
-|           | B2          |             |                |       |
-|           | B3          |             |                |       |
-|           | B4          |             |                |       |
-|           | B5          |             |                |       |
-|           | B6          |             |                |       |
-|           | B7          |             |                |       |
+| Timestamp | Scenario ID | HTTP Status | Notes |
+|-----------|-------------|-------------|-------|
+| 2026-04-07 | B1 | 403 Forbidden | ✅ Valid management token rejected — `allowedPrincipals` restricts to APIM MI only |
+| 2026-04-07 | B2 | 401 Unauthorized | ✅ Invalid bearer token correctly rejected by Easy Auth |
+| 2026-04-07 | B3 | 401 Unauthorized | ✅ Wrong audience (Graph token) correctly rejected |
+| 2026-04-07 | B4 | 401 Unauthorized | ✅ No token + no SAS key → rejected |
+| 2026-04-07 | B5 | 200 OK | ✅ No token + SAS key → accepted (SAS keys remain active) |
+
+### Track C — APIM JWT Validation (Lab 2)
+
+| Timestamp | Scenario ID | HTTP Status | Notes |
+|-----------|-------------|-------------|-------|
+| 2026-04-07 | C2 | 401 Unauthorized | ✅ Invalid token rejected by APIM validate-jwt policy |
+| 2026-04-07 | C3 | 401 Unauthorized | ✅ No token rejected by APIM validate-jwt policy |
+
+### Track D — Backend Isolation (Lab 2)
+
+| Timestamp | Scenario ID | HTTP Status | Notes |
+|-----------|-------------|-------------|-------|
+| 2026-04-07 | D1 | 401 Unauthorized | ✅ Direct call to Logic App blocked by access restrictions |
+
+### Track E — Portal Manageability (Lab 2 — No Easy Auth)
+
+| Timestamp | Scenario ID | HTTP Status | Notes |
+|-----------|-------------|-------------|-------|
+| 2026-04-07 | E1 | 200 OK | ✅ hostruntime runs endpoint accessible |
+| 2026-04-07 | E2 | 200 OK | ✅ listCallbackUrl via hostruntime accessible |
 
 ## Key Findings
 
@@ -200,6 +218,86 @@ This is a **platform limitation**, not a configuration error. Advise the custome
 
 ---
 
+## Finding 5: AllowAnonymous + allowedPrincipals — Confirmed Working Pattern
+
+### Observation (2026-04-07)
+
+Switching Lab 1 from `Return401` to `AllowAnonymous` with `allowedPrincipals` set to the APIM managed identity **resolves all portal manageability issues** while maintaining trigger security.
+
+### Configuration Applied
+
+```json
+{
+  "globalValidation": {
+    "requireAuthentication": true,
+    "unauthenticatedClientAction": "AllowAnonymous"
+  },
+  "identityProviders": {
+    "azureActiveDirectory": {
+      "validation": {
+        "allowedAudiences": ["https://management.core.windows.net/", "https://management.azure.com/"],
+        "defaultAuthorizationPolicy": {
+          "allowedPrincipals": {
+            "identities": ["<APIM-managed-identity-principal-id>"]
+          }
+        }
+      }
+    }
+  },
+  "platform": { "enabled": true, "runtimeVersion": "~1" }
+}
+```
+
+### Results
+
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| A1–A4: Portal management | ✅ Accessible | ✅ Accessible | ✅ |
+| B1: Valid mgmt token (user identity) | 403 (not in allowedPrincipals) | 403 | ✅ |
+| B2: Invalid token | 401 | 401 | ✅ |
+| B3: Wrong audience (Graph token) | 401 | 401 | ✅ |
+| B4: No token, no SAS | 401 | 401 | ✅ |
+| B5: SAS key only (no token) | 200 | 200 | ✅ |
+
+### Key Insight
+
+With `AllowAnonymous`, Easy Auth behaves as follows:
+- Requests **without** an Authorization header → pass through to runtime (SAS key or other auth required)
+- Requests **with** an Authorization header → validated against Entra requirements (audience, principal, issuer)
+- This means portal/ARM management calls (which don't carry app-level tokens) pass through, while API calls with tokens are strictly validated.
+
+### References
+- [Microsoft Learn — Method 2: Easy Auth](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth)
+- [azcloudsecurity.io — AllowAnonymous explanation](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/#excuse-me-allow-unauthenticated-requests)
+
+---
+
+## Finding 6: APIM-Centric Security (Lab 2) — Validated
+
+### Observation (2026-04-07)
+
+Lab 2 demonstrates that APIM `validate-jwt` policy correctly enforces Entra ID authentication centrally, with backend Logic App protected by IP access restrictions.
+
+### Results
+
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| C2: Invalid token via APIM | 401 | 401 | ✅ |
+| C3: No token via APIM | 401 | 401 | ✅ |
+| D1: Direct call (bypass APIM) | Blocked | 401 (access restriction) | ✅ |
+| E1: Portal run history | Accessible | Accessible | ✅ |
+| E2: listCallbackUrl | Accessible | Accessible | ✅ |
+
+### Access Restrictions Applied
+
+| Rule | Action | Target | Priority |
+|------|--------|--------|----------|
+| Allow-APIM | Allow | 51.145.176.4/32 | 100 |
+| Allow-AzureCloud | Allow | AzureCloud service tag | 200 |
+| Deny all | Deny | Any | 2147483647 |
+
+---
+
 ## Summary of All Findings
 
 | # | Finding | Severity | Impact |
@@ -208,8 +306,11 @@ This is a **platform limitation**, not a configuration error. Advise the custome
 | 2 | ARM vs hostruntime endpoint classification | Informational | Pure ARM operations unaffected; data-plane blocked |
 | 3 | excludedPaths mitigates hostruntime blocking | Informational | Surgical fix preserves auth on triggers |
 | 4 | Shared key policy + Logic App Standard = deadlock | Critical | Cannot deploy Logic App Standard in policy-governed subscriptions |
+| 5 | **AllowAnonymous + allowedPrincipals = working pattern** | **Resolution** | **Portal works + trigger security enforced (Lab 1)** |
+| 6 | **APIM-centric security validated** | **Resolution** | **Centralized JWT validation + backend isolation (Lab 2)** |
 
 ## Appendix
 
 - Screenshots: `docs/evidence/screenshots/`
 - Raw API responses: `docs/evidence/api-responses/`
+- Decision guidance: [`docs/decision-guidance.md`](../decision-guidance.md)

@@ -1,0 +1,104 @@
+[
+  {
+    "from": "client",
+    "to": "entra",
+    "label": "1. Authenticate",
+    "type": "security"
+  },
+  {
+    "from": "entra",
+    "to": "client",
+    "label": "2. Bearer Token",
+    "type": "security"
+  },
+  {
+    "from": "client",
+    "to": "apim",
+    "label": "3. HTTPS request + token",
+    "type": "api"
+  },
+  {
+    "from": "apim",
+    "to": "spoke1-vnet",
+    "label": "4a. Routed to Spoke 1",
+    "type": "api"
+  },
+  {
+    "from": "apim",
+    "to": "spoke2-vnet",
+    "label": "4b. Routed to Spoke 2",
+    "type": "api"
+  },
+  {
+    "from": "spoke1-vnet",
+    "to": "hub-vnet",
+    "label": "VNet peering",
+    "type": "network"
+  },
+  {
+    "from": "spoke2-vnet",
+    "to": "hub-vnet",
+    "label": "VNet peering",
+    "type": "network"
+  },
+  {
+    "from": "hub-vnet",
+    "to": "firewall",
+    "label": "Outbound route",
+    "type": "network"
+  },
+  {
+    "from": "nsg-spoke1",
+    "to": "logicapp1",
+    "label": "Controls inbound",
+    "type": "security"
+  },
+  {
+    "from": "logicapp1",
+    "to": "storage1",
+    "label": "5. Blob/Queue/Table (via PE)",
+    "type": "data"
+  },
+  {
+    "from": "logicapp1",
+    "to": "pe1-blob",
+    "label": "→ PE",
+    "type": "private"
+  },
+  {
+    "from": "pe1-blob",
+    "to": "storage1",
+    "label": "→ Storage",
+    "type": "private"
+  },
+  {
+    "from": "logicapp1",
+    "to": "pe1-queue",
+    "label": "→ PE",
+    "type": "private"
+  },
+  {
+    "from": "pe1-queue",
+    "to": "storage1",
+    "label": "→ Storage",
+    "type": "private"
+  },
+  {
+    "from": "logicapp1",
+    "to": "keyvault1",
+    "label": "6. Get secrets (MI)",
+    "type": "security"
+  },
+  {
+    "from": "logicapp1",
+    "to": "appinsights",
+    "label": "7. Telemetry",
+    "type": "data"
+  },
+  {
+    "from": "apim",
+    "to": "appinsights",
+    "label": "APIM diagnostics",
+    "type": "data"
+  }
+]

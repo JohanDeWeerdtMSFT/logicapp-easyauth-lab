@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resource Inventory — Logic App Standard Security Labs</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="../architecture/executive-summary.html">Executive Summary</a>
+      <a href="../evidence/index.html">Evidence</a>
+      <a href="index.html" class="active">Operations</a>
+    </nav>
+  </header>
+
+  <ol class="breadcrumb container">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="index.html">Operations</a></li>
+    <li>Resource Inventory</li>
+  </ol>
+
+  <div class="container">
+
+    <h1>Resource Inventory<span class="subtitle">All deployed Azure resources across both lab resource groups</span></h1>
+
+    <!-- ============================================================ -->
+    <h2>Lab 1 — <code class="resource-group-label">rg-la-easyauth-lab-dev</code></h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Resource Name</th>
+          <th>Type</th>
+          <th>SKU / Tier</th>
+          <th>Location</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>la-easyauth-lab-dev-la-daaq6t5xzrpaw</code></td>
+          <td>Logic App Standard</td>
+          <td>WS1</td>
+          <td>westeurope</td>
+          <td><span class="status-pass">Running</span></td>
+        </tr>
+        <tr>
+          <td><code>laeasyauthlabdevdaaq6t5x</code></td>
+          <td>Storage Account</td>
+          <td>Standard_LRS</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-dev-plan</code></td>
+          <td>App Service Plan</td>
+          <td>WS1</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-dev-ai</code></td>
+          <td>Application Insights</td>
+          <td>web</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-dev-law</code></td>
+          <td>Log Analytics</td>
+          <td>PerGB2018</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>id-la-easyauth-dev</code></td>
+          <td>User-Assigned Managed Identity</td>
+          <td>—</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2>Lab 2 — <code class="resource-group-label">rg-la-easyauth-lab-apim-dev</code></h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Resource Name</th>
+          <th>Type</th>
+          <th>SKU / Tier</th>
+          <th>Location</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-la-ec5ylfoo2rspq</code></td>
+          <td>Logic App Standard</td>
+          <td>WS1</td>
+          <td>westeurope</td>
+          <td><span class="status-pass">Running</span></td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-apim-ec5ylfoo2rspq</code></td>
+          <td>API Management</td>
+          <td>Developer</td>
+          <td>westeurope</td>
+          <td><span class="status-pass">Succeeded</span></td>
+        </tr>
+        <tr>
+          <td><code>laeasyauthlabapimdevec5y</code></td>
+          <td>Storage Account</td>
+          <td>Standard_LRS</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-plan</code></td>
+          <td>App Service Plan</td>
+          <td>WS1</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-ai</code></td>
+          <td>Application Insights</td>
+          <td>web</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-law</code></td>
+          <td>Log Analytics</td>
+          <td>PerGB2018</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>la-easyauth-lab-apim-dev-uami</code></td>
+          <td>User-Assigned Managed Identity</td>
+          <td>—</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td><code>id-la-easyauth-apim-dev</code></td>
+          <td>User-Assigned Managed Identity</td>
+          <td>—</td>
+          <td>westeurope</td>
+          <td>✅</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>
+      <p>Logic App Standard Security Labs &mdash; Resource Inventory &mdash; Last scanned: 2026-04-08</p>
+    </footer>
+
+  </div>
+</body>
+</html>

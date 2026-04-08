@@ -9,20 +9,20 @@
                     "statusCode": 200,
                     "headers": {
                         "Content-Type": "application/json",
-                        "X-Scenario-Tag": "@{triggerOutputs()['queries']?['scenario'] ?? 'default'}"
+                        "X-Scenario-Tag": "@{coalesce(triggerOutputs()?['queries']?['scenario'], 'default')}"
                     },
                     "body": {
                         "status": "ok",
                         "timestamp": "@{utcNow()}",
-                        "scenario": "@{triggerOutputs()['queries']?['scenario'] ?? 'default'}",
+                        "scenario": "@{coalesce(triggerOutputs()?['queries']?['scenario'], 'default')}",
                         "authInfo": {
-                            "isAuthenticated": "@{if(not(empty(triggerOutputs()['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'])), true, false)}",
-                            "principalName": "@{triggerOutputs()['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'] ?? 'anonymous'}",
-                            "principalId": "@{triggerOutputs()['headers']?['X-MS-CLIENT-PRINCIPAL-ID'] ?? 'none'}"
+                            "isAuthenticated": "@{not(empty(coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'], '')))}",
+                            "principalName": "@{coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'], 'anonymous')}",
+                            "principalId": "@{coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-ID'], 'none')}"
                         },
                         "triggerHeaders": {
-                            "host": "@{triggerOutputs()['headers']?['Host']}",
-                            "userAgent": "@{triggerOutputs()['headers']?['User-Agent']}"
+                            "host": "@{coalesce(triggerOutputs()?['headers']?['Host'], '')}",
+                            "userAgent": "@{coalesce(triggerOutputs()?['headers']?['User-Agent'], '')}"
                         }
                     }
                 },

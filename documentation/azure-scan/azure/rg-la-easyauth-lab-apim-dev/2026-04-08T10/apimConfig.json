@@ -1,0 +1,17 @@
+{
+  "gatewayUrl": "https://la-easyauth-lab-apim-dev-apim-ec5ylfoo2rspq.azure-api.net",
+  "identity": {
+    "principalId": "8306e585-e9cc-4a56-b28c-0faa6f917122",
+    "tenantId": "00922812-791e-41c8-a99e-45c3ed784cf5",
+    "type": "SystemAssigned",
+    "userAssignedIdentities": null
+  },
+  "name": "la-easyauth-lab-apim-dev-apim-ec5ylfoo2rspq",
+  "publicIPs": [
+    "51.145.176.4"
+  ],
+  "sku": {
+    "capacity": 1,
+    "name": "Developer"
+  }
+}

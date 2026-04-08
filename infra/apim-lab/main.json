@@ -1,0 +1,427 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "5723446689776878820"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Environment name (e.g. dev, test, prod). Used in resource names."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Primary Azure region."
+      }
+    },
+    "entraAppClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra ID application (client) ID for JWT validation."
+      }
+    },
+    "entraAppTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra ID tenant ID."
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "defaultValue": "lab@contoso.com",
+      "metadata": {
+        "description": "APIM publisher email."
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "defaultValue": "EasyAuth Lab",
+      "metadata": {
+        "description": "APIM publisher name."
+      }
+    }
+  },
+  "variables": {
+    "baseName": "[format('la-easyauth-lab-apim-{0}', parameters('environmentName'))]",
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "storageRawName": "[replace(format('{0}{1}', variables('baseName'), variables('suffix')), '-', '')]",
+    "storageAccountName": "[toLower(take(variables('storageRawName'), 24))]",
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "storageBlobUri": "[format('https://{0}.blob.{1}', variables('storageAccountName'), environment().suffixes.storage)]",
+    "storageQueueUri": "[format('https://{0}.queue.{1}', variables('storageAccountName'), environment().suffixes.storage)]",
+    "storageTableUri": "[format('https://{0}.table.{1}', variables('storageAccountName'), environment().suffixes.storage)]",
+    "logicAppName": "[format('{0}-la-{1}', variables('baseName'), variables('suffix'))]",
+    "storageRoles": [
+      {
+        "name": "blob-owner",
+        "roleId": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b"
+      },
+      {
+        "name": "queue-contrib",
+        "roleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88"
+      },
+      {
+        "name": "table-contrib",
+        "roleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+      },
+      {
+        "name": "account-contrib",
+        "roleId": "17d1049b-9a84-46fb-8f53-869881c3d3ab"
+      },
+      {
+        "name": "fileshare-contrib",
+        "roleId": "0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb"
+      }
+    ],
+    "jwtPolicyXml": "<policies>\r\n    <inbound>\r\n        <base />\r\n        <validate-jwt header-name=\"Authorization\" failed-validation-httpcode=\"401\" failed-validation-error-message=\"Unauthorized. Valid Entra ID bearer token required.\" require-expiration-time=\"true\" require-scheme=\"Bearer\" require-signed-tokens=\"true\">\r\n            <openid-config url=\"https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration\" />\r\n            <audiences>\r\n                <audience>{{client-id}}</audience>\r\n            </audiences>\r\n            <issuers>\r\n                <issuer>https://login.microsoftonline.com/{{tenant-id}}/v2.0</issuer>\r\n                <issuer>https://sts.windows.net/{{tenant-id}}/</issuer>\r\n            </issuers>\r\n        </validate-jwt>\r\n        <set-header name=\"X-Authenticated-User\" exists-action=\"override\">\r\n            <value>@(context.Request.Headers.GetValueOrDefault(\"Authorization\",\"\").AsJwt()?.Subject)</value>\r\n        </set-header>\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>\r\n"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-plan', variables('baseName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "tier": "WorkflowStandard",
+        "name": "WS1"
+      },
+      "kind": "elastic",
+      "properties": {
+        "maximumElasticWorkerCount": 20
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}-law', variables('baseName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[format('{0}-ai', variables('baseName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-law', variables('baseName')))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-law', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-uami', variables('baseName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]"
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('logicAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "kind": "functionapp,workflowapp",
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName'))))]": {}
+        }
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('baseName')))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "netFrameworkVersion": "v6.0",
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage__accountName",
+              "value": "[variables('storageAccountName')]"
+            },
+            {
+              "name": "AzureWebJobsStorage__credential",
+              "value": "managedIdentity"
+            },
+            {
+              "name": "AzureWebJobsStorage__credentialType",
+              "value": "managedIdentity"
+            },
+            {
+              "name": "AzureWebJobsStorage__managedIdentityResourceId",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName')))]"
+            },
+            {
+              "name": "AzureWebJobsStorage__blobServiceUri",
+              "value": "[variables('storageBlobUri')]"
+            },
+            {
+              "name": "AzureWebJobsStorage__queueServiceUri",
+              "value": "[variables('storageQueueUri')]"
+            },
+            {
+              "name": "AzureWebJobsStorage__tableServiceUri",
+              "value": "[variables('storageTableUri')]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "~18"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-ai', variables('baseName'))), '2020-02-02').ConnectionString]"
+            },
+            {
+              "name": "APP_KIND",
+              "value": "workflowApp"
+            },
+            {
+              "name": "AzureFunctionsJobHost__extensionBundle__id",
+              "value": "Microsoft.Azure.Functions.ExtensionBundle.Workflows"
+            },
+            {
+              "name": "AzureFunctionsJobHost__extensionBundle__version",
+              "value": "[1.*, 2.0.0)"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}-ai', variables('baseName')))]",
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('baseName')))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName')))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "sysRoleAssignments",
+        "count": "[length(variables('storageRoles'))]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), resourceId('Microsoft.Web/sites', variables('logicAppName')), variables('storageRoles')[copyIndex()].roleId)]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageRoles')[copyIndex()].roleId)]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "uamiRoleAssignments",
+        "count": "[length(variables('storageRoles'))]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName'))), variables('storageRoles')[copyIndex()].roleId)]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName'))), '2023-01-31').principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageRoles')[copyIndex()].roleId)]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-uami', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}-apim-{1}', variables('baseName'), variables('suffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "Developer",
+        "capacity": 1
+      },
+      "properties": {
+        "publisherEmail": "[parameters('publisherEmail')]",
+        "publisherName": "[parameters('publisherName')]"
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'tenant-id')]",
+      "properties": {
+        "displayName": "tenant-id",
+        "value": "[parameters('entraAppTenantId')]",
+        "secret": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('baseName'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'client-id')]",
+      "properties": {
+        "displayName": "client-id",
+        "value": "[parameters('entraAppClientId')]",
+        "secret": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('baseName'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/backends",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-backend')]",
+      "properties": {
+        "url": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01').defaultHostName)]",
+        "protocol": "http",
+        "description": "Logic App Standard backend (no Easy Auth)"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('baseName'), variables('suffix')))]",
+        "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows')]",
+      "properties": {
+        "displayName": "Logic App Workflows",
+        "path": "workflows",
+        "protocols": [
+          "https"
+        ],
+        "serviceUrl": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01').defaultHostName)]",
+        "subscriptionRequired": false,
+        "apiType": "http"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('baseName'), variables('suffix')))]",
+        "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]",
+        "[resourceId('Microsoft.ApiManagement/service/namedValues', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'client-id')]",
+        "[resourceId('Microsoft.ApiManagement/service/namedValues', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'tenant-id')]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis/policies",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}/{2}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows', 'policy')]",
+      "properties": {
+        "format": "rawxml",
+        "value": "[variables('jwtPolicyXml')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows')]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis/operations",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}/{2}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows', 'get-all')]",
+      "properties": {
+        "displayName": "GET all paths",
+        "method": "GET",
+        "urlTemplate": "/*"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows')]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis/operations",
+      "apiVersion": "2023-09-01-preview",
+      "name": "[format('{0}/{1}/{2}', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows', 'post-all')]",
+      "properties": {
+        "displayName": "POST all paths",
+        "method": "POST",
+        "urlTemplate": "/*"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', format('{0}-apim-{1}', variables('baseName'), variables('suffix')), 'logic-app-workflows')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "logicAppName": {
+      "type": "string",
+      "value": "[variables('logicAppName')]"
+    },
+    "logicAppDefaultHostname": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01').defaultHostName]"
+    },
+    "logicAppResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]"
+    },
+    "logicAppPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01', 'full').identity.principalId]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]"
+    },
+    "appServicePlanId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('baseName')))]"
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-ai', variables('baseName'))), '2020-02-02').ConnectionString]"
+    },
+    "apimName": {
+      "type": "string",
+      "value": "[format('{0}-apim-{1}', variables('baseName'), variables('suffix'))]"
+    },
+    "apimGatewayUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('baseName'), variables('suffix'))), '2023-09-01-preview').gatewayUrl]"
+    }
+  }
+}

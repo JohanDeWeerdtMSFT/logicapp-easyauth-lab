@@ -46,7 +46,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
-    allowSharedKeyAccess: false
+    // allowSharedKeyAccess not set – subscription policy enforces false;
+    // Logic App WS plan still needs the platform to manage internal tokens
   }
 }
 
@@ -92,7 +93,16 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 4. Logic App Standard – NO Easy Auth
+// 4. User-Assigned Managed Identity (required for MI storage)
+// ══════════════════════════════════════════════════════════════
+resource userAssignedMI 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${baseName}-uami'
+  location: location
+  tags: tags
+}
+
+// ══════════════════════════════════════════════════════════════
+// 5. Logic App Standard – NO Easy Auth
 // ══════════════════════════════════════════════════════════════
 var storageBlobUri = 'https://${storageAccountName}.blob.${environment().suffixes.storage}'
 var storageQueueUri = 'https://${storageAccountName}.queue.${environment().suffixes.storage}'
@@ -104,7 +114,12 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
   location: location
   tags: tags
   kind: 'functionapp,workflowapp'
-  identity: { type: 'SystemAssigned' }
+  identity: {
+    type: 'SystemAssigned, UserAssigned'
+    userAssignedIdentities: {
+      '${userAssignedMI.id}': {}
+    }
+  }
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
@@ -117,7 +132,15 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage__credential'
-          value: 'managedidentity'
+          value: 'managedIdentity'
+        }
+        {
+          name: 'AzureWebJobsStorage__credentialType'
+          value: 'managedIdentity'
+        }
+        {
+          name: 'AzureWebJobsStorage__managedIdentityResourceId'
+          value: userAssignedMI.id
         }
         {
           name: 'AzureWebJobsStorage__blobServiceUri'
@@ -134,10 +157,6 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
         }
         {
           name: 'WEBSITE_NODE_DEFAULT_VERSION'
@@ -165,7 +184,7 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 5. RBAC – Logic App MI → Storage
+// 6. RBAC – Logic App managed identities → Storage
 // ══════════════════════════════════════════════════════════════
 var storageRoles = [
   {
@@ -190,12 +209,26 @@ var storageRoles = [
   }
 ]
 
-resource roleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+// System-assigned MI roles
+resource sysRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in storageRoles: {
     name: guid(storageAccount.id, logicApp.id, role.roleId)
     scope: storageAccount
     properties: {
       principalId: logicApp.identity.principalId
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role.roleId)
+      principalType: 'ServicePrincipal'
+    }
+  }
+]
+
+// User-assigned MI roles
+resource uamiRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in storageRoles: {
+    name: guid(storageAccount.id, userAssignedMI.id, role.roleId)
+    scope: storageAccount
+    properties: {
+      principalId: userAssignedMI.properties.principalId
       roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role.roleId)
       principalType: 'ServicePrincipal'
     }
@@ -281,6 +314,11 @@ var jwtPolicyXml = '''
     </on-error>
 </policies>
 '''
+
+// Reference: https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth
+// Note: Lab 2 uses validate-jwt (caller must provide their own Entra token).
+// For a pattern where APIM itself authenticates to a Logic App with Easy Auth enabled,
+// use authentication-managed-identity instead of validate-jwt (see Lab 1 / Method 2).
 
 resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   parent: apim

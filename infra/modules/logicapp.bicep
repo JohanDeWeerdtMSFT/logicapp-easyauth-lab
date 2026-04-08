@@ -23,12 +23,80 @@ param storageAccountId string
 @description('Application Insights connection string.')
 param appInsightsConnectionString string
 
+@description('Entra ID tenant ID — used for WEBSITE_AUTH_AAD_ALLOWED_TENANTS.')
+param entraAppTenantId string = ''
+
 var baseName = 'la-easyauth-lab-${environmentName}'
 var suffix = uniqueString(resourceGroup().id)
 var logicAppName = '${baseName}-la-${suffix}'
 var storageBlobUri = 'https://${storageAccountName}.blob.${environment().suffixes.storage}'
 var storageQueueUri = 'https://${storageAccountName}.queue.${environment().suffixes.storage}'
 var storageTableUri = 'https://${storageAccountName}.table.${environment().suffixes.storage}'
+
+var baseAppSettings = [
+  // Identity-based storage (no shared keys required)
+  {
+    name: 'AzureWebJobsStorage__accountName'
+    value: storageAccountName
+  }
+  {
+    name: 'AzureWebJobsStorage__credential'
+    value: 'managedidentity'
+  }
+  {
+    name: 'AzureWebJobsStorage__blobServiceUri'
+    value: storageBlobUri
+  }
+  {
+    name: 'AzureWebJobsStorage__queueServiceUri'
+    value: storageQueueUri
+  }
+  {
+    name: 'AzureWebJobsStorage__tableServiceUri'
+    value: storageTableUri
+  }
+  // Runtime
+  {
+    name: 'FUNCTIONS_EXTENSION_VERSION'
+    value: '~4'
+  }
+  {
+    name: 'FUNCTIONS_WORKER_RUNTIME'
+    value: 'node'
+  }
+  {
+    name: 'WEBSITE_NODE_DEFAULT_VERSION'
+    value: '~18'
+  }
+  // Monitoring
+  {
+    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+  // Logic App Standard
+  {
+    name: 'APP_KIND'
+    value: 'workflowApp'
+  }
+  {
+    name: 'AzureFunctionsJobHost__extensionBundle__id'
+    value: 'Microsoft.Azure.Functions.ExtensionBundle.Workflows'
+  }
+  {
+    name: 'AzureFunctionsJobHost__extensionBundle__version'
+    value: '[1.*, 2.0.0)'
+  }
+]
+
+// Tenant restriction for Easy Auth (required for proper tenant validation)
+var tenantAppSetting = empty(entraAppTenantId) ? [] : [
+  {
+    name: 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS'
+    value: entraAppTenantId
+  }
+]
+
+var allAppSettings = concat(baseAppSettings, tenantAppSetting)
 
 resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
   name: logicAppName
@@ -42,60 +110,7 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     siteConfig: {
       netFrameworkVersion: 'v6.0'
-      appSettings: [
-        // Identity-based storage (no shared keys required)
-        {
-          name: 'AzureWebJobsStorage__accountName'
-          value: storageAccountName
-        }
-        {
-          name: 'AzureWebJobsStorage__credential'
-          value: 'managedidentity'
-        }
-        {
-          name: 'AzureWebJobsStorage__blobServiceUri'
-          value: storageBlobUri
-        }
-        {
-          name: 'AzureWebJobsStorage__queueServiceUri'
-          value: storageQueueUri
-        }
-        {
-          name: 'AzureWebJobsStorage__tableServiceUri'
-          value: storageTableUri
-        }
-        // Runtime
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~18'
-        }
-        // Monitoring
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsightsConnectionString
-        }
-        // Logic App Standard
-        {
-          name: 'APP_KIND'
-          value: 'workflowApp'
-        }
-        {
-          name: 'AzureFunctionsJobHost__extensionBundle__id'
-          value: 'Microsoft.Azure.Functions.ExtensionBundle.Workflows'
-        }
-        {
-          name: 'AzureFunctionsJobHost__extensionBundle__version'
-          value: '[1.*, 2.0.0)'
-        }
-      ]
+      appSettings: allAppSettings
     }
   }
 }

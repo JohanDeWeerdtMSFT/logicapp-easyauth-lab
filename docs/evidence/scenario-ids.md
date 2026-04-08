@@ -2,26 +2,39 @@
 
 This file is the single source of truth for scenario IDs used across all lanes.
 
-## Track A — Portal Manageability
+## Track A — Portal Manageability (Lab 1)
 
-- **A1**: View run history list (Return401)
-- **A2**: View run details (Return401)
-- **A3**: View inputs/outputs (Return401)
-- **A4**: Re-run/Resubmit (Return401)
-- **A5**: View run history list (AllowAnonymous)
-- **A6**: View run details (AllowAnonymous)
-- **A7**: View inputs/outputs (AllowAnonymous)
-- **A8**: Re-run/Resubmit (AllowAnonymous)
+- **A1**: View run history list (Return401 → 🔴 Blocked; AllowAnonymous → ✅)
+- **A2**: View run details (Return401 → 🔴 Blocked; AllowAnonymous → ✅)
+- **A3**: View inputs/outputs (Return401 → 🔴 Blocked; AllowAnonymous → ✅)
+- **A4**: Re-run/Resubmit (Return401 → 🔴 Blocked; AllowAnonymous → ✅)
 
-## Track B — Trigger Security
+## Track B — Trigger Security (Lab 1 — AllowAnonymous + allowedPrincipals)
 
-- **B1**: Valid token + Return401 → expect 200
-- **B2**: Invalid/expired token + Return401 → expect 401
-- **B3**: Wrong audience token + Return401 → expect 401
-- **B4**: No token + Return401 → expect 401
-- **B5**: No token + AllowAnonymous → expect 200
-- **B6**: Valid token + SAS disabled + Return401 → expect 200
-- **B7**: No token + SAS key only + Return401 → expect 401
+- **B1**: Valid mgmt token (user identity) → 403 (not in allowedPrincipals) ✅
+- **B2**: Invalid/expired token → 401 ✅
+- **B3**: Wrong audience token (Graph) → 401 ✅
+- **B4**: No token, no SAS key → 401 ✅
+- **B5**: No token + SAS key → 200 (SAS remains active) ✅
+
+## Track C — APIM JWT Validation (Lab 2)
+
+- **C1**: Valid Entra token through APIM → expect 200 (⏳ requires APIM MI token)
+- **C2**: Invalid token through APIM → 401 ✅
+- **C3**: No token through APIM → 401 ✅
+- **C4**: Wrong audience through APIM → expect 401 (⏳)
+
+## Track D — Backend Isolation (Lab 2)
+
+- **D1**: Direct call to Logic App (bypass APIM) → 401 (access restriction) ✅
+- **D2**: APIM managed identity to backend → expect 200 (⏳ requires MI auth policy)
+
+## Track E — Portal Manageability (Lab 2 — No Easy Auth)
+
+- **E1**: List workflow runs (hostruntime) → 200 ✅
+- **E2**: listCallbackUrl (hostruntime) → 200 ✅
+- **E3**: View inputs/outputs → ✅ (confirmed via portal)
+- **E4**: Re-run/Resubmit → ✅ (confirmed via portal)
 
 ## Endpoint Classification
 

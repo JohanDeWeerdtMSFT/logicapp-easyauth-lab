@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evidence Hub — Logic App Standard Security Labs</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="../architecture/executive-summary.html">Executive Summary</a>
+      <a href="index.html" class="active">Evidence</a>
+      <a href="../operations/index.html">Operations</a>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <main class="content page-intro">
+      <ol class="breadcrumb">
+        <li><a href="../index.html">Home</a></li>
+        <li>Evidence</li>
+      </ol>
+
+      <h1>Evidence Hub</h1>
+      <p class="subtitle">Latest consolidated validation and deployment evidence for both labs</p>
+
+      <p>
+        This section contains the evidence-backed findings that support the customer-facing
+        architecture story. Use it when you need to trace a statement in the architecture pages
+        back to a validated behavior or a scan artifact.
+      </p>
+
+      <div class="card-grid">
+        <a href="findings.html" class="card card-link">
+          <h3>Consolidated Findings</h3>
+          <p>Track-by-track findings, status codes, portal manageability outcomes, and the key
+            distinction between ARM control-plane and hostruntime data-plane behavior.</p>
+        </a>
+
+        <a href="../architecture/request-flow-comparison.html" class="card card-link">
+          <h3>Request &amp; Data Flow Mapping</h3>
+          <p>Customer-ready diagrams that translate the findings into a layer-by-layer explanation
+            of request routing, authentication, authorization, and access control.</p>
+        </a>
+      </div>
+
+      <h2>Latest Scan Snapshot</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Resource Group</th>
+            <th>Scan Timestamp</th>
+            <th>Easy Auth State</th>
+            <th>Network Artifacts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="resource-group-label">rg-la-easyauth-lab-dev</span></td>
+            <td>2026-04-08T06</td>
+            <td><code>platform.enabled: true</code>, <code>AllowAnonymous</code></td>
+            <td>No VNet or Private Endpoint artifacts found in current scan</td>
+          </tr>
+          <tr>
+            <td><span class="resource-group-label">rg-la-easyauth-lab-apim-dev</span></td>
+            <td>2026-04-08T06</td>
+            <td><code>platform.enabled: false</code></td>
+            <td>No VNet or Private Endpoint artifacts found in current scan</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warning">
+        <strong>Evidence Boundaries</strong>
+        Where the site mentions production options such as VNet integration or Private Endpoints,
+        treat those as design guidance rather than current deployment facts unless a scan artifact
+        explicitly shows the resource.
+      </div>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    Logic App Standard — Security Labs · Evidence Hub · 2026-04-08
+  </footer>
+
+</body>
+</html>

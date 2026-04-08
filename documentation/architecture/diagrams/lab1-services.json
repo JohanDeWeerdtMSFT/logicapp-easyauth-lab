@@ -1,0 +1,53 @@
+[
+  {
+    "id": "client",
+    "name": "Client / API Consumer",
+    "type": "user",
+    "resourceGroup": "External",
+    "details": ["HTTP request with bearer token", "Entra ID token (audience: Logic App)"]
+  },
+  {
+    "id": "entra",
+    "name": "Microsoft Entra ID",
+    "type": "entra_id",
+    "resourceGroup": "Identity",
+    "details": ["Issues Entra tokens", "allowedAudiences: Logic App app registration", "allowedPrincipals: validated callers"]
+  },
+  {
+    "id": "logicapp",
+    "name": "Logic App Standard\n(rg-la-easyauth-lab-dev)",
+    "type": "logic_app",
+    "sku": "Standard WS1",
+    "private": false,
+    "resourceGroup": "rg-la-easyauth-lab-dev",
+    "details": [
+      "Easy Auth enabled (authsettingsV2)",
+      "Action: AllowAnonymous",
+      "allowedAudiences configured",
+      "allowedPrincipals: APIM MI",
+      "Workflow-level token check via trigger security",
+      "hostruntime path: validated"
+    ]
+  },
+  {
+    "id": "storage",
+    "name": "Storage Account\n(Logic App backend)",
+    "type": "storage",
+    "resourceGroup": "rg-la-easyauth-lab-dev",
+    "details": ["Stores workflow definitions", "Blob + Queue + Table", "Tied to Logic App Standard"]
+  },
+  {
+    "id": "keyvault",
+    "name": "Key Vault",
+    "type": "keyvault",
+    "resourceGroup": "rg-la-easyauth-lab-dev",
+    "details": ["Secrets management", "Managed identity access from Logic App"]
+  },
+  {
+    "id": "appinsights",
+    "name": "Application Insights",
+    "type": "app_insights",
+    "resourceGroup": "rg-la-easyauth-lab-dev",
+    "details": ["Diagnostic logging", "Workflow run telemetry"]
+  }
+]

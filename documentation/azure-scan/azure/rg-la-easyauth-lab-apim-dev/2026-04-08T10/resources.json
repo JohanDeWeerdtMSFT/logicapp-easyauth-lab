@@ -1,0 +1,250 @@
+[
+  {
+    "changedTime": "2026-04-07T20:47:06.668623+00:00",
+    "createdTime": "2026-04-07T20:19:20.360142+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/serverFarms/la-easyauth-lab-apim-dev-plan",
+    "identity": null,
+    "kind": "elastic",
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-plan",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": {
+      "capacity": 1,
+      "family": "WS",
+      "model": null,
+      "name": "WS1",
+      "size": "WS1",
+      "tier": "WorkflowStandard"
+    },
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.Web/serverFarms"
+  },
+  {
+    "changedTime": "2026-04-08T09:33:34.280782+00:00",
+    "createdTime": "2026-04-07T19:30:17.349595+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Storage/storageAccounts/laeasyauthlabapimdevec5y",
+    "identity": null,
+    "kind": "StorageV2",
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "laeasyauthlabapimdevec5y",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": {
+      "capacity": null,
+      "family": null,
+      "model": null,
+      "name": "Standard_LRS",
+      "size": null,
+      "tier": "Standard"
+    },
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.Storage/storageAccounts"
+  },
+  {
+    "changedTime": "2026-04-07T21:52:31.114069+00:00",
+    "createdTime": "2026-04-07T19:30:17.351937+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.ApiManagement/service/la-easyauth-lab-apim-dev-apim-ec5ylfoo2rspq",
+    "identity": {
+      "principalId": "8306e585-e9cc-4a56-b28c-0faa6f917122",
+      "tenantId": "00922812-791e-41c8-a99e-45c3ed784cf5",
+      "type": "SystemAssigned",
+      "userAssignedIdentities": null
+    },
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-apim-ec5ylfoo2rspq",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": {
+      "capacity": 1,
+      "family": null,
+      "model": null,
+      "name": "Developer",
+      "size": null,
+      "tier": null
+    },
+    "systemData": {
+      "createdAt": "2026-04-07T19:30:17.3780621Z",
+      "createdBy": "admin@D365DemoTSCE82071571.onmicrosoft.com",
+      "createdByType": "User",
+      "lastModifiedAt": "2026-04-07T21:42:03.7005839Z",
+      "lastModifiedBy": "admin@D365DemoTSCE82071571.onmicrosoft.com",
+      "lastModifiedByType": "User"
+    },
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.ApiManagement/service"
+  },
+  {
+    "changedTime": "2026-04-07T20:47:27.670414+00:00",
+    "createdTime": "2026-04-07T19:30:17.351569+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.OperationalInsights/workspaces/la-easyauth-lab-apim-dev-law",
+    "identity": null,
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-law",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.OperationalInsights/workspaces"
+  },
+  {
+    "changedTime": "2026-04-07T19:40:39.172975+00:00",
+    "createdTime": "2026-04-07T19:30:38.367329+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Insights/components/la-easyauth-lab-apim-dev-ai",
+    "identity": null,
+    "kind": "web",
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-ai",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.Insights/components"
+  },
+  {
+    "changedTime": "2026-04-08T09:32:54.897604+00:00",
+    "createdTime": "2026-04-07T20:37:28.470144+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/sites/la-easyauth-lab-apim-dev-la-ec5ylfoo2rspq",
+    "identity": {
+      "principalId": "ef3e1958-14a7-412d-b22c-13a55a137999",
+      "tenantId": "00922812-791e-41c8-a99e-45c3ed784cf5",
+      "type": "SystemAssigned, UserAssigned",
+      "userAssignedIdentities": {
+        "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourcegroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-la-easyauth-apim-dev": {
+          "clientId": "3d62acd2-1100-4f27-bc55-feba9707abec",
+          "principalId": "4d4c063d-9d41-4ac6-ba74-cd9af5907134"
+        }
+      }
+    },
+    "kind": "functionapp,workflowapp",
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-la-ec5ylfoo2rspq",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.Web/sites"
+  },
+  {
+    "changedTime": "2026-04-07T19:44:15.521466+00:00",
+    "createdTime": "2026-04-07T19:34:15.181419+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.EventGrid/systemTopics/laeasyauthlabapimdevec5y-031dd1df-5d25-4849-bef5-d0f7c7fedd37",
+    "identity": null,
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "laeasyauthlabapimdevec5y-031dd1df-5d25-4849-bef5-d0f7c7fedd37",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": null,
+    "type": "Microsoft.EventGrid/systemTopics"
+  },
+  {
+    "changedTime": "2026-04-07T20:05:01.085286+00:00",
+    "createdTime": "2026-04-07T19:54:59.973339+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/la-easyauth-lab-apim-dev-uami",
+    "identity": null,
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "la-easyauth-lab-apim-dev-uami",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.ManagedIdentity/userAssignedIdentities"
+  },
+  {
+    "changedTime": "2026-04-07T20:36:13.987548+00:00",
+    "createdTime": "2026-04-07T20:26:13.636958+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-la-easyauth-apim-dev",
+    "identity": null,
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "id-la-easyauth-apim-dev",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": {
+      "lab": "apim",
+      "project": "la-easyauth-lab"
+    },
+    "type": "Microsoft.ManagedIdentity/userAssignedIdentities"
+  },
+  {
+    "changedTime": "2026-04-08T09:22:15.242166+00:00",
+    "createdTime": "2026-04-08T09:22:09.866421+00:00",
+    "extendedLocation": null,
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev",
+    "identity": null,
+    "kind": null,
+    "location": "westeurope",
+    "managedBy": null,
+    "name": "vnet-easyauth-apim-lab-dev",
+    "plan": null,
+    "properties": null,
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-apim-dev",
+    "sku": null,
+    "tags": null,
+    "type": "Microsoft.Network/virtualNetworks"
+  }
+]

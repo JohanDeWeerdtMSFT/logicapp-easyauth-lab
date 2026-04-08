@@ -1,13 +1,24 @@
-# Logic App Standard — Easy Auth Lab
+# Logic App Standard — Security Labs
 
 ## Purpose
 
-Reproducible Azure lab to validate the impact of enabling Easy Auth (Authentication/Authorization via `authsettingsV2`) on Logic App Standard, specifically:
+Two complementary Azure labs to validate different security patterns for Logic App Standard HTTP triggers:
 
-1. **Track A — Portal Manageability**: Does enabling Easy Auth break the Azure portal experience for managing Logic App workflows (run history, run details, inputs/outputs visibility, re-run/resubmit)?
-2. **Track B — Trigger Security**: Does Easy Auth correctly enforce authentication on HTTP-triggered workflows?
+1. **Lab 1 — Easy Auth** (`rg-la-easyauth-lab-dev`): Validates that Easy Auth can enforce Entra ID authentication **without breaking portal manageability** using the `AllowAnonymous` + `allowedPrincipals` pattern.
+2. **Lab 2 — APIM-Centric** (`rg-la-easyauth-lab-apim-dev`): Demonstrates centralized JWT validation at API Management, with backend Logic Apps protected via network restrictions instead of Easy Auth.
 
-## Architecture
+> See [`docs/decision-guidance.md`](docs/decision-guidance.md) for a detailed comparison of when to use which pattern.
+
+### References
+
+- [Microsoft Learn — Secure Integration Workflows (Method 2: Easy Auth)](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth) — primary reference for Lab 1
+- [azcloudsecurity.io — Logic App Standard Easy Auth](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/) — AllowAnonymous pattern analysis
+- [Microsoft Learn — App Service Authentication Overview](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization#considerations-for-using-built-in-authentication) — Easy Auth middleware architecture
+- [Microsoft Learn — Secure Logic Apps with VNet and Private Endpoints](https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint) — network isolation patterns
+
+## Lab 1 — Easy Auth (AllowAnonymous Pattern)
+
+### Architecture
 
 ```text
 ┌─────────────────────────────────────────────────┐
@@ -19,67 +30,81 @@ Reproducible Azure lab to validate the impact of enabling Easy Auth (Authenticat
 │  └─────────────┘  │                          │     │
 │                    │ ┌────────────────────┐  │     │
 │                    │ │ httpTriggerWorkflow│  │     │
-│                    │ │ (HTTP GET trigger) │  │     │
 │                    │ └────────────────────┘  │     │
 │                    │                          │     │
 │                    │ authsettingsV2:          │     │
-│                    │ ├─ Mode X: Return401     │     │
-│                    │ └─ Mode Y: AllowAnonymous│     │
+│                    │ ├─ AllowAnonymous        │     │
+│                    │ ├─ allowedPrincipals     │     │
+│                    │ └─ platform.enabled: true│     │
 │                    └────────────────────────┘     │
 │                                                   │
 │  ┌────────────────┐  ┌───────────────────┐       │
 │  │ Storage Account│  │ App Insights      │       │
-│  │ (for workflow  │  │ + Log Analytics   │       │
-│  │  state)        │  └───────────────────┘       │
-│  └────────────────┘                               │
-│                                                   │
-│  ┌────────────────────────┐ (optional, Lane D)   │
-│  │ Function App comparison│                       │
-│  └────────────────────────┘                       │
+│  │ (managed ID)   │  │ + Log Analytics   │       │
+│  └────────────────┘  └───────────────────┘       │
 └─────────────────────────────────────────────────┘
 ```
+
+### Key Insight: AllowAnonymous is Required
+
+> **Microsoft Learn** ([Method 2](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth)): *"If `unauthenticatedClientAction` is set to `Return401`, the request doesn't get routed to the Azure Logic Apps runtime and fails with the 401 error from Azure App Service. With this error, you also get a broken Azure portal experience."*
+
+- **Portal management**: ✅ Works with AllowAnonymous
+- **Token enforcement**: ✅ Requests with Authorization header are validated against Entra requirements
+- **SAS keys**: Remain available as a trigger mechanism
 
 ## Prerequisites
 
 - Azure subscription with Contributor access
 - Azure CLI installed and logged in
-- Entra ID App Registration (for Easy Auth)
-  - Redirect URI: `https://<logicapp-hostname>/.auth/login/aad/callback`
-  - Client secret created
-  - API permission: none required (we use client\_credentials flow)
+- Entra ID App Registration (for Easy Auth / APIM JWT validation)
+  - Only a **blank** App Registration is needed — no redirect URIs, secrets, or scopes required for the basic setup
+  - For Easy Auth (Lab 1): client secret stored via `MICROSOFT_PROVIDER_AUTHENTICATION_SECRET` (Key Vault reference recommended)
+  - Reference: [azcloudsecurity.io — Creating the App Registration](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/#creating-the-app-registration)
 
 ## Quick Start
 
-1. Register an Entra ID application
-2. Deploy: `.\scripts\deploy.ps1 -EntraAppClientId <clientId> -EntraAppTenantId <tenantId>`
-3. Validate: `.\scripts\validate.ps1 -LogicAppName <name> -ResourceGroupName <rg> -EntraAppClientId <clientId> -EntraAppTenantId <tenantId> -ClientSecret <secret>`
+### Lab 1 (Easy Auth)
+```powershell
+.\scripts\deploy.ps1 -EntraAppClientId <clientId> -EntraAppTenantId <tenantId>
+```
+
+### Lab 2 (APIM)
+```powershell
+az deployment group create --resource-group rg-la-easyauth-lab-apim-dev `
+  --template-file infra/apim-lab/main.bicep `
+  --parameters infra/apim-lab/params.bicepparam
+```
 
 ## Scenario Matrix
 
-### Track A — Portal Manageability
+### Track A — Portal Manageability (Return401 vs AllowAnonymous)
 
-| ID | Scenario              | Easy Auth Mode | Expected   | Actual | Status |
-|----|-----------------------|----------------|------------|--------|--------|
-| A1 | View run history list | Return401      | ⚠️ Blocked by Easy Auth | 401 — hostruntime blocked | 🔴      |
-| A2 | View run details      | Return401      | ⚠️ Blocked by Easy Auth | 401 — hostruntime blocked | 🔴      |
-| A3 | View inputs/outputs   | Return401      | ⚠️ Blocked by Easy Auth | 401 — hostruntime blocked | 🔴      |
-| A4 | Re-run/Resubmit       | Return401      | ⚠️ Blocked by Easy Auth | 401 — hostruntime blocked | 🔴      |
-| A5 | View run history list | AllowAnonymous | Accessible | Accessible | ✅      |
-| A6 | View run details      | AllowAnonymous | Accessible | Accessible | ✅      |
-| A7 | View inputs/outputs   | AllowAnonymous | Visible    | Visible    | ✅      |
-| A8 | Re-run/Resubmit       | AllowAnonymous | Works      | Works      | ✅      |
+| ID | Scenario              | Return401 | AllowAnonymous | Status |
+|----|-----------------------|-----------|----------------|--------|
+| A1 | View run history list | 🔴 Blocked | ✅ Accessible   | Confirmed |
+| A2 | View run details      | 🔴 Blocked | ✅ Accessible   | Confirmed |
+| A3 | View inputs/outputs   | 🔴 Blocked | ✅ Visible      | Confirmed |
+| A4 | Re-run/Resubmit       | 🔴 Blocked | ✅ Works        | Confirmed |
 
-### Track B — Trigger Security
+### Track B — Trigger Security (AllowAnonymous + allowedPrincipals)
 
-| ID | Scenario                   | Easy Auth Mode | Token                      | Expected HTTP | Actual HTTP | Correlation ID | Status |
-|----|----------------------------|----------------|----------------------------|---------------|-------------|----------------|--------|
-| B1 | Valid token                | Return401      | Valid bearer                | 200           | —           | —              | ⏳      |
-| B2 | Invalid token              | Return401      | Expired/malformed           | 401           | —           | —              | ⏳      |
-| B3 | Wrong audience             | Return401      | Valid, wrong aud            | 401           | —           | —              | ⏳      |
-| B4 | No token                   | Return401      | None                        | 401           | —           | —              | ⏳      |
-| B5 | No token                   | AllowAnonymous | None                        | 200           | —           | —              | ⏳      |
-| B6 | Valid token + SAS disabled | Return401      | Valid bearer, no SAS key    | 200           | —           | —              | ⏳      |
-| B7 | No token + SAS only        | Return401      | None, SAS key only          | 401           | —           | —              | ⏳      |
+| ID | Scenario                   | Token                      | Expected HTTP | Status |
+|----|----------------------------|----------------------------|---------------|--------|
+| B1 | Valid token (right aud/principal) | Valid bearer           | 403           | ✅ `allowedPrincipals` restricts to APIM MI |
+| B2 | Invalid token              | Expired/malformed           | 401           | ✅ Rejected by Easy Auth |
+| B3 | Wrong audience             | Valid, wrong aud            | 401           | ✅ Rejected by Easy Auth |
+| B4 | No token (no SAS)          | None                        | 401           | ✅ Rejected |
+| B5 | No token + SAS key         | None, SAS key present       | 200           | ✅ SAS keys remain active |
+
+### Track C — APIM JWT Validation (Lab 2)
+
+| ID | Scenario                   | Token                      | Expected HTTP | Status |
+|----|----------------------------|----------------------------|---------------|--------|
+| C1 | Valid token through APIM   | Valid bearer                | 200           | ⏳ (requires MI auth)     |
+| C2 | Invalid token through APIM | Expired/malformed           | 401           | ✅ Rejected by APIM |
+| C3 | No token through APIM      | None                        | 401           | ✅ Rejected by APIM |
+| C4 | Wrong audience through APIM| Valid, wrong aud            | 401           | ⏳      |
 
 ## Findings Log
 
@@ -87,65 +112,45 @@ See [`docs/evidence/findings.md`](docs/evidence/findings.md) for detailed observ
 
 ## Key Findings
 
-> **Critical: Easy Auth `Return401` blocks Logic App Standard management endpoints.**
+> **Critical: Easy Auth `Return401` breaks Logic App Standard portal — use `AllowAnonymous` instead.**
 
-1. **hostruntime endpoints are blocked.** When `authsettingsV2` is set to `unauthenticatedClientAction: Return401`, Easy Auth intercepts all `/hostruntime/...` data-plane requests before the Logic App runtime can process them. These paths serve the management API that the portal, `az rest`, and ARM-proxied operations depend on. Error: `"Unauthorized (You do not have permission to view this directory or page.)"`
+1. **`Return401` blocks hostruntime endpoints** — portal loses run history, details, re-run. Confirmed by [Microsoft Learn](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth) and lab testing.
+2. **`AllowAnonymous` resolves this** — requests with Authorization header are still validated; portal management works.
+3. **ARM-only operations are unaffected** regardless of Easy Auth mode.
+4. **Two valid production patterns**: Easy Auth (Lab 1) for few apps with strict identity, APIM-centric (Lab 2) for scale.
 
-2. **Portal manageability is impacted.** Run history, run details, inputs/outputs, callback URLs, and re-run/resubmit all rely on hostruntime endpoints. With Return401 enabled, the portal loses visibility into workflow execution state (scenarios A1–A4 all blocked).
+## Recommended Architectures
 
-3. **ARM-only operations are unaffected.** Pure ARM reads (get site properties, list workflows, list runs) bypass the app host and continue working regardless of Easy Auth mode.
-
-4. **Mitigation options:**
-   - **Quick fix**: Add `excludedPaths: ["/runtime/*", "/hostruntime/*"]` to `authsettingsV2.globalValidation` — unblocks management while keeping Easy Auth on API routes
-   - **Production recommendation**: APIM or Application Gateway fronting the Logic App with Entra JWT validation at the gateway, Private Endpoints for network isolation, and no Easy Auth on the Logic App host itself
-
-## Recommended Architecture
-
-For production workloads requiring Entra ID enforcement on Logic App Standard HTTP triggers:
-
-```text
-                          ┌──────────────────────────┐
-                          │  Azure API Management     │
-  Client ───── Entra ────▶│  - JWT validation policy  │
-  (bearer token)          │  - Rate limiting           │
-                          │  - Logging                 │
-                          └──────────┬───────────────┘
-                                     │ Private Endpoint
-                          ┌──────────▼───────────────┐
-                          │  Logic App Standard       │
-                          │  (NO Easy Auth)           │
-                          │  ┌────────────────────┐  │
-                          │  │ httpTriggerWorkflow│  │
-                          │  └────────────────────┘  │
-                          │                           │
-                          │  Portal access: ✅ Full   │
-                          │  Management APIs: ✅ Full │
-                          └───────────────────────────┘
-```
-
-**Why this works**: Entra authentication is enforced at the APIM gateway layer (via `validate-jwt` policy). The Logic App itself has no Easy Auth configured, so portal and ARM management operations work without interference. The Private Endpoint ensures the Logic App is not publicly reachable except through APIM.
+See [`docs/decision-guidance.md`](docs/decision-guidance.md) for the full comparison.
 
 ## Conclusions
 
-**Easy Auth (`authsettingsV2` with `Return401`) is not compatible with Logic App Standard portal manageability.** The Easy Auth middleware sits in front of the app host and intercepts hostruntime data-plane endpoints that the Azure portal, ARM-proxied operations, and tooling depend on for workflow management.
+Two valid patterns exist, confirmed by [Microsoft Learn](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management) and [azcloudsecurity.io](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/):
 
-**Recommendation**: Do not use Easy Auth directly on Logic App Standard for Entra-based trigger security. Instead, use a **gateway-fronted architecture** (APIM with `validate-jwt` policy + Private Endpoints) to enforce Entra ID authentication while preserving full portal and management API access. For dev/test scenarios, `excludedPaths` in `authsettingsV2` provides a quick workaround.
+- **Lab 1 — Easy Auth with `AllowAnonymous` + `allowedPrincipals`**: Best for limited numbers of apps where app-level identity enforcement is required. Portal management works. APIM authenticates via managed identity bearer token. SAS keys remain active.
+- **Lab 2 — APIM-centric (no Easy Auth)**: Best at scale (hundreds of apps). Centralized JWT validation via `validate-jwt` policy, reduced IP consumption, simpler operations.
 
-See [`docs/evidence/findings.md`](docs/evidence/findings.md) for full analysis, test matrix, and mitigation details.
+> Some references combine API Management and Easy Auth for defense‑in‑depth identity enforcement. While valid, enabling Easy Auth on Logic Apps Standard can introduce operational complexity and runtime manageability risks. Lab 2 demonstrates an alternative pattern where API Management enforces identity centrally, and backend Logic Apps are protected using network-level access restrictions, reducing the need for per-app Private Endpoints and preserving portal functionality.
+
+See [`docs/decision-guidance.md`](docs/decision-guidance.md) for the full trade-off analysis.
 
 ## Teardown
 
 ```powershell
+# Lab 1
 az group delete --name rg-la-easyauth-lab-dev --yes --no-wait
+# Lab 2
+az group delete --name rg-la-easyauth-lab-apim-dev --yes --no-wait
 ```
 
 ## Cost Estimate
 
-| Resource         | SKU            | Est. Monthly Cost |
-|------------------|----------------|-------------------|
-| App Service Plan | WS1            | ~€130/month       |
-| Storage Account  | Standard\_LRS  | ~€1/month         |
-| Log Analytics    | Pay-as-you-go  | ~€2/month         |
-| **Total**        |                | **~€133/month**   |
+| Resource         | Lab 1 (Easy Auth) | Lab 2 (APIM) |
+|------------------|-------------------|---------------|
+| App Service Plan | WS1 ~€130/mo      | WS1 ~€130/mo  |
+| Storage Account  | ~€1/mo            | ~€1/mo        |
+| Log Analytics    | ~€2/mo            | ~€2/mo        |
+| APIM Developer   | —                 | ~€45/mo       |
+| **Total**        | **~€133/mo**      | **~€178/mo**  |
 
 > ⚠️ Delete resources after testing to avoid ongoing charges.

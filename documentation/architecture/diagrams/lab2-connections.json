@@ -1,0 +1,50 @@
+[
+  {
+    "from": "client",
+    "to": "entra",
+    "label": "1. Authenticate",
+    "type": "security"
+  },
+  {
+    "from": "entra",
+    "to": "client",
+    "label": "2. Bearer token (APIM audience)",
+    "type": "security"
+  },
+  {
+    "from": "client",
+    "to": "apim",
+    "label": "3. HTTPS + Bearer token",
+    "type": "api"
+  },
+  {
+    "from": "apim",
+    "to": "logicapp",
+    "label": "4. Validated request (no token forwarded)",
+    "type": "api"
+  },
+  {
+    "from": "logicapp",
+    "to": "storage",
+    "label": "5. Blob / Queue / Table",
+    "type": "data"
+  },
+  {
+    "from": "logicapp",
+    "to": "keyvault",
+    "label": "6. Get secrets (MI)",
+    "type": "security"
+  },
+  {
+    "from": "logicapp",
+    "to": "appinsights",
+    "label": "7. Telemetry",
+    "type": "data"
+  },
+  {
+    "from": "apim",
+    "to": "appinsights",
+    "label": "APIM diagnostics",
+    "type": "data"
+  }
+]

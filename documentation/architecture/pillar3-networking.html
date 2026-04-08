@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pillar 3: Network Isolation — Logic App Standard Security Labs</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{primaryColor:'#e1f0ff', primaryBorderColor:'#0078D4', lineColor:'#0078D4'}});</script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="executive-summary.html">Executive Summary</a>
+      <a href="../evidence/index.html">Evidence</a>
+      <a href="../operations/index.html">Operations</a>
+    </nav>
+  </header>
+
+  <ol class="breadcrumb container">
+    <li><a href="../index.html">Home</a></li>
+    <li>Architecture</li>
+    <li>Pillar 3: Network Isolation</li>
+  </ol>
+
+  <div class="container">
+
+    <h1>Pillar 3: Service Endpoints + Storage Firewall<span class="subtitle">Secure storage connectivity without Private Endpoint IP exhaustion</span></h1>
+
+    <!-- ============================================================ -->
+    <h2 id="overview">1. Overview</h2>
+
+    <p>
+      Logic App Standard requires a backing storage account for workflow state, run history, and
+      artifact storage. Securing that storage link is essential — but every Private Endpoint
+      consumes an IP address from your VNet.
+    </p>
+
+    <div class="callout callout-warning">
+      <strong>The Problem</strong>
+      Each storage account exposes four sub-resources (blob, queue, table, file). A Private Endpoint
+      for each sub-resource means <strong>4 IPs per storage account per app</strong>. At scale this
+      exhausts subnet address space rapidly.
+    </div>
+
+    <div class="callout callout-info">
+      <strong>The Solution</strong>
+      VNet Service Endpoints + storage firewall rules deliver subnet-level network isolation with
+      <strong>0 IPs consumed</strong>. Traffic stays on the Azure backbone, and the storage firewall
+      restricts access to the authorized subnet only.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="pe-vs-se">2. Private Endpoints vs Service Endpoints</h2>
+
+    <h3>Private Endpoint Approach</h3>
+    <pre><code>Logic App ──▶ VNet ──▶ PE NIC (10.0.1.5) ──▶ Storage (no public IP)
+                       ↑ consumes 1 IP         ↑ private DNS zone needed
+                       × 4 per storage (blob, queue, table, file)</code></pre>
+
+    <h3>Service Endpoint Approach</h3>
+    <pre><code>Logic App ──▶ VNet ──▶ Azure backbone ──▶ Storage (public FQDN, firewalled)
+                       ↑ 0 IPs               ↑ firewall: allow subnet only
+                       ↑ no DNS changes</code></pre>
+
+    <h3>Comparison</h3>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Private Endpoint</th>
+          <th>Service Endpoint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>IPs consumed</strong></td>
+          <td>1 per PE (4 per storage acct)</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td><strong>DNS changes</strong></td>
+          <td>Private DNS zone + VNet link</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td><strong>Storage has public IP?</strong></td>
+          <td>No (truly private)</td>
+          <td>Yes (but firewalled to subnet)</td>
+        </tr>
+        <tr>
+          <td><strong>Traffic path</strong></td>
+          <td>VNet → private IP in VNet</td>
+          <td>Azure backbone (optimized route)</td>
+        </tr>
+        <tr>
+          <td><strong>Cost per PE</strong></td>
+          <td>~€7/month</td>
+          <td>Free</td>
+        </tr>
+        <tr>
+          <td><strong>Security level</strong></td>
+          <td>Strongest — no public surface</td>
+          <td>Strong — subnet-restricted</td>
+        </tr>
+        <tr>
+          <td><strong>Setup complexity</strong></td>
+          <td>Higher (PE + DNS + NIC)</td>
+          <td>Low (subnet toggle + firewall rule)</td>
+        </tr>
+        <tr>
+          <td><strong>When to use</strong></td>
+          <td>Policy requires NO public IP</td>
+          <td>Policy requires restricted access</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="architecture">3. Architecture Diagram</h2>
+
+    <div class="mermaid">
+flowchart LR
+    subgraph VNet["VNet"]
+        subgraph Subnet["Subnet: snet-logicapp"]
+            LA["Logic App Standard"]
+        end
+        SE["Service Endpoint: Microsoft.Storage"]
+    end
+
+    Backbone["Azure Backbone"]
+    Storage["Storage Account\nFirewall: Deny All\nAllow: snet-logicapp"]
+
+    LA -->|Outbound via VNet integration| SE
+    SE -->|Optimized route, 0 IPs| Backbone
+    Backbone -->|Subnet identity verified| Storage
+
+    subgraph External["Microsoft Multitenant Infra"]
+        O365["Office 365 Connector"]
+        SP["SharePoint Connector"]
+    end
+
+    LA -.->|Managed connectors go outside VNet| External
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Key Insight</strong>
+      Managed connectors (Office 365, SharePoint) run in Microsoft's multitenant infrastructure
+      <em>outside</em> your VNet. Service Endpoints and storage firewall rules do not affect those
+      connectors — they only govern traffic from your VNet-integrated subnet to the storage account.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="ip-scale">4. IP Consumption at Scale</h2>
+
+    <p>
+      The table below compares three approaches as the number of Logic Apps grows. Each app has one
+      backing storage account with four sub-resources.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th># Apps</th>
+          <th>PE per app + PE per storage (4)</th>
+          <th>APIM + PE per storage</th>
+          <th>APIM + Service Endpoints</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>10</td>
+          <td>10 + 40 = <strong>50 IPs</strong></td>
+          <td>1 + 40 = <strong>41 IPs</strong></td>
+          <td>1 + 0 = <strong>1 IP</strong></td>
+        </tr>
+        <tr>
+          <td>50</td>
+          <td>50 + 200 = <strong>250 IPs</strong></td>
+          <td>1 + 200 = <strong>201 IPs</strong></td>
+          <td>1 + 0 = <strong>1 IP</strong></td>
+        </tr>
+        <tr>
+          <td>100</td>
+          <td>100 + 400 = <strong>500 IPs</strong></td>
+          <td>1 + 400 = <strong>401 IPs</strong></td>
+          <td>1 + 0 = <strong>1 IP</strong></td>
+        </tr>
+        <tr>
+          <td>200</td>
+          <td>200 + 800 = <strong>1000 IPs</strong></td>
+          <td>1 + 800 = <strong>801 IPs</strong></td>
+          <td>1 + 0 = <strong>1 IP</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>Takeaway</strong>
+      Service Endpoints eliminate storage-related IP consumption entirely. Combined with APIM for
+      inbound, the total footprint stays at 1 IP regardless of fleet size.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="lab-evidence">5. What We Deployed (Lab Evidence)</h2>
+
+    <h3>Lab 1 — <code>rg-la-easyauth-lab-dev</code></h3>
+    <table>
+      <thead>
+        <tr><th>Resource</th><th>Configuration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>VNet</td><td><code>vnet-easyauth-lab-dev</code> — 10.10.0.0/16</td></tr>
+        <tr><td>Subnet</td><td><code>snet-logicapp</code> — 10.10.1.0/26, delegation: <code>Microsoft.Web/serverFarms</code></td></tr>
+        <tr><td>Service Endpoint</td><td><code>Microsoft.Storage</code> enabled on subnet</td></tr>
+        <tr><td>Logic App VNet integration</td><td>Outbound via <code>snet-logicapp</code></td></tr>
+        <tr><td>Storage</td><td><code>laeasyauthlabdevdaaq6t5x</code></td></tr>
+        <tr><td>Storage firewall</td><td>publicNetworkAccess: <strong>Enabled</strong>, defaultAction: <strong>Deny</strong>, subnet allowed</td></tr>
+      </tbody>
+    </table>
+    <p>
+      <span class="badge badge-pass">✅ Logic App reaches storage</span>
+      <span class="badge badge-pass">✅ External access blocked</span>
+      <span class="badge badge-pass">✅ 0 IPs consumed</span>
+    </p>
+
+    <h3>Lab 2 — <code>rg-la-easyauth-lab-apim-dev</code></h3>
+    <table>
+      <thead>
+        <tr><th>Resource</th><th>Configuration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>VNet</td><td><code>vnet-easyauth-apim-lab-dev</code> — 10.20.0.0/16</td></tr>
+        <tr><td>Subnet</td><td><code>snet-logicapp</code> — 10.20.1.0/26, delegation: <code>Microsoft.Web/serverFarms</code></td></tr>
+        <tr><td>Service Endpoint</td><td><code>Microsoft.Storage</code> enabled on subnet</td></tr>
+        <tr><td>Logic App VNet integration</td><td>Outbound via <code>snet-logicapp</code></td></tr>
+        <tr><td>Storage</td><td><code>laeasyauthlabapimdevec5y</code></td></tr>
+        <tr><td>Storage firewall</td><td>publicNetworkAccess: <strong>Enabled</strong>, defaultAction: <strong>Deny</strong>, subnet allowed</td></tr>
+      </tbody>
+    </table>
+    <p>
+      <span class="badge badge-pass">✅ Logic App reaches storage</span>
+      <span class="badge badge-pass">✅ External access blocked</span>
+      <span class="badge badge-pass">✅ 0 IPs consumed</span>
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="setup-steps">6. Setup Steps</h2>
+
+    <p>For each Logic App + storage account pair:</p>
+    <ol>
+      <li>Create a VNet (or use existing) with a subnet (<code>/26</code> recommended).</li>
+      <li>Add delegation <code>Microsoft.Web/serverFarms</code> to the subnet.</li>
+      <li>Enable Service Endpoint for <code>Microsoft.Storage</code> on the subnet.</li>
+      <li>VNet-integrate the Logic App (outbound traffic routes via the subnet).</li>
+      <li>Set the storage account firewall: default action = <strong>Deny</strong>.</li>
+      <li>Add a network rule: allow the Logic App subnet.</li>
+      <li>Set bypass: <strong>AzureServices</strong> (for ARM management operations).</li>
+      <li>Verify: Logic App can reach storage, external access is blocked.</li>
+    </ol>
+
+    <!-- ============================================================ -->
+    <h2 id="important-notes">7. Important Notes</h2>
+
+    <div class="callout callout-warning">
+      <strong>Managed Connectors Are Not Affected</strong>
+      Office 365, SharePoint, and other managed connectors run in Microsoft's multitenant
+      infrastructure, <em>outside</em> your VNet. If an NSG or firewall blocks outbound traffic,
+      you must allow the
+      <a href="https://learn.microsoft.com/en-us/connectors/common/outbound-ip-addresses">managed connector IP ranges</a>
+      separately.
+    </div>
+
+    <div class="callout callout-warning">
+      <strong>Service Endpoints Require publicNetworkAccess: Enabled</strong>
+      Service Endpoints use the storage account's public FQDN (firewalled to your subnet). If a
+      tenant policy forces <code>publicNetworkAccess: Disabled</code>, you <strong>must</strong> use
+      Private Endpoints instead.
+    </div>
+
+    <div class="callout callout-info">
+      <strong>One Subnet Serves Multiple Logic Apps</strong>
+      All Logic Apps VNet-integrated into the same subnet share the service endpoint — no per-app
+      setup needed for the endpoint itself. Only the storage firewall rule per storage account is
+      app-specific.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="when-to-use">8. When to Use Which</h2>
+
+    <table>
+      <thead>
+        <tr><th>Scenario</th><th>Recommended Approach</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tenant policy: "No public IP on storage"</td>
+          <td><strong>Private Endpoints</strong> — accept the IP cost; no public surface at all</td>
+        </tr>
+        <tr>
+          <td>Tenant policy: "Restricted access from authorized networks"</td>
+          <td><strong>Service Endpoints</strong> — 0 IPs, subnet-restricted access</td>
+        </tr>
+        <tr>
+          <td>Mixed environment with different security zones</td>
+          <td>Both approaches can coexist — use PEs for high-security zones, SEs elsewhere</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="references">9. References</h2>
+
+    <ul>
+      <li><a href="https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview">Virtual Network Service Endpoints Overview</a></li>
+      <li><a href="https://learn.microsoft.com/en-us/azure/virtual-network/tutorial-restrict-network-access-to-resources">Tutorial: Restrict Network Access to Resources</a></li>
+      <li><a href="https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint">Secure Logic Apps with VNet and Private Endpoints</a></li>
+    </ul>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>Logic App Standard — Security Labs &bull; Internal documentation</p>
+  </footer>
+
+</body>
+</html>

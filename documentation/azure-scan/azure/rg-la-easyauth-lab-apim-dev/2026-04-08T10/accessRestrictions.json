@@ -1,0 +1,37 @@
+{
+  "ipSecurityRestrictions": [
+    {
+      "action": "Allow",
+      "ipAddress": "51.145.176.4/32",
+      "name": "Allow-APIM",
+      "priority": 100,
+      "tag": "Default"
+    },
+    {
+      "action": "Allow",
+      "ipAddress": "AzureCloud",
+      "name": "Allow-AzureCloud",
+      "priority": 200,
+      "tag": "ServiceTag"
+    },
+    {
+      "action": "Deny",
+      "description": "Deny all access",
+      "ipAddress": "Any",
+      "name": "Deny all",
+      "priority": 2147483647
+    }
+  ],
+  "ipSecurityRestrictionsDefaultAction": null,
+  "scmIpSecurityRestrictions": [
+    {
+      "action": "Allow",
+      "description": "Allow all access",
+      "ipAddress": "Any",
+      "name": "Allow all",
+      "priority": 2147483647
+    }
+  ],
+  "scmIpSecurityRestrictionsDefaultAction": null,
+  "scmIpSecurityRestrictionsUseMain": false
+}

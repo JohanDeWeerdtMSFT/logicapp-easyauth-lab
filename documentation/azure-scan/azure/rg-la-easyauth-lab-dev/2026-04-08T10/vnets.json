@@ -1,0 +1,71 @@
+[
+  {
+    "addressSpace": {
+      "addressPrefixes": [
+        "10.10.0.0/16"
+      ]
+    },
+    "enableDdosProtection": false,
+    "etag": "W/\"9cbfe399-fae9-43d5-9d23-382e4431c38c\"",
+    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev",
+    "location": "westeurope",
+    "name": "vnet-easyauth-lab-dev",
+    "privateEndpointVNetPolicies": "Disabled",
+    "provisioningState": "Succeeded",
+    "resourceGroup": "rg-la-easyauth-lab-dev",
+    "resourceGuid": "ab96b6f8-58f9-4f64-9109-39403efca5ff",
+    "subnets": [
+      {
+        "addressPrefix": "10.10.1.0/26",
+        "delegations": [
+          {
+            "actions": [
+              "Microsoft.Network/virtualNetworks/subnets/action"
+            ],
+            "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
+            "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/delegations/0",
+            "name": "0",
+            "provisioningState": "Succeeded",
+            "resourceGroup": "rg-la-easyauth-lab-dev",
+            "serviceName": "Microsoft.Web/serverFarms",
+            "type": "Microsoft.Network/virtualNetworks/subnets/delegations"
+          }
+        ],
+        "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
+        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp",
+        "name": "snet-logicapp",
+        "privateEndpointNetworkPolicies": "Disabled",
+        "privateLinkServiceNetworkPolicies": "Enabled",
+        "provisioningState": "Succeeded",
+        "resourceGroup": "rg-la-easyauth-lab-dev",
+        "serviceAssociationLinks": [
+          {
+            "allowDelete": false,
+            "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
+            "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
+            "link": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-dev-plan",
+            "linkedResourceType": "Microsoft.Web/serverfarms",
+            "locations": [],
+            "name": "AppServiceLink",
+            "provisioningState": "Succeeded",
+            "resourceGroup": "rg-la-easyauth-lab-dev",
+            "type": "Microsoft.Network/virtualNetworks/subnets/serviceAssociationLinks"
+          }
+        ],
+        "serviceEndpoints": [
+          {
+            "locations": [
+              "westeurope",
+              "northeurope"
+            ],
+            "provisioningState": "Succeeded",
+            "service": "Microsoft.Storage"
+          }
+        ],
+        "type": "Microsoft.Network/virtualNetworks/subnets"
+      }
+    ],
+    "type": "Microsoft.Network/virtualNetworks",
+    "virtualNetworkPeerings": []
+  }
+]
