@@ -3,8 +3,24 @@
     Deploys the Logic App Easy Auth lab infrastructure (Lane B).
 
 .DESCRIPTION
-    Orchestrates resource group creation and Bicep deployment for the
-    Logic App Standard Easy Auth validation lab.
+    Orchestrates the complete infrastructure deployment for the Logic App Standard
+    Easy Auth validation lab, including resource group creation, Bicep template
+    deployment, and infrastructure configuration. This script automates the setup
+    of Azure resources needed for testing Easy Auth authentication patterns with
+    Logic App Standard workloads.
+    
+    The deployment includes:
+    - Resource group provisioning in the specified location
+    - Azure Networking resources (VNets, subnets, private endpoints)
+    - Logic App Standard instance with Easy Auth configuration
+    - Azure API Management integration (optional APIM lab)
+    - Function App deployment (optional, controlled by -DeployFunctionApp switch)
+    
+    Prerequisites:
+    - Azure CLI must be installed and authenticated
+    - Bicep template must exist at infra\main.bicep
+    - Required Entra app client ID and tenant ID for Easy Auth configuration
+    - Appropriate Azure subscription permissions (Contributor or higher)
 
 .EXAMPLE
     .\deploy.ps1 -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..."
