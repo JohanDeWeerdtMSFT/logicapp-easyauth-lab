@@ -116,6 +116,13 @@ Two complementary Azure labs to validate different security patterns for Logic A
 > - Troubleshooting scenarios and error handling
 > - Microsoft Learn documentation references
 
+> **🧪 TESTING & VERIFICATION:** See [`docs/lab3-testing-and-verification.md`](docs/lab3-testing-and-verification.md) for complete step-by-step testing guide:
+> - How to create and deploy a test Function App with bearer token code
+> - How to verify infrastructure is configured correctly
+> - How to invoke the function and monitor in Application Insights
+> - How to collect evidence (JWT token, logs, execution history)
+> - How to troubleshoot 6 common error scenarios
+
 **Lab 3 eliminates all shared secrets:**
 - Function App acquires access token using its **system-assigned managed identity** (no credentials to rotate)
 - Token is presented as `Authorization: Bearer <token>` to Logic App private endpoint

@@ -379,6 +379,20 @@ Response: 20.y.z.w (public IP — blocked by public access disabled)</code></pre
     <section id="code-examples">
       <h2>8. C# Code Examples</h2>
 
+      <div class="callout callout-info">
+        <strong>📖 Complete Testing & Implementation Guide</strong><br>
+        For step-by-step instructions on how to create and deploy a test Function App with full bearer token code,
+        see <a href="../../docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a>.
+        This includes:
+        <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+          <li>Complete C# HttpTrigger function implementation</li>
+          <li>How to acquire bearer tokens and call Logic App</li>
+          <li>End-to-end test scenarios with evidence collection</li>
+          <li>Troubleshooting 6 common error scenarios</li>
+          <li>Application Insights monitoring queries</li>
+        </ul>
+      </div>
+
       <h3>Token Acquisition (DefaultAzureCredential)</h3>
       <pre><code>using Azure.Identity;
 using Azure.Core;
@@ -682,6 +696,40 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
         <li><a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/zero-trust" target="_blank">Zero Trust Security Model</a></li>
         <li><a href="https://learn.microsoft.com/en-us/azure/well-architected/security/design-identity-and-access-management" target="_blank">Azure Well-Architected Framework — Identity &amp; Access Management</a></li>
         <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-security-controls" target="_blank">Security Controls in Azure App Service</a></li>
+      </ul>
+    </section>
+
+    <!-- 12.5 Source Code & Implementation -->
+    <section id="source-code">
+      <h2>12.5 Source Code & Implementation</h2>
+      
+      <p>
+        <strong>About this Repository:</strong> The EasyAuth lab repository is structured to demonstrate security patterns with infrastructure templates (Bicep), reference documentation, and complete code examples. The actual Function App source code is not pre-deployed; instead, you build it using the C# patterns shown in this documentation.
+      </p>
+
+      <div class="callout callout-info">
+        <strong>🔧 How to Implement:</strong>
+        <ol>
+          <li><strong>Reference Code:</strong> The C# code examples in section 8 show exactly how to build the Function App (token acquisition, HTTP requests, error handling)</li>
+          <li><strong>Complete Guide:</strong> <a href="../../docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a> provides step-by-step instructions for creating a working Function App</li>
+          <li><strong>Deploy:</strong> Use Azure Functions Core Tools or Visual Studio to deploy your function to the pre-configured Function App</li>
+          <li><strong>Test:</strong> Follow the testing guide to verify bearer token flow works end-to-end</li>
+          <li><strong>Monitor:</strong> Use Application Insights to capture evidence and troubleshoot issues</li>
+        </ol>
+      </div>
+
+      <p>
+        <strong>Why It Works This Way:</strong> The bearer token pattern is language-agnostic. You can implement the caller in C#, Java, Python, or any language that supports Azure SDK's <code>DefaultAzureCredential</code>. The infrastructure (Bicep) and security controls (Easy Auth, managed identity, RBAC) are independent of implementation language.
+      </p>
+
+      <p>
+        <strong>Key Files in Repository:</strong>
+      </p>
+      <ul>
+        <li><code>infra/modules/</code> — Bicep infrastructure definitions (Function App, Logic App, VNet, Easy Auth)</li>
+        <li><code>docs/lab3-testing-and-verification.md</code> — Complete testing guide with C# implementation</li>
+        <li><code>documentation/architecture/lab3-bearer-token-flow.html</code> — This page (architecture &amp; reference)</li>
+        <li><code>src/httpTriggerWorkflow/</code> — Example Logic App workflow (reference for testing)</li>
       </ul>
     </section>
 
