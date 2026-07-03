@@ -26,6 +26,15 @@ param appInsightsConnectionString string
 @description('Entra ID tenant ID — used for WEBSITE_AUTH_AAD_ALLOWED_TENANTS.')
 param entraAppTenantId string = ''
 
+@description('Subnet resource ID for outbound VNet integration. Leave empty to skip VNet integration.')
+param vnetIntegrationSubnetId string = ''
+
+@description('Subnet resource ID for the inbound private endpoint. Leave empty to skip (public access remains enabled).')
+param privateEndpointSubnetId string = ''
+
+@description('Resource ID of the privatelink.azurewebsites.net private DNS zone. Required when privateEndpointSubnetId is set.')
+param privateDnsZoneId string = ''
+
 var baseName = 'la-easyauth-lab-${environmentName}'
 var suffix = uniqueString(resourceGroup().id)
 var logicAppName = '${baseName}-la-${suffix}'
@@ -98,6 +107,9 @@ var tenantAppSetting = empty(entraAppTenantId) ? [] : [
 
 var allAppSettings = concat(baseAppSettings, tenantAppSetting)
 
+var hasVnetIntegration = !empty(vnetIntegrationSubnetId)
+var hasPrivateEndpoint = !empty(privateEndpointSubnetId)
+
 resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
   name: logicAppName
   location: location
@@ -108,10 +120,55 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: appServicePlanId
     httpsOnly: true
+    // Disable public inbound access when a private endpoint is configured
+    publicNetworkAccess: hasPrivateEndpoint ? 'Disabled' : 'Enabled'
+    // Outbound VNet integration — routes egress through the VNet
+    virtualNetworkSubnetId: hasVnetIntegration ? vnetIntegrationSubnetId : null
+    vnetRouteAllEnabled: hasVnetIntegration
     siteConfig: {
       netFrameworkVersion: 'v6.0'
       appSettings: allAppSettings
     }
+  }
+}
+
+// ── Private Endpoint (inbound) ──
+// Exposes the Logic App on the VNet so only callers within the VNet
+// (or via private peering) can reach the HTTP trigger endpoint.
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = if (hasPrivateEndpoint) {
+  name: 'pe-${logicAppName}'
+  location: location
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'plsc-${logicAppName}'
+        properties: {
+          privateLinkServiceId: logicApp.id
+          groupIds: ['sites']
+        }
+      }
+    ]
+  }
+}
+
+// ── Private DNS Zone Group ──
+// Automatically registers the private endpoint NIC IP as an A record
+// in the privatelink.azurewebsites.net zone so DNS resolves to the private IP.
+resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = if (hasPrivateEndpoint && !empty(privateDnsZoneId)) {
+  parent: privateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'privatelink-azurewebsites-net'
+        properties: {
+          privateDnsZoneId: privateDnsZoneId
+        }
+      }
+    ]
   }
 }
 
@@ -161,3 +218,4 @@ output logicAppName string = logicApp.name
 output logicAppDefaultHostname string = logicApp.properties.defaultHostName
 output logicAppResourceId string = logicApp.id
 output logicAppPrincipalId string = logicApp.identity.principalId
+output privateEndpointId string = hasPrivateEndpoint ? privateEndpoint.id : ''

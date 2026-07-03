@@ -27,9 +27,24 @@ param entraAppTenantId string
 @description('Deploy an optional Function App for comparison testing.')
 param deployFunctionApp bool = false
 
+@description('Deploy the Function App → Logic App private-endpoint demo (Lab 3). Requires separate Entra app registration for the Function App.')
+param deployFuncCallerDemo bool = false
+
+@description('Entra ID application client ID for the caller Function App Easy Auth registration. Required when deployFuncCallerDemo = true.')
+param funcCallerEntraClientId string = ''
+
 // ── 1. Foundation ──────────────────────────────
 module foundation 'modules/foundation.bicep' = {
   name: 'foundation'
+  params: {
+    environmentName: environmentName
+    location: location
+  }
+}
+
+// ── 1b. Networking (optional — required for func-caller demo) ──
+module networking 'modules/networking.bicep' = if (deployFuncCallerDemo) {
+  name: 'networking'
   params: {
     environmentName: environmentName
     location: location
@@ -46,10 +61,15 @@ module logicApp 'modules/logicapp.bicep' = {
     storageAccountName: foundation.outputs.storageAccountName
     storageAccountId: foundation.outputs.storageAccountId
     appInsightsConnectionString: foundation.outputs.appInsightsConnectionString
+    entraAppTenantId: entraAppTenantId
+    // Wire VNet integration + private endpoint when func-caller demo is enabled
+    vnetIntegrationSubnetId: deployFuncCallerDemo ? networking.outputs.appIntegrationSubnetId : ''
+    privateEndpointSubnetId: deployFuncCallerDemo ? networking.outputs.privateEndpointSubnetId : ''
+    privateDnsZoneId: deployFuncCallerDemo ? networking.outputs.privateDnsZoneId : ''
   }
 }
 
-// ── 3. Easy Auth ───────────────────────────────
+// ── 3. Easy Auth on Logic App ────────────────────────
 module easyAuth 'modules/easyauth.bicep' = {
   name: 'easyauth'
   params: {
@@ -57,10 +77,14 @@ module easyAuth 'modules/easyauth.bicep' = {
     easyAuthMode: easyAuthMode
     entraAppClientId: entraAppClientId
     entraAppTenantId: entraAppTenantId
+    // When the func-caller demo is active, restrict inbound calls to the Function App's
+    // managed identity only. The Function App acquires a token as this identity and
+    // presents it as Authorization: Bearer <token> when invoking the Logic App trigger.
+    allowedPrincipals: deployFuncCallerDemo ? [funcCallerApp.outputs.functionAppPrincipalId] : []
   }
 }
 
-// ── 4. Function App (optional) ─────────────────
+// ── 4. Function App (optional, comparison baseline) ─────────────
 module functionApp 'modules/functionapp.bicep' = if (deployFunctionApp) {
   name: 'functionapp'
   params: {
@@ -76,9 +100,35 @@ module functionApp 'modules/functionapp.bicep' = if (deployFunctionApp) {
   }
 }
 
+// ── 5. Function App Caller + Easy Auth (func → Logic App via private endpoint) ──
+// Deploys a dedicated Function App with:
+//   - Outbound VNet integration → routes HTTP calls through the VNet
+//   - System-assigned managed identity → used to acquire Entra tokens for the Logic App
+//   - Easy Auth (AllowAnonymous + allowedPrincipals) protecting its own inbound trigger
+// The Logic App Easy Auth is updated (module easyauth above) to only allow this
+// Function App’s managed identity principal ID.
+module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDemo) {
+  name: 'functionapp-caller'
+  params: {
+    environmentName: environmentName
+    location: location
+    appInsightsConnectionString: foundation.outputs.appInsightsConnectionString
+    storageAccountName: foundation.outputs.storageAccountName
+    storageAccountId: foundation.outputs.storageAccountId
+    vnetIntegrationSubnetId: networking.outputs.appIntegrationSubnetId
+    entraAppClientId: funcCallerEntraClientId
+    entraAppTenantId: entraAppTenantId
+    logicAppHostname: logicApp.outputs.logicAppDefaultHostname
+    logicAppEntraClientId: entraAppClientId
+  }
+}
+
 // ── Outputs ────────────────────────────────────
 output resourceGroupName string = resourceGroup().name
 output logicAppName string = logicApp.outputs.logicAppName
 output logicAppDefaultHostname string = logicApp.outputs.logicAppDefaultHostname
 output logicAppResourceId string = logicApp.outputs.logicAppResourceId
 output storageAccountName string = foundation.outputs.storageAccountName
+output functionAppCallerName string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppName : ''
+output functionAppCallerHostname string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppDefaultHostname : ''
+output functionAppCallerPrincipalId string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppPrincipalId : ''

@@ -23,6 +23,7 @@ param logicAppName string
 @description('Unauthenticated client action – AllowAnonymous is required for Logic Apps Standard portal manageability.')
 @allowed([
   'AllowAnonymous'
+  'Return401'
 ])
 param easyAuthMode string = 'AllowAnonymous'
 
