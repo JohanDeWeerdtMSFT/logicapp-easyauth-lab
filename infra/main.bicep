@@ -69,22 +69,7 @@ module logicApp 'modules/logicapp.bicep' = {
   }
 }
 
-// ── 3. Easy Auth on Logic App ────────────────────────
-module easyAuth 'modules/easyauth.bicep' = {
-  name: 'easyauth'
-  params: {
-    logicAppName: logicApp.outputs.logicAppName
-    easyAuthMode: easyAuthMode
-    entraAppClientId: entraAppClientId
-    entraAppTenantId: entraAppTenantId
-    // When the func-caller demo is active, restrict inbound calls to the Function App's
-    // managed identity only. The Function App acquires a token as this identity and
-    // presents it as Authorization: Bearer <token> when invoking the Logic App trigger.
-    allowedPrincipals: deployFuncCallerDemo ? [funcCallerApp.outputs.functionAppPrincipalId] : []
-  }
-}
-
-// ── 4. Function App (optional, comparison baseline) ─────────────
+// ── 3. Function App (optional, comparison baseline) ─────────────
 module functionApp 'modules/functionapp.bicep' = if (deployFunctionApp) {
   name: 'functionapp'
   params: {
@@ -123,6 +108,24 @@ module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDe
   }
 }
 
+// ── 4. Easy Auth on Logic App ────────────────────────
+// Compute allowedPrincipals safely: only include the Function App's principal ID when deployed.
+var easyAuthAllowedPrincipals = deployFuncCallerDemo ? [ funcCallerApp.outputs.functionAppPrincipalId ] : []
+
+module easyAuth 'modules/easyauth.bicep' = {
+  name: 'easyauth'
+  params: {
+    logicAppName: logicApp.outputs.logicAppName
+    easyAuthMode: easyAuthMode
+    entraAppClientId: entraAppClientId
+    entraAppTenantId: entraAppTenantId
+    allowedPrincipals: easyAuthAllowedPrincipals
+  }
+  dependsOn: [
+    funcCallerApp
+  ]
+}
+
 // ── Outputs ────────────────────────────────────
 output resourceGroupName string = resourceGroup().name
 output logicAppName string = logicApp.outputs.logicAppName
@@ -132,3 +135,4 @@ output storageAccountName string = foundation.outputs.storageAccountName
 output functionAppCallerName string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppName : ''
 output functionAppCallerHostname string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppDefaultHostname : ''
 output functionAppCallerPrincipalId string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppPrincipalId : ''
+
