@@ -386,7 +386,7 @@ Response: 20.y.z.w (public IP — blocked by public access disabled)</code></pre
       <div class="callout callout-info">
         <strong>📖 Complete Testing & Implementation Guide</strong><br>
         For step-by-step instructions on how to create and deploy a test Function App with full bearer token code,
-        see <a href="../../docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a>.
+        see <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a>.
         This includes:
         <ul style="margin-top: 0.5rem; margin-bottom: 0;">
           <li>Complete C# HttpTrigger function implementation</li>
@@ -715,7 +715,7 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
         <strong>🔧 How to Implement:</strong>
         <ol>
           <li><strong>Reference Code:</strong> The C# code examples in section 8 show exactly how to build the Function App (token acquisition, HTTP requests, error handling)</li>
-          <li><strong>Complete Guide:</strong> <a href="../../docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a> provides step-by-step instructions for creating a working Function App</li>
+          <li><strong>Complete Guide:</strong> <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a> provides step-by-step instructions for creating a working Function App</li>
           <li><strong>Deploy:</strong> Use Azure Functions Core Tools or Visual Studio to deploy your function to the pre-configured Function App</li>
           <li><strong>Test:</strong> Follow the testing guide to verify bearer token flow works end-to-end</li>
           <li><strong>Monitor:</strong> Use Application Insights to capture evidence and troubleshoot issues</li>
@@ -731,9 +731,9 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
       </p>
       <ul>
         <li><code>infra/modules/</code> — Bicep infrastructure definitions (Function App, Logic App, VNet, Easy Auth)</li>
-        <li><code>docs/lab3-testing-and-verification.md</code> — Complete testing guide with C# implementation</li>
+        <li><code>labs/lab3-bearer-token/docs/lab3-testing-and-verification.md</code> — Complete testing guide with C# implementation</li>
         <li><code>documentation/architecture/lab3-bearer-token-flow.html</code> — This page (architecture &amp; reference)</li>
-        <li><code>src/httpTriggerWorkflow/</code> — Example Logic App workflow (reference for testing)</li>
+        <li><code>labs/lab3-bearer-token/workflows/httpTriggerWorkflow/</code> — Example Logic App workflow (reference for testing)</li>
       </ul>
     </section>
 

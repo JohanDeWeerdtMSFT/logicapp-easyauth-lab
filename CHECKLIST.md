@@ -21,7 +21,7 @@
 6. Contract checks pass.
 
 ## Deploy Gate
-1. What-if executed and reviewed for Lab 1 (`rg-la-easyauth-lab-dev`).
+1. What-if executed and reviewed for Lab 1 (`{resourceGroupName}`).
 2. What-if executed and reviewed for Lab 2 (`rg-la-easyauth-lab-apim-dev`).
 3. Lab 1 deployment completed.
 4. Lab 2 deployment completed.

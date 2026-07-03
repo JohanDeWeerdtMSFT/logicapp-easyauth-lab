@@ -1,0 +1,45 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Response": {
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "X-Scenario-Tag": "@{coalesce(triggerOutputs()?['queries']?['scenario'], 'default')}"
+                    },
+                    "body": {
+                        "status": "ok",
+                        "timestamp": "@{utcNow()}",
+                        "scenario": "@{coalesce(triggerOutputs()?['queries']?['scenario'], 'default')}",
+                        "authInfo": {
+                            "isAuthenticated": "@{not(empty(coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'], '')))}",
+                            "principalName": "@{coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-NAME'], 'anonymous')}",
+                            "principalId": "@{coalesce(triggerOutputs()?['headers']?['X-MS-CLIENT-PRINCIPAL-ID'], 'none')}"
+                        },
+                        "triggerHeaders": {
+                            "host": "@{coalesce(triggerOutputs()?['headers']?['Host'], '')}",
+                            "userAgent": "@{coalesce(triggerOutputs()?['headers']?['User-Agent'], '')}"
+                        }
+                    }
+                },
+                "runAfter": {}
+            }
+        },
+        "triggers": {
+            "When_a_HTTP_request_is_received": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "GET"
+                }
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {}
+    },
+    "kind": "Stateful"
+}

@@ -2,18 +2,17 @@ using '../main.bicep'
 
 param environmentName = 'dev'
 param location = 'westeurope'
-param easyAuthMode = 'Return401'
+param easyAuthMode = 'AllowAnonymous'
 
-// TODO: Replace with actual Entra ID app registration values after running:
-//   az ad app create --display-name "la-easyauth-lab-dev"
-param entraAppClientId = '<ENTRA_APP_CLIENT_ID>'
-param entraAppTenantId = '<ENTRA_TENANT_ID>'
+// Lab 1 + Lab 3: Logic App Entra app registration
+// az ad app create --display-name "la-easyauth-lab-dev"
+param entraAppClientId = '786594a8-6b38-40cf-8c6b-d434b539dd46'
+param entraAppTenantId = '00922812-791e-41c8-a99e-45c3ed784cf5'
 
 param deployFunctionApp = false
 
 // ── Lab 3: Function App caller → Logic App via private endpoint ──
-// Set deployFuncCallerDemo = true and supply a second Entra app registration
-// for the Function App's own Easy Auth. Run:
-//   az ad app create --display-name "la-easyauth-lab-caller-dev"
-param deployFuncCallerDemo = false
-param funcCallerEntraClientId = '<FUNC_CALLER_ENTRA_APP_CLIENT_ID>'
+// Function App caller Entra app registration for its own Easy Auth
+// az ad app create --display-name "la-easyauth-lab-caller-dev"
+param deployFuncCallerDemo = true
+param funcCallerEntraClientId = 'a571dbde-47f4-4e3d-a1f8-1b012d065786'

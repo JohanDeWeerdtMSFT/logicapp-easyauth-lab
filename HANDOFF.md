@@ -6,7 +6,7 @@ Build and validate **two complementary Azure labs** that demonstrate different s
 
 Validate that Easy Auth (`authsettingsV2`) can secure Logic App Standard HTTP triggers **without breaking portal manageability**, using the `AllowAnonymous` + `allowedPrincipals` pattern from [azcloudsecurity.io](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/).
 
-- Resource Group: `rg-la-easyauth-lab-dev`
+- Resource Group: `{resourceGroupName}`
 - Goal: Prove Easy Auth works for **limited numbers of apps** when configured correctly
 - Key insight: Use `AllowAnonymous` (not `Return401`) — requests with an Authorization header are still validated; SAS keys remain available as a trigger mechanism
 

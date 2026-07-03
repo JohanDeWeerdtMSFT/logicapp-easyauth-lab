@@ -17,8 +17,9 @@
     Resource group that contains the Function App.
 
 .PARAMETER LogicAppUrl
-    Full callback URL of the Logic App HTTP trigger (including SAS parameters).
-    Find it: Azure Portal → Logic App → Workflows → httpTriggerWorkflow → Overview → Callback URL
+    Base invoke URL of the Logic App HTTP trigger (no SAS signature needed!).
+    Format: https://<logicapp-name>.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
+    Why no signature? Managed Identity bearer token provides authentication instead.
 
 .PARAMETER LogicAppAudience
     Entra ID App Registration client ID for the Logic App, in URI format.
@@ -31,11 +32,13 @@
 
 .EXAMPLE
     .\deploy.ps1 `
-      -FunctionAppName "la-easyauth-lab-dev-func-abc123" `
+      -FunctionAppName "la-easyauth-lab-dev-caller-xyz123" `
       -ResourceGroupName "rg-la-easyauth-lab-dev" `
-      -LogicAppUrl "https://la-easyauth-lab-dev-logic-abc123.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=<sig>" `
-      -LogicAppAudience "api://a1b2c3d4-e5f6-7890-abcd-ef1234567890" `
+      -LogicAppUrl "https://la-easyauth-lab-dev-la-xyz123.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+      -LogicAppAudience "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
       -TenantId "00922812-791e-41c8-a99e-45c3ed784cf5"
+    
+    Note: No SAS signature (sig=...) is required! The bearer token authenticates the request.
 #>
 [CmdletBinding()]
 param (
@@ -80,9 +83,11 @@ az functionapp deployment source config-zip `
     --src $ZipPath
 if ($LASTEXITCODE -ne 0) { throw "az functionapp deployment failed" }
 
-# ── 4. Configure application settings ────────────────────────────────────────
+# ── 4. Configure application settings (NO SECRETS!) ────────────────────────────
 Write-Host ""
 Write-Host "=== Step 4: Configure application settings ===" -ForegroundColor Cyan
+Write-Host "Note: These settings contain NO SECRETS or SAS signatures." -ForegroundColor Green
+Write-Host "      Authentication uses Managed Identity bearer tokens instead." -ForegroundColor Green
 az functionapp config appsettings set `
     --name $FunctionAppName `
     --resource-group $ResourceGroupName `

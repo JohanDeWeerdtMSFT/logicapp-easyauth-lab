@@ -29,8 +29,8 @@ deploying it to Azure, running tests, and collecting evidence that everything wo
 ### What You'll Need
 
 **Azure Access:**
-- Contributor role on the subscription containing `rg-la-easyauth-lab-dev`
-- Access to Entra ID tenant (00922812-791e-41c8-a99e-45c3ed784cf5)
+- Contributor role on the subscription containing `{resourceGroupName}`
+- Access to Entra ID tenant (`{tenantId}`)
 - Owner or higher role on resource group `rg-la-easyauth-lab-dev`
 
 **Your Local Machine:**
