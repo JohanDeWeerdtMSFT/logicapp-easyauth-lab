@@ -6,6 +6,7 @@ Two complementary Azure labs to validate different security patterns for Logic A
 
 1. **Lab 1 — Easy Auth** (`rg-la-easyauth-lab-dev`): Validates that Easy Auth can enforce Entra ID authentication **without breaking portal manageability** using the `AllowAnonymous` + `allowedPrincipals` pattern.
 2. **Lab 2 — APIM-Centric** (`rg-la-easyauth-lab-apim-dev`): Demonstrates centralized JWT validation at API Management, with backend Logic Apps protected via network restrictions instead of Easy Auth.
+3. **Lab 3 — Function App Caller with Easy Auth** (`rg-la-easyauth-lab-dev` — extends Lab 1): Demonstrates a Function App calling a Logic App via private endpoints with **managed identity-based authentication** (no shared secrets).
 
 > See [`docs/decision-guidance.md`](docs/decision-guidance.md) for a detailed comparison of when to use which pattern.
 
@@ -15,6 +16,7 @@ Two complementary Azure labs to validate different security patterns for Logic A
 - [azcloudsecurity.io — Logic App Standard Easy Auth](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/) — AllowAnonymous pattern analysis
 - [Microsoft Learn — App Service Authentication Overview](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization#considerations-for-using-built-in-authentication) — Easy Auth middleware architecture
 - [Microsoft Learn — Secure Logic Apps with VNet and Private Endpoints](https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint) — network isolation patterns
+- [Microsoft Learn — Managed Identities for Azure Resources](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) — foundation for Lab 3 identity-based auth
 
 ## Lab 1 — Easy Auth (AllowAnonymous Pattern)
 
@@ -53,6 +55,136 @@ Two complementary Azure labs to validate different security patterns for Logic A
 - **Token enforcement**: ✅ Requests with Authorization header are validated against Entra requirements
 - **SAS keys**: Remain available as a trigger mechanism
 
+## Lab 3 — Function App Caller with Easy Auth (Managed Identity Pattern)
+
+### Architecture
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ Resource Group: rg-la-easyauth-lab-dev (extends Lab 1)            │
+│                                                                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ Virtual Network (10.0.0.0/16)                               │ │
+│  │                                                              │ │
+│  │  Subnet 1: App Integration (10.0.0.0/24)                    │ │
+│  │  ├─ VNet-integrated Function App (caller)                   │ │
+│  │  │  ├─ System-Assigned MI (bearer token → Logic App)        │ │
+│  │  │  └─ Easy Auth (AllowAnonymous + allowedPrincipals)       │ │
+│  │  │                                                           │ │
+│  │  Subnet 2: Private Endpoint (10.0.1.0/24)                   │ │
+│  │  ├─ PE for Logic App                                        │ │
+│  │  │  └─ Private DNS zone (privatelink.azurewebsites.net)    │ │
+│  │  │                                                           │ │
+│  │  │     ┌──────────────────────────────┐                    │ │
+│  │  │     │ Logic App Standard (WS1)      │                    │ │
+│  │  │     │ la-easyauth-lab-xxx-la       │                    │ │
+│  │  │     │                               │                    │ │
+│  │  │     │ authsettingsV2:               │                    │ │
+│  │  │     │ ├─ AllowAnonymous             │                    │ │
+│  │  │     │ ├─ allowedPrincipals:         │                    │ │
+│  │  │     │ │  [Function App's MI PID]    │                    │ │
+│  │  │     │ └─ platform.enabled: true     │                    │ │
+│  │  │     │                               │                    │ │
+│  │  │     │ publicNetworkAccess: Disabled │                    │ │
+│  │  │     └──────────────────────────────┘                    │ │
+│  │                                                              │ │
+│  │ ┌─────────────────┐         ┌──────────────────────┐        │ │
+│  │ │ Shared Storage  │         │ App Insights + LAW   │        │ │
+│  │ │ (managed ID)    │         │                      │        │ │
+│  │ └─────────────────┘         └──────────────────────┘        │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                    │
+│  Request Flow:                                                     │
+│  1. Caller (Function App) → SystemMI acquires token               │
+│  2. Token includes aud=Logic App Entra app ID                     │
+│  3. HTTPS call to Logic App private endpoint                      │
+│  4. Private DNS resolves *.azurewebsites.net → PE IP              │
+│  5. Private endpoint routes to Logic App (public disabled)        │
+│  6. Easy Auth validates token, checks allowedPrincipals           │
+│  7. Workflow executes (if principal ID matches)                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Key Insight: Managed Identity + Private Endpoints = Zero Secrets
+
+**Lab 3 eliminates all shared secrets:**
+- Function App acquires access token using its **system-assigned managed identity** (no credentials to rotate)
+- Token is presented as `Authorization: Bearer <token>` to Logic App private endpoint
+- Logic App Easy Auth validates token and restricts access to **only the Function App's principal ID**
+- Network isolation via private endpoints prevents public internet exposure
+
+**Benefits:**
+- ✅ **No secrets** to manage or rotate (managed identity is automatic)
+- ✅ **Network isolation** via private endpoints (VNet-integrated caller, PE-protected receiver)
+- ✅ **Fine-grained access** via Easy Auth `allowedPrincipals` (only specific identities can call)
+- ✅ **Audit trail** via Azure AD sign-in logs (token acquisition is logged)
+- ✅ **Portal management** preserved (AllowAnonymous + bearer token validation)
+
+### When to Use Lab 3 Pattern
+
+- **Self-contained workloads**: Function App and Logic App are part of the same solution (not multi-tenant)
+- **Secure by default**: Want identity-based auth without APIM complexity
+- **Ephemeral integration**: Temporary or service-to-service calls (not a stable API)
+- **Few callers**: Only a handful of apps need access (use allowedPrincipals for each)
+
+### Deployment
+
+Lab 3 is deployed as an extension to Lab 1 by setting `deployFuncCallerDemo = true` in the bicep parameters:
+
+```powershell
+$params = @{
+  environmentName = "dev"
+  location = "westeurope"
+  deployFuncCallerDemo = $true
+  easyAuthMode = "AllowAnonymous"
+  entraAppClientId = "<Logic App Entra client ID>"
+  entraAppTenantId = "<Tenant ID>"
+  funcCallerEntraClientId = "<Function App Entra client ID>"
+}
+
+az deployment group create `
+  --resource-group rg-la-easyauth-lab-dev `
+  --template-file infra/main.bicep `
+  --parameters $params
+```
+
+**Deployed Resources:**
+- Virtual Network (la-easyauth-lab-dev-vnet)
+- Two subnets (app integration, private endpoints)
+- Private DNS zone (privatelink.azurewebsites.net)
+- Private endpoint for Logic App
+- Dedicated Function App with S1 plan (required for VNet integration)
+- System-assigned managed identity on Function App
+- RBAC role assignments (Storage Blob Data Contributor for managed identity)
+
+### Verification Steps
+
+1. **Check Function App connectivity**:
+   ```bash
+   az webapp log stream --resource-group rg-la-easyauth-lab-dev \
+     --name la-easyauth-lab-dev-caller-daaq6t5xzrpaw
+   ```
+
+2. **Review Easy Auth configuration**:
+   ```bash
+   az resource show --resource-group rg-la-easyauth-lab-dev \
+     --resource-type "Microsoft.Web/sites/config" \
+     --name la-easyauth-lab-dev-la-daaq6t5xzrpaw/authsettingsv2
+   ```
+
+3. **Test token acquisition** (from Function App code):
+   ```csharp
+   var credential = new DefaultAzureCredential();
+   var token = await credential.GetTokenAsync(
+     new TokenRequestContext(new[] { $"api://{logicAppEntraClientId}/.default" })
+   );
+   ```
+
+4. **Monitor in Application Insights**:
+   - Track token acquisition attempts
+   - Watch for Easy Auth 401/403 responses
+   - Verify request flow end-to-end
+
 ## Prerequisites
 
 - Azure subscription with Contributor access
@@ -67,6 +199,14 @@ Two complementary Azure labs to validate different security patterns for Logic A
 ### Lab 1 (Easy Auth)
 ```powershell
 .\scripts\deploy.ps1 -EntraAppClientId <clientId> -EntraAppTenantId <tenantId>
+```
+
+### Lab 3 (Function App Caller with Easy Auth)
+```powershell
+.\scripts\deploy.ps1 -EntraAppClientId <logic-app-client-id> `
+  -EntraAppTenantId <tenantId> `
+  -DeployFuncCallerDemo $true `
+  -FuncCallerEntraClientId <function-app-client-id>
 ```
 
 ### Lab 2 (APIM)
@@ -137,20 +277,24 @@ See [`docs/decision-guidance.md`](docs/decision-guidance.md) for the full trade-
 ## Teardown
 
 ```powershell
-# Lab 1
+# Lab 1 + Lab 3 (same resource group)
 az group delete --name rg-la-easyauth-lab-dev --yes --no-wait
-# Lab 2
+
+# Lab 2 (separate resource group)
 az group delete --name rg-la-easyauth-lab-apim-dev --yes --no-wait
 ```
 
 ## Cost Estimate
 
-| Resource         | Lab 1 (Easy Auth) | Lab 2 (APIM) |
-|------------------|-------------------|---------------|
-| App Service Plan | WS1 ~€130/mo      | WS1 ~€130/mo  |
-| Storage Account  | ~€1/mo            | ~€1/mo        |
-| Log Analytics    | ~€2/mo            | ~€2/mo        |
-| APIM Developer   | —                 | ~€45/mo       |
-| **Total**        | **~€133/mo**      | **~€178/mo**  |
+| Resource              | Lab 1 (Easy Auth) | Lab 2 (APIM) | Lab 3 (Func Caller) |
+|-----------------------|-------------------|--------------|---------------------|
+| App Service Plan      | WS1 ~€130/mo      | WS1 ~€130/mo | WS1 + S1 ~€235/mo   |
+| Storage Account       | ~€1/mo            | ~€1/mo       | ~€1/mo              |
+| Log Analytics         | ~€2/mo            | ~€2/mo       | ~€2/mo              |
+| Virtual Network       | —                 | —            | ~€6/mo              |
+| Private Endpoint      | —                 | —            | ~€0.50/mo           |
+| APIM Developer        | —                 | ~€45/mo      | —                   |
+| **Total**             | **~€133/mo**      | **~€178/mo** | **~€245/mo**        |
 
+> ⚠️ **Lab 3 shares the same resource group as Lab 1** — enabling Lab 3 adds Function App and networking costs on top of Lab 1.
 > ⚠️ Delete resources after testing to avoid ongoing charges.
