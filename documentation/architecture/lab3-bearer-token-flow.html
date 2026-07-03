@@ -51,30 +51,34 @@
       <li>Lab 3 — Bearer Token Flow</li>
     </ol>
 
-    <h1>Lab 3 — Managed Identity Bearer Token Flow
-      <span class="subtitle">Service-to-service authentication without shared secrets or SAS tokens</span>
+    <h1>Lab 3 — Secure Service-to-Service Calls with Managed Identity
+      <span class="subtitle">Enable Function Apps and services to call Logic Apps without managing secrets or credentials</span>
     </h1>
 
     <!-- 1. Overview -->
     <section id="overview">
       <h2>1. Overview</h2>
+      
       <p>
-        Lab 3 demonstrates how a Function App can call a Logic App securely using <strong>bearer token authentication</strong>
-        with managed identities — <strong>eliminating all shared secrets</strong> including SAS tokens.
+        Lab 3 shows you how to build a production-ready architecture where a Function App securely calls a Logic App 
+        using bearer tokens. The critical innovation: <strong>your applications never store, rotate, or manage credentials</strong>. 
+        Instead, managed identity automatically handles authentication.
       </p>
-      <p>
-        Resource Group: <span class="resource-group-label">rg-la-easyauth-lab-dev</span> (extends Lab 1)
-      </p>
+
       <div class="callout callout-success">
-        <strong>Key Innovation:</strong> No SAS tokens, no shared secrets, no manual credential rotation.
-        The Function App's system-assigned managed identity is automatically refreshed by Azure.
+        <strong>What This Solves:</strong> Enable service-to-service communication without SAS tokens, without shared secrets, 
+        and without manual credential rotation. Managed identity handles everything automatically.
       </div>
+
+      <p><strong>This lab deploys to:</strong> Resource Group <span class="resource-group-label">rg-la-easyauth-lab-dev</span></p>
+
+      <h3>What You're Building</h3>
       <ul>
-        <li><strong>Caller:</strong> Azure Function App (S1 plan, system-assigned managed identity, VNet-integrated)</li>
-        <li><strong>Receiver:</strong> Logic App Standard (WS1 plan, VNet-integrated, private endpoint-protected)</li>
-        <li><strong>Authentication:</strong> OAuth 2.0 bearer tokens from Entra ID</li>
-        <li><strong>Network Isolation:</strong> Private endpoints, private DNS zone, VNet routing</li>
-        <li><strong>Authorization:</strong> Easy Auth with allowedPrincipals filtering</li>
+        <li><strong>Function App Caller:</strong> Runs in a Standard S1 plan with system-assigned managed identity and VNet integration</li>
+        <li><strong>Logic App Receiver:</strong> Runs in Standard WS1 plan, protected by Easy Auth and private endpoints</li>
+        <li><strong>Authentication Method:</strong> OAuth 2.0 bearer tokens issued by Entra ID</li>
+        <li><strong>Network Path:</strong> VNet integration + private DNS resolution + private endpoints</li>
+        <li><strong>Authorization:</strong> Easy Auth with allowedPrincipals filter — only the Function App's identity is allowed</li>
       </ul>
     </section>
 

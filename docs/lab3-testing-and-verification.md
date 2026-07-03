@@ -1,52 +1,75 @@
-# Lab 3: Testing & Verification Guide
-## Bearer Token Flow — Evidence Collection & Proof of Concept
+# Lab 3: Complete Testing & Deployment Guide
 
-**Last Updated:** 2026-07-03  
-**Lab 3 Resource Group:** `rg-la-easyauth-lab-dev`  
-**Region:** `westeurope`  
-**Subscription:** `6851693c-0b74-4462-8da8-cd498b088827`
+This guide walks you through creating a test Function App that calls Logic App using managed identity bearer tokens, 
+deploying it to Azure, running tests, and collecting evidence that everything works correctly.
+
+**By the end of this guide, you'll have:**
+- A working Function App that uses managed identity to acquire bearer tokens
+- Complete evidence that the bearer token flow is secure and functional
+- Logs and screenshots documenting the entire flow
+- Understanding of how to troubleshoot common issues
+
+**Time Required:** Approximately 60 minutes total
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-1. [Prerequisites & Setup](#prerequisites--setup)
-2. [Verify Infrastructure Deployment](#verify-infrastructure-deployment)
-3. [Create Test Function App with Bearer Token Code](#create-test-function-app-with-bearer-token-code)
-4. [Run & Monitor Tests](#run--monitor-tests)
-5. [Collect Evidence](#collect-evidence)
-6. [Troubleshooting Checklist](#troubleshooting-checklist)
+1. [Prerequisites](#prerequisites--setup) — What you need before starting
+2. [Infrastructure Verification](#verify-infrastructure-deployment) — Confirm everything is deployed
+3. [Create Your Test Function](#create-test-function-app-with-bearer-token-code) — Build and deploy the test code
+4. [Deploy to Azure](#run--monitor-tests) — Publish to your Function App
+5. [Collect Evidence](#collect-evidence) — Capture proof that it works
+6. [Troubleshooting](#troubleshooting-checklist) — Solutions for common issues
 
 ---
 
 ## Prerequisites & Setup
 
-### Required Access
+### What You'll Need
 
-- ✅ Azure Subscription access (6851693c-0b74-4462-8da8-cd498b088827)
-- ✅ Entra ID tenant access (00922812-791e-41c8-a99e-45c3ed784cf5)
-- ✅ Owner or Contributor role on resource group `rg-la-easyauth-lab-dev`
-- ✅ Visual Studio Code with Azure Functions extension
+**Azure Access:**
+- Contributor role on the subscription containing `rg-la-easyauth-lab-dev`
+- Access to Entra ID tenant (00922812-791e-41c8-a99e-45c3ed784cf5)
+- Owner or higher role on resource group `rg-la-easyauth-lab-dev`
 
-### Local Environment
+**Your Local Machine:**
+- Azure Functions Core Tools (version 4 or higher)
+- Visual Studio Code (recommended) or Visual Studio
+- .NET 6 SDK or higher
+- PowerShell or Bash terminal
+- Azure CLI (optional but recommended)
 
-```bash
-# Install Azure Functions Core Tools (v4+)
-# macOS:
-brew tap azure/azurecli && brew install azure-functions
+### Install Azure Functions Core Tools
 
-# Windows (winget):
+**Windows (PowerShell):**
+```powershell
 winget install Microsoft.AzureFunctionsCoreTools
+```
 
-# Verify installation
+**macOS (Homebrew):**
+```bash
+brew tap azure/azurecli && brew install azure-functions
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list'
+sudo apt-get update && sudo apt-get install azure-functions-core-tools-4
+```
+
+**Verify Installation:**
+```bash
 func --version
+# Should output version 4.x or higher
 ```
 
 ---
 
 ## Verify Infrastructure Deployment
 
-### 1️⃣ Check Deployed Resources (Azure Portal)
+Before you write any code, confirm that Lab 3 infrastructure is correctly deployed in Azure.
 
 Navigate to `rg-la-easyauth-lab-dev` and verify:
 

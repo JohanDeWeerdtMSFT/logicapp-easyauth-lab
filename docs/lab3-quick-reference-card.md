@@ -1,32 +1,44 @@
-# Lab 3 Testing — Quick Reference Card
+# Lab 3: Testing Quick Reference
 
-**Print or save this for quick access during testing**
-
----
-
-## 📋 Pre-Test Checklist
-
-- [ ] Function App: S1 plan (or higher)
-- [ ] Function App: System-assigned MI enabled
-- [ ] Function App: VNet integration enabled
-- [ ] Logic App: `publicNetworkAccess: Disabled`
-- [ ] Logic App: Easy Auth with `AllowAnonymous`
-- [ ] Logic App: Function App principal ID in `allowedPrincipals`
-- [ ] VNet: 10.0.0.0/16 configured
-- [ ] Private DNS Zone: `privatelink.azurewebsites.net` created
-- [ ] Private Endpoint: Logic App endpoint created
-- [ ] Application Insights: Enabled on Function App
+Use this reference card while testing and deploying Lab 3. Print it, bookmark it, or keep it open in a separate window.
 
 ---
 
-## 🔧 Function App Code Essentials
+## Pre-Test Checklist
 
-### NuGet Packages
+Before you start testing, verify these infrastructure components are in place:
+
+**Function App Configuration:**
+- [ ] Plan: Standard (S1) or higher
+- [ ] System-assigned managed identity: Enabled
+- [ ] VNet integration: Enabled (routed through app integration subnet)
+- [ ] Easy Auth configured
+
+**Logic App Configuration:**
+- [ ] Public network access: Disabled
+- [ ] Easy Auth enabled with AllowAnonymous mode
+- [ ] Function App's managed identity principal ID in allowedPrincipals
+
+**Network Configuration:**
+- [ ] Virtual Network: 10.0.0.0/16 deployed
+- [ ] Private DNS Zone: privatelink.azurewebsites.net created
+- [ ] Private Endpoint: Created and linked to Logic App
+
+**Monitoring:**
+- [ ] Application Insights: Connected to Function App
+
+---
+
+## Function App Implementation
+
+### Required NuGet Packages
+
+Install these packages in your Function App project:
 
 ```bash
-dotnet add package Azure.Identity
-dotnet add package Azure.Core
-dotnet add package Newtonsoft.Json
+dotnet add package Azure.Identity          # For DefaultAzureCredential
+dotnet add package Azure.Core              # For TokenRequestContext
+dotnet add package Newtonsoft.Json         # For JSON serialization
 ```
 
 ### Application Settings (Required)

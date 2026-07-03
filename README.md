@@ -1,25 +1,98 @@
 # Logic App Standard — Security Labs
+## Secure Your Azure Workflows with Identity-Based Authentication
 
-## Purpose
+### What This Repository Contains
 
-Two complementary Azure labs to validate different security patterns for Logic App Standard HTTP triggers:
+Three practical, production-tested security patterns for Azure Logic App Standard:
 
-1. **Lab 1 — Easy Auth** (`rg-la-easyauth-lab-dev`): Validates that Easy Auth can enforce Entra ID authentication **without breaking portal manageability** using the `AllowAnonymous` + `allowedPrincipals` pattern.
-2. **Lab 2 — APIM-Centric** (`rg-la-easyauth-lab-apim-dev`): Demonstrates centralized JWT validation at API Management, with backend Logic Apps protected via network restrictions instead of Easy Auth.
-3. **Lab 3 — Function App Caller with Easy Auth** (`rg-la-easyauth-lab-dev` — extends Lab 1): Demonstrates a Function App calling a Logic App via private endpoints with **managed identity-based authentication** (no shared secrets).
+- **Lab 1 — Easy Auth & Entra ID Authentication** (`rg-la-easyauth-lab-dev`)  
+  Learn how to enforce Entra ID authentication on Logic App HTTP triggers **without sacrificing Azure portal manageability**. Uses the proven `AllowAnonymous` + `allowedPrincipals` pattern.
 
-> See [`docs/decision-guidance.md`](docs/decision-guidance.md) for a detailed comparison of when to use which pattern.
+- **Lab 2 — Centralized Gateway Security with APIM** (`rg-la-easyauth-lab-apim-dev`)  
+  Consolidate all authentication and authorization at API Management, protecting backend Logic Apps with network restrictions instead of per-app Easy Auth.
 
-### References
+- **Lab 3 — Secure Service-to-Service Calls with Managed Identity** (`rg-la-easyauth-lab-dev`)  
+  Build a Function App that calls Logic App using bearer tokens from managed identity — **no shared secrets, no SAS tokens**, completely automated credential rotation.
 
-- [Microsoft Learn — Secure Integration Workflows (Method 2: Easy Auth)](https://learn.microsoft.com/en-us/community/content/secure-integration-workflows-azure-logic-apps-api-management#method-2-security-using-easy-auth) — primary reference for Lab 1
-- [azcloudsecurity.io — Logic App Standard Easy Auth](https://azcloudsecurity.io/posts/logic-app-standard-easy-auth/) — AllowAnonymous pattern analysis
-- [Microsoft Learn — App Service Authentication Overview](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization#considerations-for-using-built-in-authentication) — Easy Auth middleware architecture
-- [Microsoft Learn — Secure Logic Apps with VNet and Private Endpoints](https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint) — network isolation patterns
-- [Microsoft Learn — Managed Identities for Azure Resources](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) — foundation for Lab 3 identity-based auth
-- **[📖 Lab 3 Technical Deep-Dive: Managed Identity Bearer Token Flow](docs/lab3-managed-identity-bearer-token-flow.md)** — ⭐ **Complete guide to Lab 3 authentication pattern** (no SAS tokens, C# code examples, mermaid diagrams, error handling)
+> **Not sure which pattern fits your needs?** See [`docs/decision-guidance.md`](docs/decision-guidance.md) for a clear comparison of all three patterns with decision criteria.
 
-## Lab 1 — Easy Auth (AllowAnonymous Pattern)
+---
+
+## 🚀 Getting Started — Choose Your Path
+
+### New to This Repository?
+**Start here:** [Complete Learning Path](#learning-path-step-by-step)
+
+### Want a Specific Lab?
+- **Lab 1 (Easy Auth):** Jump to [Lab 1 — Easy Auth Pattern](#lab-1--easy-auth-allowonymous-pattern)
+- **Lab 2 (APIM):** Jump to [Lab 2 — API Management Pattern](#lab-2--api-management-pattern)  
+- **Lab 3 (Managed Identity):** Jump to [Lab 3 — Function App with Bearer Tokens](#lab-3--function-app-caller-with-easy-auth-managed-identity-pattern)
+
+### Want to Deploy?
+**Go directly to:** [Deployment Instructions](#deployment)
+
+---
+
+## 📚 Learning Path — Step by Step
+
+### Step 1: Understand the Security Challenge
+Logic App Standard's HTTP trigger needs authentication that:
+- ✅ Enforces Entra ID identity
+- ✅ Keeps Azure portal management working  
+- ✅ Works with service-to-service calls
+- ✅ Scales without secrets management
+
+### Step 2: Learn the Three Patterns
+Each lab demonstrates a different approach. Read [`docs/decision-guidance.md`](docs/decision-guidance.md) to understand:
+- When to use each pattern
+- Trade-offs between patterns
+- Cost and complexity comparison
+- Real-world decision criteria
+
+### Step 3: Deploy a Lab
+Pick the pattern that matches your needs and follow the step-by-step deployment instructions below.
+
+### Step 4: Test and Verify
+Each lab includes complete testing procedures:
+- Infrastructure verification checklist
+- How to invoke the Logic App
+- How to monitor and collect evidence
+- How to troubleshoot issues
+
+### Step 5: Review Evidence
+Capture proof that your pattern works:
+- Security logs showing authentication
+- Request traces through the system
+- Performance metrics
+
+### Step 6: Implement in Your Environment
+Use the Bicep infrastructure code and patterns as templates for your production workloads.
+
+---
+
+## 📖 Reference Documentation
+
+Each lab includes comprehensive documentation:
+
+| Document | Location | What You'll Learn |
+|----------|----------|------------------|
+| **Lab 1: Easy Auth Deep-Dive** | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) | JWT structure, token flow, Easy Auth validation process |
+| **Lab 3: Testing Guide** | [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) | Step-by-step testing with complete C# code examples |
+| **Lab 3: Quick Reference** | [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md) | Printable checklist for deploying and testing |
+| **Decision Guidance** | [docs/decision-guidance.md](docs/decision-guidance.md) | How to choose between Lab 1, Lab 2, and Lab 3 |
+| **Interactive Architecture Docs** | [documentation/architecture/lab3-bearer-token-flow.html](documentation/architecture/lab3-bearer-token-flow.html) | Visual explanations with Mermaid diagrams |
+
+## Lab 1 — Easy Auth with Entra ID Authentication
+
+### What You'll Learn
+
+In Lab 1, you'll discover how to enable Entra ID authentication on a Logic App HTTP trigger **while keeping Azure portal management fully functional**. This pattern uses a proven configuration: `AllowAnonymous` mode combined with `allowedPrincipals` to restrict access to specific Entra ID identities.
+
+### Why This Pattern Matters
+
+The challenge: You want to enforce identity-based security, but setting `unauthenticatedClientAction` to `Return401` breaks the Azure portal's ability to view run history and test the workflow.
+
+**The solution:** Lab 1 demonstrates how `AllowAnonymous` + `allowedPrincipals` gives you both security AND portal access.
 
 ### Architecture
 
@@ -56,9 +129,17 @@ Two complementary Azure labs to validate different security patterns for Logic A
 - **Token enforcement**: ✅ Requests with Authorization header are validated against Entra requirements
 - **SAS keys**: Remain available as a trigger mechanism
 
-## Lab 3 — Function App Caller with Easy Auth (Managed Identity Pattern)
+## Lab 3 — Secure Service-to-Service Calls with Managed Identity & Bearer Tokens
 
-### Architecture
+### What You'll Learn
+
+Lab 3 shows you how to build a Function App that securely calls a Logic App using bearer tokens. The key innovation: **your applications never store, manage, or rotate credentials**. Instead, they use managed identity to automatically acquire fresh tokens from Entra ID.
+
+### Why This Pattern Matters
+
+The challenge: How do you enable app-to-app communication without sharing secrets, rotating credentials, or managing complex authentication flows?
+
+**The solution:** Lab 3 demonstrates managed identity combined with Easy Auth, providing automatic credential management with fine-grained access control.
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐

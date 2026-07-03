@@ -23,30 +23,47 @@
     <div class="content page-intro">
 
       <h1>Logic App Standard — Security Labs</h1>
-      <p class="subtitle">Three pillars for securing Logic App Standard at enterprise scale</p>
+      <p class="subtitle">Learn and implement proven security patterns for Azure Logic App Standard</p>
+
+      <!-- INTRODUCTION -->
+      <div style="margin: 2rem 0; padding: 1.5rem; background-color: #f5f5f5; border-radius: 5px;">
+        <h2 style="margin-top: 0;">Welcome</h2>
+        <p>
+          This repository contains three production-tested security patterns for Logic App Standard HTTP triggers. 
+          Each pattern solves a different business requirement:
+        </p>
+        <ul>
+          <li><strong>Lab 1: Identity-Based Security with Easy Auth</strong> — Enforce Entra ID authentication while preserving Azure portal functionality</li>
+          <li><strong>Lab 2: Centralized Gateway Security with APIM</strong> — Consolidate authentication across many Logic Apps using API Management</li>
+          <li><strong>Lab 3: Service-to-Service Calls with Managed Identity</strong> — Enable secure app-to-app communication without managing secrets</li>
+        </ul>
+        <p>
+          Each lab includes complete infrastructure code (Bicep), step-by-step deployment instructions, testing procedures, and evidence collection methods.
+        </p>
+      </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- THREE PILLAR CARDS                                      -->
       <!-- ═══════════════════════════════════════════════════════ -->
-      <h2>The Three Security Pillars</h2>
+      <h2>The Three Security Patterns</h2>
       <div class="card-grid">
 
         <a href="architecture/lab1-easyauth.html" class="card card-link">
-          <h3>🔐 Pillar 1: Easy Auth (Identity)</h3>
-          <p>Enable Easy Auth with AllowAnonymous on every app. Portal works. Tokens enforced.</p>
-          <p><span class="badge badge-pass">Validated ✅</span></p>
+          <h3>🔐 Lab 1: Easy Auth & Identity</h3>
+          <p>Enforce Entra ID authentication on Logic App HTTP triggers while keeping the Azure portal fully functional.</p>
+          <p><span class="badge badge-pass">Tested & Validated ✅</span></p>
         </a>
 
         <a href="architecture/lab2-apim.html" class="card card-link">
-          <h3>🌐 Pillar 2: APIM (Centralized Gateway)</h3>
-          <p>Centralize JWT validation at APIM. No per-app Easy Auth needed at scale.</p>
-          <p><span class="badge badge-pass">Validated ✅</span></p>
+          <h3>🌐 Lab 2: Centralized Gateway with APIM</h3>
+          <p>Consolidate JWT validation and access control at API Management instead of per-app configuration.</p>
+          <p><span class="badge badge-pass">Tested & Validated ✅</span></p>
         </a>
 
         <a href="architecture/pillar3-networking.html" class="card card-link">
-          <h3>🛡️ Pillar 3: Service Endpoints (Network)</h3>
-          <p>VNet + Service Endpoints + storage firewall. Zero IPs consumed. No Private Endpoints needed.</p>
-          <p><span class="badge badge-pass">Validated ✅</span></p>
+          <h3>🛡️ Lab 3: Secure Service Calls with Managed Identity</h3>
+          <p>Enable Function Apps and other services to call Logic Apps using bearer tokens and automatic credential rotation.</p>
+          <p><span class="badge badge-pass">Tested & Validated ✅</span></p>
         </a>
 
       </div>
@@ -55,19 +72,18 @@
       <!-- LAB 3: BEARER TOKEN FLOW                                -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div class="callout callout-success">
-        <strong>🆕 Lab 3: Managed Identity Bearer Token Flow</strong><br>
-        Service-to-service authentication using bearer tokens and managed identities — <strong>no SAS tokens, no shared secrets</strong>.
-        Function App calls Logic App securely with automatic token refresh and fine-grained access control.
-        <a href="architecture/lab3-bearer-token-flow.html" style="display: inline-block; margin-top: 0.5rem;">📖 Learn more →</a>
+        <strong>Lab 3 Highlight: Zero Secrets Architecture</strong><br>
+        Service-to-service authentication using managed identity bearer tokens — no SAS tokens, no shared secrets, automatic credential rotation.
+        <a href="architecture/lab3-bearer-token-flow.html" style="display: inline-block; margin-top: 0.5rem;">Complete Lab 3 Guide →</a>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- IP COMPARISON HIGHLIGHT                                 -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div class="callout callout-success">
-        <strong>IP Address Impact</strong>
-        Traditional approach: <strong>1000 IPs</strong> for 200 apps.
-        With all three pillars: <strong>1 IP</strong>.
+        <strong>Network Efficiency</strong><br>
+        Traditional approach (many apps calling Logic App): 1000+ public IPs.
+        With integrated security patterns: 1 IP.
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
