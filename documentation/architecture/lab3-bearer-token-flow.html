@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 3 — Bearer Token Flow (Managed Identity Pattern) | Logic App Standard Security Labs</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{primaryColor:'#e1f0ff', primaryBorderColor:'#0078D4', lineColor:'#0078D4'}});</script>
+  <style>
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 1rem;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    .comparison-table th {
+      background-color: #f5f5f5;
+      font-weight: 600;
+    }
+    .comparison-table tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+    .badge-success { background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+    .badge-danger { background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+    code { background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; font-family: 'Courier New', monospace; }
+    pre { background-color: #f4f4f4; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="executive-summary.html">Executive Summary</a>
+      <a href="../evidence/index.html">Evidence</a>
+      <a href="../operations/index.html">Operations</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <ol class="breadcrumb">
+      <li><a href="../index.html">Home</a></li>
+      <li>Architecture</li>
+      <li>Lab 3 — Bearer Token Flow</li>
+    </ol>
+
+    <h1>Lab 3 — Managed Identity Bearer Token Flow
+      <span class="subtitle">Service-to-service authentication without shared secrets or SAS tokens</span>
+    </h1>
+
+    <!-- 1. Overview -->
+    <section id="overview">
+      <h2>1. Overview</h2>
+      <p>
+        Lab 3 demonstrates how a Function App can call a Logic App securely using <strong>bearer token authentication</strong>
+        with managed identities — <strong>eliminating all shared secrets</strong> including SAS tokens.
+      </p>
+      <p>
+        Resource Group: <span class="resource-group-label">rg-la-easyauth-lab-dev</span> (extends Lab 1)
+      </p>
+      <div class="callout callout-success">
+        <strong>Key Innovation:</strong> No SAS tokens, no shared secrets, no manual credential rotation.
+        The Function App's system-assigned managed identity is automatically refreshed by Azure.
+      </div>
+      <ul>
+        <li><strong>Caller:</strong> Azure Function App (S1 plan, system-assigned managed identity, VNet-integrated)</li>
+        <li><strong>Receiver:</strong> Logic App Standard (WS1 plan, VNet-integrated, private endpoint-protected)</li>
+        <li><strong>Authentication:</strong> OAuth 2.0 bearer tokens from Entra ID</li>
+        <li><strong>Network Isolation:</strong> Private endpoints, private DNS zone, VNet routing</li>
+        <li><strong>Authorization:</strong> Easy Auth with allowedPrincipals filtering</li>
+      </ul>
+    </section>
+
+    <!-- 2. Three Core Components -->
+    <section id="components">
+      <h2>2. Three Core Components</h2>
+
+      <h3>A. Managed Identity (No Secrets)</h3>
+      <p>
+        The Function App has a <strong>system-assigned managed identity</strong> created automatically by Azure.
+        This identity is used to acquire access tokens from Entra ID — no credentials are ever stored or managed by developers.
+      </p>
+      <pre><code>// Bicep configuration (automatic)
+identity: { type: 'SystemAssigned' }
+
+// At runtime, the identity is available via the Azure Instance Metadata Service (IMDS)
+// http://169.254.169.254/metadata/identity/oauth2/token</code></pre>
+
+      <h3>B. Bearer Token (Automatic Refresh)</h3>
+      <p>
+        When the Function App needs to call the Logic App, it requests an access token from Entra ID using its managed identity.
+        The token is short-lived (1 hour) and automatically refreshed on each call via the <code>DefaultAzureCredential</code> library.
+      </p>
+      <pre><code>// Token request
+POST https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token
+  scope: api://{logicAppEntraClientId}/.default
+  client_id: {functionAppPrincipalId}
+
+// Token response (JWT)
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}</code></pre>
+
+      <h3>C. Easy Auth Validation (Zero Trust)</h3>
+      <p>
+        The Logic App's Easy Auth middleware validates every bearer token before allowing the request through.
+        It checks:
+      </p>
+      <ul>
+        <li>Token signature (RS256, verified against Entra ID public keys)</li>
+        <li>Audience claim (must match Logic App's Entra app ID)</li>
+        <li>Token expiry (must not be expired)</li>
+        <li>Principal ID (must be in the allowedPrincipals list)</li>
+      </ul>
+    </section>
+
+    <!-- 3. Architecture Diagram -->
+    <section id="architecture">
+      <h2>3. Architecture Diagram</h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph VNet["Virtual Network (10.0.0.0/16)"]
+      subgraph Subnet1["Subnet: App Integration (10.0.0.0/24)"]
+        FuncApp["Function App<br/>(S1 Plan)<br/>System-Assigned MI"]
+      end
+      
+      subgraph Subnet2["Subnet: Private Endpoint (10.0.1.0/24)"]
+        PrivDNS["Private DNS Zone<br/>(privatelink.azurewebsites.net)"]
+        PE["Private Endpoint<br/>for Logic App"]
+      end
+    end
+    
+    EntraID["Entra ID<br/>(Token STS)"]
+    LogicApp["Logic App Standard<br/>(WS1)<br/>Easy Auth + allowedPrincipals"]
+    
+    FuncApp -->|1. Request bearer token<br/>from managed identity| EntraID
+    EntraID -->|2. Return access token<br/>aud=Logic App Entra ID| FuncApp
+    FuncApp -->|3. HTTPS request<br/>Authorization: Bearer| PrivDNS
+    PrivDNS -->|4. Resolve to PE IP<br/>10.0.1.x| PE
+    PE -->|5. Route to Logic App<br/>public access disabled| LogicApp
+    LogicApp -->|6. Validate token<br/>check principal| LogicApp
+      </div>
+    </section>
+
+    <!-- 4. Step-by-Step Flow -->
+    <section id="step-by-step">
+      <h2>4. Step-by-Step Request Flow</h2>
+
+      <h3>Step 1: Function App Acquires Bearer Token</h3>
+      <p>
+        The Function App code uses <code>DefaultAzureCredential</code> from the Azure SDK to request an access token
+        from the Entra ID Security Token Service (STS). The token is scoped to the Logic App's Entra application.
+      </p>
+      <pre><code>// C# code running in Function App
+var credential = new DefaultAzureCredential();
+var logicAppEntraClientId = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE");
+
+var tokenResponse = await credential.GetTokenAsync(
+    new TokenRequestContext(new[] { $"{logicAppEntraClientId}/.default" })
+);
+
+var accessToken = tokenResponse.Token; // e.g., "eyJ0eXAiOiJKV1QiLCJhbGc..."</code></pre>
+
+      <h3>Step 2: Function App Sends HTTPS Request with Bearer Token</h3>
+      <p>
+        The Function App creates an HTTP request to the Logic App with the bearer token in the <code>Authorization</code> header.
+      </p>
+      <pre><code>// HTTP request
+POST https://la-easyauth-lab-dev-la-xxx.azurewebsites.net/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01 HTTP/1.1
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+Content-Type: application/json
+Host: la-easyauth-lab-dev-la-xxx.azurewebsites.net
+
+{
+  "requestBody": "sample data"
+}</code></pre>
+
+      <h3>Step 3: DNS Resolution via Private DNS Zone</h3>
+      <p>
+        Because the Function App is VNet-integrated, its DNS queries are routed through the VNet's private DNS zone.
+        The private DNS zone resolves <code>*.azurewebsites.net</code> to the private endpoint's IP address (10.0.1.x).
+      </p>
+      <pre><code>// DNS resolution (in VNet)
+Query: la-easyauth-lab-dev-la-xxx.azurewebsites.net
+Response: 10.0.1.x (private endpoint IP)
+
+// Without VNet integration, would resolve to:
+Response: 20.y.z.w (public IP — blocked by public access disabled)</code></pre>
+
+      <h3>Step 4: Private Endpoint Routes to Logic App</h3>
+      <p>
+        The HTTPS request is routed to the private endpoint. The private endpoint accepts the connection
+        and forwards it to the Logic App's Easy Auth middleware. Since <code>publicNetworkAccess: Disabled</code>,
+        only traffic from the private endpoint is accepted.
+      </p>
+
+      <h3>Step 5: Easy Auth Validates Bearer Token</h3>
+      <p>
+        Easy Auth intercepts the request and validates the bearer token:
+      </p>
+      <table class="comparison-table">
+        <tr>
+          <th>Validation Step</th>
+          <th>Check</th>
+          <th>Success</th>
+          <th>Failure</th>
+        </tr>
+        <tr>
+          <td><strong>1. Parse JWT</strong></td>
+          <td>Token format is valid JWT (3 base64 parts)</td>
+          <td>Continue</td>
+          <td>401 Unauthorized</td>
+        </tr>
+        <tr>
+          <td><strong>2. Verify Signature</strong></td>
+          <td>Token signed with Entra ID RS256 private key (verified against public key)</td>
+          <td>Continue</td>
+          <td>401 Unauthorized</td>
+        </tr>
+        <tr>
+          <td><strong>3. Check Audience (aud)</strong></td>
+          <td>Token's aud claim matches Logic App's Entra app ID</td>
+          <td>Continue</td>
+          <td>401 Unauthorized</td>
+        </tr>
+        <tr>
+          <td><strong>4. Check Expiry</strong></td>
+          <td>Token's exp claim is in the future</td>
+          <td>Continue</td>
+          <td>401 Unauthorized</td>
+        </tr>
+        <tr>
+          <td><strong>5. Extract Principal</strong></td>
+          <td>Extract appid or oid claim (the caller's identity)</td>
+          <td>Continue</td>
+          <td>401 if claim missing</td>
+        </tr>
+        <tr>
+          <td><strong>6. Check allowedPrincipals</strong></td>
+          <td>Principal is in the allowedPrincipals list</td>
+          <td>✅ Request allowed through</td>
+          <td>🔴 403 Forbidden</td>
+        </tr>
+      </table>
+
+      <h3>Step 6: Workflow Executes</h3>
+      <p>
+        Once Easy Auth validation passes, the request is routed to the Logic App runtime and the workflow executes normally.
+        The response is returned to the Function App via the same private endpoint.
+      </p>
+    </section>
+
+    <!-- 5. Bearer Token Anatomy -->
+    <section id="token-anatomy">
+      <h2>5. Bearer Token Anatomy (JWT Claims)</h2>
+      <p>
+        The access token returned from Entra ID is a JSON Web Token (JWT) containing the following important claims:
+      </p>
+      <pre><code>{
+  "header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "key-id-for-signature-verification"
+  },
+  "payload": {
+    "aud": "api://00000000-0000-0000-0000-000000000000",  // Logic App Entra app ID
+    "appid": "11111111-1111-1111-1111-111111111111",      // Function App's MI principal ID
+    "iat": 1688000000,                                     // Issued at (now)
+    "exp": 1688003600,                                     // Expires (1 hour from now)
+    "iss": "https://login.microsoftonline.com/22222222-2222-2222-2222-222222222222/v2.0",
+    "oid": "11111111-1111-1111-1111-111111111111",        // Object ID (same as appid for managed identity)
+    "scp": "",                                             // Scopes (empty, we use /.default)
+    "sub": "11111111-1111-1111-1111-111111111111",        // Subject (caller's identity)
+    "tid": "22222222-2222-2222-2222-222222222222",        // Tenant ID
+    "unique_name": "la-easyauth-lab-dev-caller-daaq6t5xzrpaw"  // Managed identity display name
+  },
+  "signature": "S0mE_L0nG_bAsE64_EnCoDe..."
+}</code></pre>
+
+      <p><strong>Key Claims for Validation:</strong></p>
+      <ul>
+        <li><code>aud</code> — Audience. Must match Logic App's Entra app ID for the token to be valid for that app.</li>
+        <li><code>exp</code> — Expiration time. Unix timestamp. Token is invalid if exp &lt; current time.</li>
+        <li><code>appid</code> or <code>oid</code> — Principal ID. Identifies the caller (Function App's managed identity).</li>
+        <li><code>iss</code> — Issuer. Must be from Entra ID STS for the correct tenant.</li>
+      </ul>
+    </section>
+
+    <!-- 6. Bearer Token vs SAS Token -->
+    <section id="comparison">
+      <h2>6. Bearer Token vs SAS Token</h2>
+      <p>
+        Lab 3 uses bearer tokens instead of SAS tokens. Here's why:
+      </p>
+      <table class="comparison-table">
+        <tr>
+          <th>Aspect</th>
+          <th>SAS Token (❌ Lab 1 & 2)</th>
+          <th>Bearer Token (✅ Lab 3)</th>
+        </tr>
+        <tr>
+          <td><strong>Storage Location</strong></td>
+          <td>Stored in app settings or Key Vault<br/>Must be managed by developers</td>
+          <td>Acquired on-demand from Entra ID<br/>Not stored in application state</td>
+        </tr>
+        <tr>
+          <td><strong>Credential Rotation</strong></td>
+          <td>Manual rotation required<br/>Risk of expiration in production</td>
+          <td>Automatic (1-hour expiry)<br/>No manual intervention needed</td>
+        </tr>
+        <tr>
+          <td><strong>If Compromised</strong></td>
+          <td>Long-lived attack window<br/>Attacker has access until key is rotated</td>
+          <td>1-hour window only<br/>Short-lived tokens limit damage</td>
+        </tr>
+        <tr>
+          <td><strong>Scope / Permissions</strong></td>
+          <td>SAS tokens grant broad trigger permissions<br/>Hard to granularly restrict</td>
+          <td>Audience-scoped to single app<br/>Easy Auth allowedPrincipals restricts further</td>
+        </tr>
+        <tr>
+          <td><strong>Audit Trail</strong></td>
+          <td>Difficult to track who used the token<br/>SAS token logs don't identify caller</td>
+          <td>Entra ID logs show principal ID<br/>Full audit trail of who called what</td>
+        </tr>
+        <tr>
+          <td><strong>Multi-App Scalability</strong></td>
+          <td>Each app needs a unique SAS token<br/>Scales linearly with number of apps</td>
+          <td>One managed identity per app<br/>Scales efficiently</td>
+        </tr>
+        <tr>
+          <td><strong>Platform Integration</strong></td>
+          <td>No native support in Azure SDKs<br/>Requires manual HTTP headers</td>
+          <td>Native support via DefaultAzureCredential<br/>Works with Azure SDK for any app</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- 7. Application Settings -->
+    <section id="app-settings">
+      <h2>7. Required Application Settings</h2>
+      <p>
+        The Function App needs the following application settings to call the Logic App:
+      </p>
+      <table class="comparison-table">
+        <tr>
+          <th>Setting Name</th>
+          <th>Value</th>
+          <th>Purpose</th>
+        </tr>
+        <tr>
+          <td><code>LOGIC_APP_URL</code></td>
+          <td><code>https://la-easyauth-lab-dev-la-xxx.azurewebsites.net/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01</code></td>
+          <td>The Logic App's HTTP trigger endpoint (from private endpoint)</td>
+        </tr>
+        <tr>
+          <td><code>LOGIC_APP_AUDIENCE</code></td>
+          <td><code>api://00000000-0000-0000-0000-000000000000</code></td>
+          <td>Logic App's Entra app ID (scope for bearer token request)</td>
+        </tr>
+        <tr>
+          <td><code>WEBSITE_AUTH_AAD_ALLOWED_TENANTS</code></td>
+          <td><code>22222222-2222-2222-2222-222222222222</code></td>
+          <td>Tenant ID where Entra identities are registered (optional, for extra security)</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- 8. C# Code Examples -->
+    <section id="code-examples">
+      <h2>8. C# Code Examples</h2>
+
+      <h3>Token Acquisition (DefaultAzureCredential)</h3>
+      <pre><code>using Azure.Identity;
+using Azure.Core;
+
+// In your Function App code
+public async Task&lt;string&gt; GetAccessTokenAsync()
+{
+    var credential = new DefaultAzureCredential(
+        new DefaultAzureCredentialOptions { TenantId = Environment.GetEnvironmentVariable("WEBSITE_AUTH_AAD_ALLOWED_TENANTS") }
+    );
+    
+    var audience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE");
+    var tokenResponse = await credential.GetTokenAsync(
+        new TokenRequestContext(new[] { $"{audience}/.default" })
+    );
+    
+    return tokenResponse.Token;
+}</code></pre>
+
+      <h3>HTTP Request with Bearer Token</h3>
+      <pre><code>using System.Net.Http;
+using System.Net.Http.Headers;
+
+public async Task CallLogicAppAsync(string accessToken, object payload)
+{
+    var httpClient = new HttpClient();
+    var logicAppUrl = Environment.GetEnvironmentVariable("LOGIC_APP_URL");
+    
+    // Add bearer token to Authorization header
+    httpClient.DefaultRequestHeaders.Authorization = 
+        new AuthenticationHeaderValue("Bearer", accessToken);
+    
+    // Serialize and send
+    var content = new StringContent(
+        JsonConvert.SerializeObject(payload),
+        Encoding.UTF8,
+        "application/json"
+    );
+    
+    var response = await httpClient.PostAsync(logicAppUrl, content);
+    response.EnsureSuccessStatusCode();
+    
+    var responseBody = await response.Content.ReadAsStringAsync();
+    return responseBody;
+}</code></pre>
+
+      <h3>Error Handling</h3>
+      <pre><code>try
+{
+    var token = await GetAccessTokenAsync();
+    var result = await CallLogicAppAsync(token, new { message = "test" });
+    _logger.LogInformation("Logic App call succeeded: {response}", result);
+}
+catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+{
+    _logger.LogError("401 Unauthorized — Token invalid (signature, audience, or expiry issue)");
+    throw;
+}
+catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+{
+    _logger.LogError("403 Forbidden — Principal ID not in allowedPrincipals list");
+    throw;
+}
+catch (AuthenticationFailedException ex)
+{
+    _logger.LogError("Failed to acquire token — Managed Identity may not be enabled: {error}", ex.Message);
+    throw;
+}</code></pre>
+    </section>
+
+    <!-- 9. Easy Auth Validation Decision Tree -->
+    <section id="validation-tree">
+      <h2>9. Easy Auth Validation Decision Tree</h2>
+      <div class="mermaid">
+flowchart TD
+    A["Request arrives<br/>with Authorization header"] --> B{Is JWT format valid?<br/>3 base64 parts?}
+    B -->|No| C["❌ 400 Bad Request"]
+    B -->|Yes| D{Verify signature<br/>with Entra public key?}
+    D -->|Invalid| E["❌ 401 Unauthorized<br/>(wrong tenant or tampered)"]
+    D -->|Valid| F{Audience claim<br/>matches Logic App?}
+    F -->|No| G["❌ 401 Unauthorized<br/>(wrong aud)"]
+    F -->|Yes| H{Token expired?<br/>exp &lt; now?}
+    H -->|Yes| I["❌ 401 Unauthorized<br/>(token expired)"]
+    H -->|No| J{Principal in<br/>allowedPrincipals?}
+    J -->|No| K["❌ 403 Forbidden<br/>(unauthorized caller)"]
+    J -->|Yes| L["✅ 200 OK<br/>Route to runtime"]
+      </div>
+    </section>
+
+    <!-- 10. Error Scenarios & Troubleshooting -->
+    <section id="troubleshooting">
+      <h2>10. Error Scenarios & Troubleshooting</h2>
+
+      <h3>❌ 401 Unauthorized — Invalid Token Signature</h3>
+      <p><strong>Cause:</strong> Token signed by wrong Entra tenant or tampered with</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Verify <code>LOGIC_APP_AUDIENCE</code> environment variable is correct Entra app ID</li>
+        <li>Verify Function App's managed identity is in the same tenant as Logic App</li>
+        <li>Check Entra ID sign-in logs to see if token acquisition failed</li>
+      </ul>
+
+      <h3>❌ 401 Unauthorized — Audience Mismatch</h3>
+      <p><strong>Cause:</strong> Bearer token's <code>aud</code> claim doesn't match Logic App's Entra app ID</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Decode token at <a href="https://jwt.ms" target="_blank">jwt.ms</a> and verify <code>aud</code> field</li>
+        <li>Ensure <code>LOGIC_APP_AUDIENCE</code> matches the Logic App's Entra app registration ID</li>
+        <li>If wrong audience, token was requested for a different app</li>
+      </ul>
+
+      <h3>❌ 403 Forbidden — Principal Not in allowedPrincipals</h3>
+      <p><strong>Cause:</strong> Bearer token is valid but caller (Function App's MI) is not in the allowedPrincipals filter</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Verify Easy Auth allowedPrincipals includes Function App's managed identity principal ID</li>
+        <li>Check Azure portal: Logic App → Configuration → Authentication / Authorization → allowedPrincipals</li>
+        <li>Principal ID must match the Function App's system-assigned managed identity object ID</li>
+      </ul>
+
+      <h3>❌ 401 Unauthorized — Token Expired</h3>
+      <p><strong>Cause:</strong> Bearer token's <code>exp</code> claim is in the past</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Tokens are short-lived (1 hour) — ensure DefaultAzureCredential is refreshing</li>
+        <li>Check function app logs for token acquisition errors</li>
+        <li>If clock skew suspected, sync time on Function App host (shouldn't happen in managed service)</li>
+      </ul>
+
+      <h3>⚠️ Network Error — Private Endpoint DNS Not Resolving</h3>
+      <p><strong>Cause:</strong> Private DNS zone not resolving *.azurewebsites.net to private endpoint IP</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Verify Function App has VNet integration (Configuration → General → Virtual network integration)</li>
+        <li>Verify private DNS zone is linked to VNet</li>
+        <li>From Function App kudu console: <code>nslookup la-easyauth-lab-dev-la-xxx.azurewebsites.net</code> should return 10.0.1.x</li>
+      </ul>
+
+      <h3>❌ AuthenticationFailedException — Managed Identity Not Enabled</h3>
+      <p><strong>Cause:</strong> DefaultAzureCredential cannot acquire token (managed identity not configured)</p>
+      <p><strong>Check:</strong></p>
+      <ul>
+        <li>Verify Function App has system-assigned managed identity (Identity → System assigned → Status: On)</li>
+        <li>Function App must be at least Standard (S1) plan to support VNet integration</li>
+        <li>If running locally (not in Azure), DefaultAzureCredential will fail — use VS Code Azure extension login as fallback</li>
+      </ul>
+    </section>
+
+    <!-- 11. Bicep Configuration -->
+    <section id="bicep-config">
+      <h2>11. Bicep Configuration (Infrastructure as Code)</h2>
+
+      <h3>Function App with System-Assigned Managed Identity</h3>
+      <pre><code>resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp'
+  identity: {
+    type: 'SystemAssigned'  // Automatic managed identity
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    virtualNetworkSubnetId: vnetIntegrationSubnetId  // VNet integration
+    vnetRouteAllEnabled: true  // Route all outbound through VNet
+    httpsOnly: true
+    appSettings: [
+      { name: 'LOGIC_APP_URL', value: logicAppHttpTriggerUrl }
+      { name: 'LOGIC_APP_AUDIENCE', value: 'api://${logicAppEntraClientId}' }
+      { name: 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS', value: entraAppTenantId }
+    ]
+  }
+}
+
+// Grant Storage access to managed identity
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount
+  name: guid(resourceGroup().id, functionApp.id, 'Storage Blob Data Contributor')
+  properties: {
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  }
+}</code></pre>
+
+      <h3>Logic App with Easy Auth allowedPrincipals</h3>
+      <pre><code>resource easyAuthConfig 'Microsoft.Web/sites/config@2022-09-01' = {
+  parent: logicApp
+  name: 'authsettingsV2'
+  properties: {
+    platform: { enabled: true }
+    globalValidation: {
+      unauthenticatedClientAction: 'AllowAnonymous'  // Portal management works
+      redirectToProvider: 'azureactivedirectory'
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        registration: { openIdIssuer: 'https://login.microsoftonline.com/${entraAppTenantId}/v2.0' }
+        validation: {
+          allowedAudiences: [ 'api://${logicAppEntraClientId}' ]
+        }
+      }
+    }
+    defaultAuthorizationPolicy: {
+      allowedPrincipals: [
+        { id: functionAppPrincipalId }  // Only Function App's MI can call
+      ]
+    }
+  }
+}</code></pre>
+
+      <h3>VNet with Private DNS Zone</h3>
+      <pre><code>resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.azurewebsites.net'
+  location: 'global'
+}
+
+resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: privateDnsZone
+  name: '${vnet.name}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: { id: vnet.id }
+  }
+}
+
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-09-01' = {
+  name: 'pe-logic-app'
+  location: location
+  properties: {
+    subnet: { id: privateEndpointSubnetId }
+    privateLinkServiceConnections: [
+      {
+        name: 'logic-app-connection'
+        properties: {
+          privateLinkServiceId: logicApp.id
+          groupIds: [ 'sites' ]
+        }
+      }
+    ]
+  }
+}
+
+// DNS group links private endpoint to private DNS zone
+resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-09-01' = {
+  parent: privateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config'
+        properties: {
+          privateDnsZoneId: privateDnsZone.id
+        }
+      }
+    ]
+  }
+}</code></pre>
+    </section>
+
+    <!-- 12. References & Further Reading -->
+    <section id="references">
+      <h2>12. Microsoft Learn References</h2>
+
+      <h3>🔐 Azure Managed Identities</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview" target="_blank">Managed Identities for Azure Resources</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-managed-identities-work-vm" target="_blank">How Managed Identities Work</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-managed-service-identity" target="_blank">Managed Identities in App Service and Azure Functions</a></li>
+      </ul>
+
+      <h3>🎫 Bearer Token Authentication & OAuth 2.0</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens" target="_blank">Entra ID Access Tokens</a></li>
+        <li><a href="https://datatracker.ietf.org/doc/html/rfc6750" target="_blank">RFC 6750 — The OAuth 2.0 Bearer Token Usage</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow" target="_blank">OAuth 2.0 Client Credentials Flow</a></li>
+      </ul>
+
+      <h3>🔐 Easy Auth & App Service Authentication</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization" target="_blank">Azure App Service Authentication / Authorization Overview</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad" target="_blank">Configure Azure AD Authentication in App Service</a></li>
+      </ul>
+
+      <h3>🛡️ Network Isolation & Private Endpoints</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview" target="_blank">Azure Private Endpoint Overview</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint" target="_blank">Secure Logic Apps with VNet and Private Endpoints</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/web-sites-integrate-with-vnet" target="_blank">VNet Integration in App Service</a></li>
+      </ul>
+
+      <h3>📊 Azure SDK & DefaultAzureCredential</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential" target="_blank">DefaultAzureCredential API Reference (.NET)</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/developer/python/sdk/authentication" target="_blank">Azure SDK Authentication (Python)</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/developer/javascript/core/identity" target="_blank">Azure Identity Client Library (JavaScript)</a></li>
+      </ul>
+
+      <h3>🔒 Zero Trust & Security Best Practices</h3>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/zero-trust" target="_blank">Zero Trust Security Model</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/well-architected/security/design-identity-and-access-management" target="_blank">Azure Well-Architected Framework — Identity &amp; Access Management</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-security-controls" target="_blank">Security Controls in Azure App Service</a></li>
+      </ul>
+    </section>
+
+    <!-- 13. When to Use Lab 3 -->
+    <section id="when-to-use">
+      <h2>13. When to Use Lab 3 Pattern</h2>
+      <p>
+        The Lab 3 pattern is ideal for:
+      </p>
+      <ul>
+        <li><strong>Self-contained workloads:</strong> Function App and Logic App are part of the same solution (not multi-tenant API)</li>
+        <li><strong>Secure by default:</strong> Want identity-based auth without APIM complexity</li>
+        <li><strong>Few callers:</strong> Only a handful of apps need access (use allowedPrincipals for each)</li>
+        <li><strong>Temporary integrations:</strong> Ephemeral service-to-service calls, not a stable public API</li>
+        <li><strong>Internal teams:</strong> Both caller and receiver are within the same organization</li>
+      </ul>
+
+      <p><strong>Not recommended for:</strong></p>
+      <ul>
+        <li>Public APIs with many external callers (use API Management instead)</li>
+        <li>Legacy systems without Azure SDK support (DefaultAzureCredential not available)</li>
+        <li>Cross-organizational integrations (partner access — use APIM + allowlists)</li>
+      </ul>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>&copy; 2026 Logic App Standard Security Labs | <a href="https://github.com/JohanDeWeerdtMSFT/logicapp-easyauth-lab" target="_blank">GitHub Repository</a></p>
+  </footer>
+
+</body>
+</html>
