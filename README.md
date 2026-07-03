@@ -17,6 +17,7 @@ Two complementary Azure labs to validate different security patterns for Logic A
 - [Microsoft Learn — App Service Authentication Overview](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization#considerations-for-using-built-in-authentication) — Easy Auth middleware architecture
 - [Microsoft Learn — Secure Logic Apps with VNet and Private Endpoints](https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint) — network isolation patterns
 - [Microsoft Learn — Managed Identities for Azure Resources](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) — foundation for Lab 3 identity-based auth
+- **[📖 Lab 3 Technical Deep-Dive: Managed Identity Bearer Token Flow](docs/lab3-managed-identity-bearer-token-flow.md)** — ⭐ **Complete guide to Lab 3 authentication pattern** (no SAS tokens, C# code examples, mermaid diagrams, error handling)
 
 ## Lab 1 — Easy Auth (AllowAnonymous Pattern)
 
@@ -106,6 +107,14 @@ Two complementary Azure labs to validate different security patterns for Logic A
 ```
 
 ### Key Insight: Managed Identity + Private Endpoints = Zero Secrets
+
+> **📖 DETAILED EXPLANATION:** See [`docs/lab3-managed-identity-bearer-token-flow.md`](docs/lab3-managed-identity-bearer-token-flow.md) for a complete technical deep-dive:
+> - How Function App acquires bearer tokens without SAS tokens
+> - Step-by-step token flow with C# code examples
+> - Easy Auth validation process explained
+> - Mermaid diagrams showing request routing
+> - Troubleshooting scenarios and error handling
+> - Microsoft Learn documentation references
 
 **Lab 3 eliminates all shared secrets:**
 - Function App acquires access token using its **system-assigned managed identity** (no credentials to rotate)
