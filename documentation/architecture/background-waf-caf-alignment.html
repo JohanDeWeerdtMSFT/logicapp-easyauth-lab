@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background: WAF and CAF Alignment | Logic App Easy Auth Lab</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Easy Auth Lab</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="../../README.md">README</a>
+      <a href="lab3-bearer-token-flow.html">Lab 3 Architecture</a>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <main class="content page-intro">
+      <ol class="breadcrumb">
+        <li><a href="../index.html">Home</a></li>
+        <li>Architecture</li>
+        <li>Background: WAF and CAF</li>
+      </ol>
+
+      <h1>Background: WAF and CAF Alignment</h1>
+      <p class="subtitle">Optional best-practice reading, not required to complete Lab 3</p>
+
+      <div class="callout callout-info">
+        <strong>Scope Note</strong><br>
+        This page maps the Lab 3 pattern to Microsoft architecture guidance. It is context material for design discussions, not a deployment checklist.
+      </div>
+
+      <h2>Well-Architected Alignment (High Level)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>WAF Pillar</th>
+            <th>Lab 3 Pattern Contribution</th>
+            <th>Design Follow-up</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Security</td>
+            <td>Managed identity + Easy Auth + private connectivity reduces secret and exposure risks.</td>
+            <td>Add policy guardrails and continuous security posture checks.</td>
+          </tr>
+          <tr>
+            <td>Reliability</td>
+            <td>Identity and network controls are explicit and repeatable via IaC.</td>
+            <td>Add zone/multi-region strategy based on business RTO and RPO targets.</td>
+          </tr>
+          <tr>
+            <td>Operational Excellence</td>
+            <td>Standardized auth flow and validation scenarios improve runbook clarity.</td>
+            <td>Add automated drift detection and production incident playbooks.</td>
+          </tr>
+          <tr>
+            <td>Performance Efficiency</td>
+            <td>Direct service-to-service path avoids unnecessary gateway hops for core internal flows.</td>
+            <td>Evaluate APIM if traffic shaping, caching, or policy centralization is needed.</td>
+          </tr>
+          <tr>
+            <td>Cost Optimization</td>
+            <td>Passwordless auth removes operational secret rotation overhead.</td>
+            <td>Track SKU choices and telemetry retention as workload grows.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Cloud Adoption Framework Context</h2>
+      <ul>
+        <li><strong>Secure methodology:</strong> identity-first access and least privilege principles are directly applied.</li>
+        <li><strong>Govern methodology:</strong> policy and standards can enforce consistent auth/network posture at scale.</li>
+        <li><strong>Manage methodology:</strong> observable flows and scenario-based validation support day-2 operations.</li>
+      </ul>
+
+      <h2>Microsoft References</h2>
+      <ul>
+        <li><a href="https://learn.microsoft.com/azure/well-architected/" target="_blank" rel="noopener noreferrer">Microsoft Azure Well-Architected Framework</a></li>
+        <li><a href="https://learn.microsoft.com/azure/well-architected/security/" target="_blank" rel="noopener noreferrer">WAF Security pillar</a></li>
+        <li><a href="https://learn.microsoft.com/azure/cloud-adoption-framework/" target="_blank" rel="noopener noreferrer">Cloud Adoption Framework</a></li>
+        <li><a href="https://learn.microsoft.com/azure/cloud-adoption-framework/secure/" target="_blank" rel="noopener noreferrer">CAF Secure methodology</a></li>
+        <li><a href="https://learn.microsoft.com/security/benchmark/azure/" target="_blank" rel="noopener noreferrer">Microsoft Cloud Security Benchmark for Azure</a></li>
+      </ul>
+
+      <h2>Trainee Guidance</h2>
+      <p>
+        Use this page to understand architectural rationale after you finish Lab 3 hands-on steps. Keep the core trainee path focused on deployment and verification first.
+      </p>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    Logic App Easy Auth Lab Documentation
+  </footer>
+</body>
+</html>

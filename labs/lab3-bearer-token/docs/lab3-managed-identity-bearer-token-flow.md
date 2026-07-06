@@ -631,6 +631,6 @@ System.Net.Http.HttpRequestException: "Unable to resolve the remote name"
 
 ## Related Documentation
 
-- [Lab 1: Easy Auth Only](../docs/decision-guidance.md#lab-1-easy-auth-only)
-- [Lab 2: APIM Gateway](../docs/decision-guidance.md#lab-2-apim-gateway)
+- [Lab 3 walkthrough](../../../../docs/lab3-passwordless-managed-identity-easy-auth.md)
+- [Lab 3 testing guide](../../../../docs/lab3-testing-and-verification.md)
 - [Deployment Guide](../README.md#lab-3--function-app-caller-with-easy-auth-managed-identity-pattern)

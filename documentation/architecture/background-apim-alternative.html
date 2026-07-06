@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background: APIM Alternative | Logic App Easy Auth Lab</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="../index.html">Logic App Easy Auth Lab</a>
+    <nav>
+      <a href="../index.html">Home</a>
+      <a href="../../README.md">README</a>
+      <a href="lab3-bearer-token-flow.html">Lab 3 Architecture</a>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <main class="content page-intro">
+      <ol class="breadcrumb">
+        <li><a href="../index.html">Home</a></li>
+        <li>Architecture</li>
+        <li>Background: APIM Alternative</li>
+      </ol>
+
+      <h1>Background: APIM Alternative</h1>
+      <p class="subtitle">Optional best-practice reading, not required to complete Lab 3</p>
+
+      <div class="callout callout-info">
+        <strong>How to Use This Page</strong><br>
+        Use this only after you complete the core Lab 3 path. It explains when an API gateway model is a better fit at enterprise scale.
+      </div>
+
+      <h2>Why APIM Can Be Useful</h2>
+      <p>
+        Lab 3 focuses on direct service-to-service authentication with managed identity and Easy Auth.
+        In larger estates, Azure API Management can add centralized API governance.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Decision Area</th>
+            <th>Direct Lab 3 Pattern</th>
+            <th>APIM Front Door Pattern</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Auth enforcement location</td>
+            <td>At each app host (Easy Auth + principal allow-list)</td>
+            <td>Centralized at API gateway plus optional backend auth</td>
+          </tr>
+          <tr>
+            <td>Policy consistency</td>
+            <td>Per-service configuration</td>
+            <td>Shared gateway policies (JWT validation, rate limits, transforms)</td>
+          </tr>
+          <tr>
+            <td>Operational scale</td>
+            <td>Best for focused app-to-app scenarios</td>
+            <td>Best for many APIs with shared controls and lifecycle management</td>
+          </tr>
+          <tr>
+            <td>Performance path</td>
+            <td>Shorter request path</td>
+            <td>Additional hop, but added governance and API product capabilities</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>When to Consider APIM</h2>
+      <ul>
+        <li>You need one consistent policy layer across many backend apps.</li>
+        <li>You need API products, subscriptions, throttling, and developer onboarding.</li>
+        <li>You need centralized JWT validation and request transformation.</li>
+        <li>You want to expose controlled APIs to partner teams or external consumers.</li>
+      </ul>
+
+      <h2>Microsoft References</h2>
+      <ul>
+        <li><a href="https://learn.microsoft.com/azure/api-management/api-management-key-concepts" target="_blank" rel="noopener noreferrer">Azure API Management key concepts</a></li>
+        <li><a href="https://learn.microsoft.com/azure/api-management/validate-jwt-policy" target="_blank" rel="noopener noreferrer">APIM validate-jwt policy</a></li>
+        <li><a href="https://learn.microsoft.com/azure/api-management/api-management-policies" target="_blank" rel="noopener noreferrer">APIM policy reference</a></li>
+        <li><a href="https://learn.microsoft.com/azure/architecture/example-scenario/integration/logic-apps-and-api-management" target="_blank" rel="noopener noreferrer">Logic Apps and API Management architecture example</a></li>
+        <li><a href="https://learn.microsoft.com/community/content/secure-integration-workflows-azure-logic-apps-api-management" target="_blank" rel="noopener noreferrer">Secure integration workflows with Logic Apps and API Management</a></li>
+      </ul>
+
+      <h2>Trainee Guidance</h2>
+      <p>
+        Complete the core Lab 3 implementation first. Treat APIM as follow-up architecture reading for platform-level API governance decisions.
+      </p>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    Logic App Easy Auth Lab Documentation
+  </footer>
+</body>
+</html>

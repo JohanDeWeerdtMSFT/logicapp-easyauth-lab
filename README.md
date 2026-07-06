@@ -1,418 +1,203 @@
-# Azure Easy Auth Lab: Passwordless Authentication
+# Logic App + Function App Easy Auth Lab
 
-## 🎓 Welcome!
+This repository is a hands-on lab for trainees who want to learn how to secure Azure Logic Apps and Azure Functions with:
 
-This lab teaches you how to implement **passwordless, Zero Trust authentication** between Azure services using **Managed Identity** and **Easy Auth**.
+- Managed Identity (passwordless service-to-service auth)
+- Easy Auth (`authsettingsV2`)
+- Enterprise networking controls (VNet integration, private endpoints, private DNS)
 
-By the end, you'll understand how to securely connect Azure services **without storing any credentials** in code or configuration.
+> Active trainee path: Lab 3.
+> Lab 1 and Lab 2 concepts are preserved as optional background patterns and are not required to complete the hands-on flow.
+
+The primary learning scenario is:
+
+1. Deploy a minimal Function App and Logic App in a secured environment.
+2. Implement bearer-token-based calls from Function App to Logic App.
+3. Validate and observe the request flow using logs and run history.
+
+> APIM is the recommended enterprise gateway pattern in many real-world environments, but APIM is intentionally out of scope for this core lab.
 
 ---
 
-## 📖 What You'll Learn
+## What You Will Achieve
 
-### Core Concepts
-- **Managed Identity** — Passwordless credentials automatically managed by Azure
-- **Bearer Tokens** — How token-based authentication works
-- **Easy Auth** — Built-in authentication middleware for App Services
-- **Zero Trust** — Never trust, always verify (identity-based security)
+By the end of this lab, you will be able to:
 
-### Real-World Skills
-- Deploy secure Azure infrastructure with Bicep (Infrastructure-as-Code)
-- Write .NET code that acquires bearer tokens
-- Configure Microsoft Entra ID (Azure AD) authentication
-- Monitor and debug authentication flows
-- Use private endpoints for network security
+- Explain why `AllowAnonymous + allowedPrincipals` is used for Logic App Standard Easy Auth scenarios.
+- Deploy an environment where Logic App runtime access is private and identity-protected.
+- Write and run .NET code that acquires a Microsoft Entra token via managed identity.
+- Prove the secure flow using Logic App run history and Application Insights traces.
 
-### What You'll Build
+---
+
+## Architecture (Active Lab 3)
+
+```mermaid
+flowchart LR
+    subgraph Azure[Azure Resource Group]
+        subgraph Network[Virtual Network]
+            FA[Function App\nSystem-assigned MI]
+            PE[Private Endpoint\nfor Logic App]
+            LA[Logic App Standard\nEasy Auth enabled]
+            AI[Application Insights]
+            SA[Storage Account]
+        end
+    end
+
+    Entra[Microsoft Entra ID]
+
+    FA -->|1. Request access token| Entra
+    Entra -->|2. Return JWT for Logic App audience| FA
+    FA -->|3. HTTPS call + Authorization Bearer token| PE
+    PE --> LA
+    LA -->|4. Easy Auth validates token + principal| LA
+    FA -->|5. Logs| AI
+    LA -->|6. Workflow state| SA
 ```
-Function App (caller)
-    ↓ Uses managed identity to get bearer token
-    ↓ HTTPS POST to Logic App with Authorization: Bearer <token>
-    ↓
-Logic App (receiver)
-    ↓ Easy Auth validates token
-    ↓ Accepts request from Function App (in allowedPrincipals)
-    ↓ Returns 200 OK
-```
-
-**Key Insight:** No passwords, API keys, or SAS signatures anywhere! 🔐
 
 ---
 
-## ⏱️ Time Required
+## Scenario Matrix (Why It Exists)
 
-- **First time** (create all infrastructure): 30-45 minutes
-- **Subsequent times** (just run setup.ps1): 15-20 minutes
-- **Lab walkthrough** (understanding concepts): 30-45 minutes
+The scenario matrix groups tests into tracks so trainees can understand *what is being validated* and *why each result matters*.
+
+- Track A: Portal manageability behavior
+- Track B: Trigger security behavior
+
+Use the matrix as a map:
+
+1. Pick a scenario ID (for example `B2`).
+2. Run that exact test.
+3. Compare your result with expected behavior.
+4. Capture evidence (status code, logs, run history).
+
+Detailed IDs and expected outcomes: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
 
 ---
 
-## ✅ Prerequisites
+## Learning Path
 
-### Tools You Need
+### 1) Understand the active lab concepts (Lab 3)
 
-| Tool | What It Does | Where to Get It |
-|------|-------------|-----------------|
-| **Azure CLI** | Command-line tool for Azure | [Download here](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) |
-| **PowerShell** 7.0+ | Script automation | [Download here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) |
-| **.NET 8 SDK** | Build & run C# code | [Download here](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| **Git** | Clone the repository | [Download here](https://git-scm.com/downloads) |
-| **Text Editor** | Edit .env file | Any editor (VS Code, Notepad, etc.) |
+- Overview and navigation: [START-HERE.md](START-HERE.md)
+- Main Lab 3 walkthrough: [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
 
-### Azure Account
+Microsoft Learn references:
 
-- **Free Azure subscription** ([Create one here](https://azure.microsoft.com/en-us/free/))
-- **Owner or Contributor role** (to create resources)
-- **Access to Microsoft Entra ID** (included in all Azure subscriptions)
+- [Managed identities overview](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview)
+- [App Service / Easy Auth overview](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization)
+- [Logic App Standard overview](https://learn.microsoft.com/azure/logic-apps/single-tenant-overview-compare)
+- [Configure Entra ID auth in App Service](https://learn.microsoft.com/azure/app-service/configure-authentication-provider-aad)
 
-### Verify You're Ready
+### 2) Deepen understanding within the active lab
 
-Run these commands to check if everything is installed:
+- Bearer token flow deep dive: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
+- Testing playbook: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
+- Quick reference card: [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md)
+
+Additional Microsoft docs:
+
+- [Azure Identity SDK for .NET (`DefaultAzureCredential`)](https://learn.microsoft.com/dotnet/azure/sdk/authentication/credential-chains)
+- [Protect Logic Apps with APIM and Easy Auth considerations](https://learn.microsoft.com/community/content/secure-integration-workflows-azure-logic-apps-api-management)
+- [Secure App Service networking and private endpoints](https://learn.microsoft.com/azure/app-service/overview-private-endpoint)
+
+### 2b) Optional background patterns and best-practice reading
+
+These pages are not required to complete Lab 3. They provide background context aligned to earlier lab themes and architecture conversations:
+
+- [APIM alternative guidance (background)](documentation/architecture/background-apim-alternative.html)
+- [WAF and CAF alignment (background)](documentation/architecture/background-waf-caf-alignment.html)
+
+### 3) Deploy and run the active lab quickly
+
+Go to [START-HERE.md](START-HERE.md) and follow the Lab 3 path.
+
+---
+
+## Quick Start
+
+If you are short on time, follow [START-HERE.md](START-HERE.md) end-to-end first, then return to deep-dive docs.
+
+### Step 0: Register a Microsoft Entra application (once)
+
+You need an Entra app registration for the Easy Auth trust relationship.
+
+- [How to register an app](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app)
+- [How to expose an API / application ID URI (audience)](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes)
+
+### Step 1: Clone and configure
 
 ```bash
-# Check each tool
-az --version
-pwsh --version  # or 'powershell' on older Windows
-dotnet --version
-git --version
-```
-
-**If any command fails**, install that tool before continuing.
-
----
-
-## 🚀 Getting Started (3 Easy Steps)
-
-### Step 1: Clone the Repository and Configure
-
-```bash
-# Clone the lab
 git clone https://github.com/JohanDeWeerdtMSFT/logicapp-easyauth-lab.git
 cd logicapp-easyauth-lab
-
-# Copy the configuration template
 cp .env.example .env
-
-# Open .env in your editor
-notepad .env              # Windows
-# OR
-nano .env                 # Mac/Linux
 ```
 
-**Edit `.env` with your Azure values** (you need 5 values):
+Fill `.env` with your tenant/subscription/region values.
 
-```env
-# 1. Your subscription ID
-AZURE_SUBSCRIPTION_ID=00000000-0000-0000-0000-000000000000
+### Step 2: Deploy infrastructure
 
-# 2. Your tenant ID (Entra ID directory ID)
-AZURE_TENANT_ID=00000000-0000-0000-0000-000000000000
-
-# 3. Azure region (closest to you)
-AZURE_REGION=westeurope
-
-# 4. Environment name (dev/test/prod)
-ENVIRONMENT_NAME=dev
-
-# 5. Your email (tags resources)
-YOUR_EMAIL=you@example.com
+```powershell
+az login
+./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"
 ```
 
-**How to find these values:**
+### Step 3: Deploy code and validate
+
+- Follow: [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md)
+- Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
+
+---
+
+## Codespaces Support
+
+This repo now includes a ready-to-use Codespaces configuration in `.devcontainer/devcontainer.json`.
+
+One-click startup flow:
+
+1. Open this repository in GitHub Codespaces.
+2. Wait for container setup to complete.
+3. Run `az login --use-device-code`.
+4. Configure `.env` from `.env.example`.
+5. Run `./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"`.
+
+The container includes Azure CLI, PowerShell, and .NET 8.
+
+---
+
+## Evidence and Findings
+
+- Scenario IDs and expected behavior: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
+- Trainee-friendly findings summary: [docs/evidence/findings.md](docs/evidence/findings.md)
+
+---
+
+## Troubleshooting and Cleanup
+
+- Troubleshooting guide: [docs/troubleshooting.md](docs/troubleshooting.md)
+- Deployment FAQ and cleanup guidance: [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md)
+
+To remove deployed resources when finished:
 
 ```bash
-# Get your subscription ID
-az account list --query "[].{name:name, subscriptionId:id}" --output table
-
-# Get your tenant ID
-az account show --query tenantId --output tsv
-
-# List available regions
-az account list-locations --query "[].name" -o table
-```
-
-### Step 2: Sign In and Deploy
-
-```bash
-# Sign in to Azure
-az login --tenant <your-tenant-id>
-
-# Deploy the infrastructure (reads .env automatically)
-./setup.ps1
-
-# Wait... (takes 15-20 minutes)
-# Azure is creating:
-#   • Resource Group
-#   • Virtual Network
-#   • Logic App Standard
-#   • Function App
-#   • Easy Auth configuration
-#   • Application Insights
-```
-
-**What happens:** The `setup.ps1` script reads your `.env` file and creates all Azure resources automatically using Bicep (Infrastructure as Code).
-
-### Step 3: Learn the Lab
-
-Open the lab documentation and start learning:
-
-```bash
-# Open in VS Code
-code docs/lab3-passwordless-managed-identity-easy-auth.md
-
-# Or open in Notepad/TextEdit
-notepad docs\lab3-passwordless-managed-identity-easy-auth.md  # Windows
-open docs/lab3-passwordless-managed-identity-easy-auth.md     # Mac
-```
-
-**The lab guide explains:**
-- How Managed Identity works (step by step)
-- How bearer tokens are created and validated
-- How Easy Auth protects your Logic App
-- How to test the complete flow
-- How to troubleshoot common issues
-
----
-
-## 📁 Repository Structure
-
-```
-logicapp-easyauth-lab/
-│
-├── README.md                              ← You are here
-├── .env.example                           ← Copy to .env and customize
-├── setup.ps1                              ← Run this to create infrastructure
-│
-├── docs/
-│   ├── lab3-passwordless-...md            ← Main lab (start here!)
-│   ├── REFACTORING-NOTES.md               ← How we removed callback URLs
-│   ├── troubleshooting.md                 ← Common problems & fixes
-│   └── DEPLOYMENT-QUICK-REF.md            ← Quick reference for experts
-│
-├── infra/                                 ← Infrastructure as Code (Bicep)
-│   ├── main.bicep                         ← Main template
-│   ├── params/                            ← Configuration per region
-│   └── modules/                           ← Reusable components
-│
-└── solution/                              ← .NET application code
-    ├── CallerFunctionApp/                 ← Function App project
-    ├── deploy.ps1                         ← Deploy code to Azure
-    └── CallerFunctionApp.sln              ← Visual Studio solution
+az group delete --name "rg-la-easyauth-lab-dev" --yes --no-wait
 ```
 
 ---
 
-## 🔑 Key Concepts Explained Simply
+## Repository Structure (High Level)
 
-### What is Managed Identity?
-
-Normally, to call an API, you need credentials (username/password). But then:
-- You must store them somewhere (risky!)
-- You must rotate them (tedious!)
-- They can be leaked or stolen (bad!)
-
-**Managed Identity solves this:**
-- Azure generates credentials automatically
-- Azure stores them securely (you never see them)
-- Azure rotates them automatically (you don't think about it)
-- Your code just uses `DefaultAzureCredential` and it works
-
-Think of it like an employee badge:
-- The badge is issued automatically when you join
-- The building validates it at each checkpoint
-- It expires and gets renewed automatically
-- You never have to manage it yourself
-
-### What is a Bearer Token?
-
-A bearer token is a temporary proof that says: *"I am Function App X, and Entra ID says so."*
-
-It's like a concert ticket:
-- Ticket issuer (Entra ID) signs the ticket
-- Bouncer (Easy Auth) checks the signature and lets you in
-- Ticket expires after the concert (token expires after 1 hour)
-- Can't fake it because of the signature
-
-Bearer tokens are passed in the `Authorization` header:
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-### What is Easy Auth?
-
-Easy Auth is a security checkpoint built into Azure App Services:
-
-```
-Request arrives at Function App
-    ↓
-Easy Auth middleware intercepts it
-    ↓
-If no Authorization header → reject (403)
-If Authorization header present:
-    • Extract the token
-    • Validate the signature (is it really from Entra ID?)
-    • Check if it's expired
-    • Check if caller is in allowedPrincipals (whitelist)
-    ↓
-If all checks pass → let request through
-If any check fails → reject (401 or 403)
-```
-
-### What is Zero Trust?
-
-The old way: "Trust everything on the network"
-```
-Companies had firewalls, then everything inside was trusted (bad!)
-```
-
-The new way: "Never trust, always verify"
-```
-Every request must prove its identity
-Every user/app must authenticate
-Every action is logged and monitored
-```
+- [START-HERE.md](START-HERE.md): entry navigation for trainees
+- [docs/](docs): concept and lab walkthrough content
+- [labs/](labs): lab-specific assets
+- [infra/](infra): Bicep templates
+- [scripts/](scripts): deployment and validation scripts
+- [solution/](solution): Function App code and deployment
 
 ---
 
-## 🏗️ Architecture Diagram
+## Notes on Scope
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Your Azure Subscription                                     │
-│                                                               │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  Virtual Network (10.0.0.0/16)                        │  │
-│  │                                                         │  │
-│  │  ┌──────────────────────────────────────────────────┐  │  │
-│  │  │  Subnet 1: Apps (10.0.0.0/24)                   │  │  │
-│  │  │                                                   │  │  │
-│  │  │  ┌────────────────────────────────────────────┐  │  │  │
-│  │  │  │  Function App (Caller)                      │  │  │  │
-│  │  │  │  • .NET 8 application                       │  │  │  │
-│  │  │  │  • System-assigned Managed Identity         │  │  │  │
-│  │  │  │  • DefaultAzureCredential to get tokens     │  │  │  │
-│  │  │  │  • Easy Auth (AllowAnonymous + validate     │  │  │  │
-│  │  │  │    bearer token from client)                │  │  │  │
-│  │  │  └────────────────────────────────────────────┘  │  │  │
-│  │  │                    │                                │  │  │
-│  │  │         POST /api/workflows/... with               │  │  │
-│  │  │         Authorization: Bearer <token>              │  │  │
-│  │  │                    │                                │  │  │
-│  │  │                    ↓                                │  │  │
-│  │  │  ┌────────────────────────────────────────────┐  │  │  │
-│  │  │  │  Logic App Standard (Receiver)             │  │  │  │
-│  │  │  │  • HTTP-triggered workflow                 │  │  │  │
-│  │  │  │  • System-assigned Managed Identity        │  │  │  │
-│  │  │  │  • Easy Auth validates bearer token        │  │  │  │
-│  │  │  │  • Only Function App in allowedPrincipals  │  │  │  │
-│  │  │  │  • Returns 200 OK with response            │  │  │  │
-│  │  │  └────────────────────────────────────────────┘  │  │  │
-│  │  └──────────────────────────────────────────────────┘  │  │
-│  │                                                         │  │
-│  │  ┌──────────────────────────────────────────────────┐  │  │
-│  │  │  Supporting Services                            │  │  │
-│  │  │  • Application Insights (monitoring)            │  │  │
-│  │  │  • Storage Account (Function App state)        │  │  │
-│  │  │  • Private Endpoints (network security)        │  │  │
-│  │  └──────────────────────────────────────────────────┘  │  │
-│  │                                                         │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                                                               │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  Microsoft Entra ID (Token Authority)                 │  │
-│  │  • Issues bearer tokens                               │  │
-│  │  • Validates token signatures                         │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🧹 Cleanup (Delete Resources)
-
-When you're done and want to avoid Azure charges:
-
-```bash
-# Delete the resource group (removes everything)
-az group delete --name "rg-easyauth-lab-dev" --yes
-
-# Verify it's deleted
-az group list --query "[].name"
-```
-
-**Tip:** You can also pause/delete resources individually in the [Azure Portal](https://portal.azure.com).
-
----
-
-## ❓ Troubleshooting Quick Links
-
-**Problem: Setup script fails**
-→ See [docs/troubleshooting.md](docs/troubleshooting.md#setup-script-fails)
-
-**Problem: Can't sign in to Azure**
-→ See [docs/troubleshooting.md](docs/troubleshooting.md#cant-sign-in-to-azure)
-
-**Problem: Easy Auth returns 401 Unauthorized**
-→ See [docs/troubleshooting.md](docs/troubleshooting.md#easy-auth-returns-401)
-
-**Problem: Function App can't acquire token**
-→ See [docs/troubleshooting.md](docs/troubleshooting.md#function-app-cant-acquire-token)
-
----
-
-## 📚 Additional Resources
-
-### Microsoft Documentation
-- [Azure Managed Identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
-- [Easy Auth & Authorization](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization)
-- [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/fundamentals/whatis)
-- [Bicep Language Reference](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/file)
-
-### Security Resources
-- [Zero Trust Security](https://www.microsoft.com/en-us/security/business/zero-trust)
-- [Azure Security Benchmark](https://learn.microsoft.com/en-us/security/benchmark/azure/)
-- [OWASP API Security](https://owasp.org/www-project-api-security/)
-
-### Learning Resources
-- [Azure Learn (free)](https://learn.microsoft.com/en-us/azure/)
-- [AZ-900 Certification](https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/)
-- [AZ-204 Certification](https://learn.microsoft.com/en-us/credentials/certifications/azure-developer/)
-
----
-
-## 🤝 Contributing
-
-Found a bug or have a suggestion?
-
-1. **Check existing issues** on GitHub
-2. **File a new issue** with:
-   - What you expected
-   - What actually happened
-   - Your OS and tool versions
-   - Relevant error messages
-
----
-
-## 📝 License
-
-This lab is provided as-is for educational purposes.
-
----
-
-## 🎯 Next Steps
-
-**Start here:** [START-HERE.md](START-HERE.md) — Quick navigation guide for all paths
-
-### For Lab 3 (Bearer Token + Managed Identity)
-
-1. ✅ **Open:** [START-HERE.md](START-HERE.md) → Path B
-2. ✅ **Read:** Overview of what you're building
-3. ✅ **Review:** Infrastructure summary ([docs/lab3-testing-evidence-summary.md](docs/lab3-testing-evidence-summary.md))
-4. ✅ **Deploy:** Run `scripts/deploy.ps1` to create infrastructure
-5. ✅ **Test:** Follow [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md) (complete step-by-step guide with C# code)
-6. ✅ **Verify:** Check Application Insights logs for success
-7. ✅ **Implement:** Use patterns in your own projects
-
----
-
-**Ready to start?** Open [START-HERE.md](START-HERE.md) and choose your path! 🚀
+- Active lab scope is Lab 3: app-host Easy Auth and managed identity patterns for Logic App + Function App.
+- Lab 1 and Lab 2 are treated as background design context rather than required trainee execution stages.
+- APIM remains the strategic enterprise gateway option for broad API estates, but this repo focuses first on core app-to-app authentication behavior.

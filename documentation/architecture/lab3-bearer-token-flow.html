@@ -27,8 +27,32 @@
     }
     .badge-success { background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
     .badge-danger { background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
-    code { background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; font-family: 'Courier New', monospace; }
-    pre { background-color: #f4f4f4; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+    code {
+      background-color: #eef3f8;
+      color: #1f2328;
+      border: 1px solid #d1d9e0;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    pre {
+      background-color: #f7f9fc;
+      color: #1f2328;
+      border: 1px solid #d1d9e0;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      border: 0;
+      padding: 0;
+    }
+    .compact-list {
+      margin-top: 0.5rem;
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -36,9 +60,8 @@
     <a class="logo" href="../index.html">Logic App Standard — Security Labs</a>
     <nav>
       <a href="../index.html">Home</a>
-      <a href="executive-summary.html">Executive Summary</a>
-      <a href="../evidence/index.html">Evidence</a>
-      <a href="../operations/index.html">Operations</a>
+      <a href="../../README.md">README</a>
+      <a href="../../docs/lab3-passwordless-managed-identity-easy-auth.md">Lab Guide</a>
     </nav>
   </header>
 
@@ -386,9 +409,9 @@ Response: 20.y.z.w (public IP — blocked by public access disabled)</code></pre
       <div class="callout callout-info">
         <strong>📖 Complete Testing & Implementation Guide</strong><br>
         For step-by-step instructions on how to create and deploy a test Function App with full bearer token code,
-        see <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a>.
+        see <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank" rel="noopener noreferrer">Lab 3 Testing & Verification Guide</a>.
         This includes:
-        <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+        <ul class="compact-list">
           <li>Complete C# HttpTrigger function implementation</li>
           <li>How to acquire bearer tokens and call Logic App</li>
           <li>End-to-end test scenarios with evidence collection</li>
@@ -503,7 +526,7 @@ flowchart TD
       <p><strong>Cause:</strong> Bearer token's <code>aud</code> claim doesn't match Logic App's Entra app ID</p>
       <p><strong>Check:</strong></p>
       <ul>
-        <li>Decode token at <a href="https://jwt.ms" target="_blank">jwt.ms</a> and verify <code>aud</code> field</li>
+        <li>Decode token at <a href="https://jwt.ms" target="_blank" rel="noopener noreferrer">jwt.ms</a> and verify <code>aud</code> field</li>
         <li>Ensure <code>LOGIC_APP_AUDIENCE</code> matches the Logic App's Entra app registration ID</li>
         <li>If wrong audience, token was requested for a different app</li>
       </ul>
@@ -663,43 +686,43 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
 
       <h3>🔐 Azure Managed Identities</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview" target="_blank">Managed Identities for Azure Resources</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-managed-identities-work-vm" target="_blank">How Managed Identities Work</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-managed-service-identity" target="_blank">Managed Identities in App Service and Azure Functions</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview" target="_blank" rel="noopener noreferrer">Managed Identities for Azure Resources</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-managed-identities-work-vm" target="_blank" rel="noopener noreferrer">How Managed Identities Work</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-managed-service-identity" target="_blank" rel="noopener noreferrer">Managed Identities in App Service and Azure Functions</a></li>
       </ul>
 
       <h3>🎫 Bearer Token Authentication & OAuth 2.0</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens" target="_blank">Entra ID Access Tokens</a></li>
-        <li><a href="https://datatracker.ietf.org/doc/html/rfc6750" target="_blank">RFC 6750 — The OAuth 2.0 Bearer Token Usage</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow" target="_blank">OAuth 2.0 Client Credentials Flow</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens" target="_blank" rel="noopener noreferrer">Entra ID Access Tokens</a></li>
+        <li><a href="https://datatracker.ietf.org/doc/html/rfc6750" target="_blank" rel="noopener noreferrer">RFC 6750 — The OAuth 2.0 Bearer Token Usage</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow" target="_blank" rel="noopener noreferrer">OAuth 2.0 Client Credentials Flow</a></li>
       </ul>
 
       <h3>🔐 Easy Auth & App Service Authentication</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization" target="_blank">Azure App Service Authentication / Authorization Overview</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad" target="_blank">Configure Azure AD Authentication in App Service</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization" target="_blank" rel="noopener noreferrer">Azure App Service Authentication / Authorization Overview</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad" target="_blank" rel="noopener noreferrer">Configure Azure AD Authentication in App Service</a></li>
       </ul>
 
       <h3>🛡️ Network Isolation & Private Endpoints</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview" target="_blank">Azure Private Endpoint Overview</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint" target="_blank">Secure Logic Apps with VNet and Private Endpoints</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/web-sites-integrate-with-vnet" target="_blank">VNet Integration in App Service</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview" target="_blank" rel="noopener noreferrer">Azure Private Endpoint Overview</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/logic-apps/secure-single-tenant-workflow-virtual-network-private-endpoint" target="_blank" rel="noopener noreferrer">Secure Logic Apps with VNet and Private Endpoints</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/web-sites-integrate-with-vnet" target="_blank" rel="noopener noreferrer">VNet Integration in App Service</a></li>
       </ul>
 
       <h3>📊 Azure SDK & DefaultAzureCredential</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential" target="_blank">DefaultAzureCredential API Reference (.NET)</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/developer/python/sdk/authentication" target="_blank">Azure SDK Authentication (Python)</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/developer/javascript/core/identity" target="_blank">Azure Identity Client Library (JavaScript)</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential" target="_blank" rel="noopener noreferrer">DefaultAzureCredential API Reference (.NET)</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/developer/python/sdk/authentication" target="_blank" rel="noopener noreferrer">Azure SDK Authentication (Python)</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/developer/javascript/core/identity" target="_blank" rel="noopener noreferrer">Azure Identity Client Library (JavaScript)</a></li>
       </ul>
 
       <h3>🔒 Zero Trust & Security Best Practices</h3>
       <ul>
-        <li><a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/zero-trust" target="_blank">Zero Trust Security Model</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/well-architected/security/design-identity-and-access-management" target="_blank">Azure Well-Architected Framework — Identity &amp; Access Management</a></li>
-        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-security-controls" target="_blank">Security Controls in Azure App Service</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/zero-trust" target="_blank" rel="noopener noreferrer">Zero Trust Security Model</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/well-architected/security/design-identity-and-access-management" target="_blank" rel="noopener noreferrer">Azure Well-Architected Framework — Identity &amp; Access Management</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/app-service/app-service-security-controls" target="_blank" rel="noopener noreferrer">Security Controls in Azure App Service</a></li>
       </ul>
     </section>
 
@@ -715,7 +738,7 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
         <strong>🔧 How to Implement:</strong>
         <ol>
           <li><strong>Reference Code:</strong> The C# code examples in section 8 show exactly how to build the Function App (token acquisition, HTTP requests, error handling)</li>
-          <li><strong>Complete Guide:</strong> <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank">Lab 3 Testing & Verification Guide</a> provides step-by-step instructions for creating a working Function App</li>
+          <li><strong>Complete Guide:</strong> <a href="../../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md" target="_blank" rel="noopener noreferrer">Lab 3 Testing & Verification Guide</a> provides step-by-step instructions for creating a working Function App</li>
           <li><strong>Deploy:</strong> Use Azure Functions Core Tools or Visual Studio to deploy your function to the pre-configured Function App</li>
           <li><strong>Test:</strong> Follow the testing guide to verify bearer token flow works end-to-end</li>
           <li><strong>Monitor:</strong> Use Application Insights to capture evidence and troubleshoot issues</li>
@@ -763,7 +786,7 @@ resource dnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>&copy; 2026 Logic App Standard Security Labs | <a href="https://github.com/JohanDeWeerdtMSFT/logicapp-easyauth-lab" target="_blank">GitHub Repository</a></p>
+    <p>&copy; 2026 Logic App Standard Security Labs | <a href="https://github.com/JohanDeWeerdtMSFT/logicapp-easyauth-lab" target="_blank" rel="noopener noreferrer">GitHub Repository</a></p>
   </footer>
 
 </body>
