@@ -45,8 +45,10 @@ workflow trigger. See [Authentication and authorization in App Service and Azure
 
 The caller Function App uses its **system-assigned managed identity**, enabled in
 [infra/modules/functionapp-caller.bicep](../infra/modules/functionapp-caller.bicep). Azure supplies the credential,
-so no secret is stored in code or app settings. The code asks Microsoft Entra ID for an access token for the Logic App
-scope and sends it in the HTTP `Authorization` header using the bearer scheme. See
+so no secret is stored in code or app settings. The code reads the `LOGIC_APP_CLIENT_ID` app setting (the Logic
+App's Entra app registration client ID) and asks Microsoft Entra ID for an access token using the scope
+`<logic-app-client-id>/.default`, then sends it in the HTTP `Authorization` header using the bearer scheme. See
+[solution/CallerFunctionApp/CallLogicApp.cs](../solution/CallerFunctionApp/CallLogicApp.cs),
 [What are managed identities for Azure resources?](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview)
 and the [client credentials flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-client-creds-grant-flow).
 
