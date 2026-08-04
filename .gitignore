@@ -2,6 +2,10 @@
 *.json.bak
 infra/*.json
 !infra/main.json
+**/bin/
+**/obj/
+**/publish/
+**/*.zip
 
 # Secrets and local config
 .env

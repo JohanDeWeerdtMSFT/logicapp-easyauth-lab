@@ -221,6 +221,11 @@ try {
         $originalPrincipals = @(
             $originalAuth.properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities
         )
+        $originalPayloadPath = Join-Path ([System.IO.Path]::GetTempPath()) "easyauth-original-$([guid]::NewGuid()).json"
+        [ordered]@{ properties = $originalAuth.properties } |
+            ConvertTo-Json -Depth 100 |
+            Set-Content $originalPayloadPath -Encoding utf8NoBOM
+
         try {
             az deployment group create `
                 --subscription $SubscriptionId `
@@ -244,17 +249,17 @@ try {
             $b6.passed = $b6.passed -and -not ($b6.assertions.Values -contains $false)
         }
         finally {
-            az deployment group create `
+            az rest `
                 --subscription $SubscriptionId `
-                --resource-group $ResourceGroupName `
-                --name "b6-restoration-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
-                --parameters $ParameterFile `
-                --mode Incremental `
-                --only-show-errors `
+                --method put `
+                --uri $authUri `
+                --body "@$originalPayloadPath" `
                 --output none
             if ($LASTEXITCODE -ne 0) {
                 throw 'B6 restoration failed.'
             }
+
+            Remove-Item $originalPayloadPath -Force -ErrorAction SilentlyContinue
         }
 
         $restoredPrincipals = @(

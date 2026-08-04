@@ -49,7 +49,7 @@ The implemented learning journey is:
 | Critical | Subscription and caller-demo inputs were not reproducible | Explicit parameters and `.env` fallback implemented | `scripts/deploy.ps1` |
 | High | Scenario body did not correlate with the workflow run | Caller propagates `scenario` in the query string | `CallLogicApp.cs`; B1 assertions |
 | High | Audience documentation did not match Easy Auth | `api://<logic-app-client-id>` aligned across Entra, caller, and Easy Auth | B1 token claim and live `authsettingsV2` |
-| High | B6 could not safely mutate and restore authorization | Explicit parameter-file mutation and exact principal comparison implemented | `scripts/validate.ps1`; live B6 `403` |
+| High | B6 could not safely mutate and restore authorization | Explicit parameter-file mutation, captured-policy restoration, and exact principal comparison implemented | `scripts/validate.ps1`; live B6 `403` |
 | High | Private ingress blocked normal workstation publishing | Public app ingress is the classroom default | `enablePrivateAppNetworking=false` |
 | Medium | Private networking and CI/CD caveats were fragmented | Dedicated guide added | `docs/07-private-networking-and-cicd.md` |
 | Medium | Duplicate Lab 3 procedures drifted | Duplicate files now point to canonical guides | `labs/lab3-bearer-token/docs/` |
@@ -121,7 +121,7 @@ All PR 6 implementation changes are complete:
 - [x] Workflow content deploys through a supported Standard Logic Apps ZIP package.
 - [x] B1 asserts scenario, audience, issuer, managed-identity object ID, and authenticated workflow principal.
 - [x] B2/B3/B4 return `401` and B6 returns `403`.
-- [x] B6 restores and compares the original principal list.
+- [x] B6 restores the captured live Easy Auth policy and compares the original principal list.
 - [x] Public classroom and optional private-ingress modes are distinct.
 - [x] Storage remains private in the classroom path.
 - [x] Canonical documentation is lint-clean and duplicate procedures are removed.

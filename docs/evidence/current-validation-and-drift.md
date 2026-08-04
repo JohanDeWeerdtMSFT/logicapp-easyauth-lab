@@ -18,11 +18,11 @@ This file records the current live classroom baseline. When older evidence or as
 | Allowed audience | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` | Live `authsettingsV2` and B1 token claim |
 | Allowed principal | `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1` | Function managed identity and live `authsettingsV2` |
 | Anonymous Logic App call | HTTP 401 | Direct unsigned `POST` without a bearer token |
-| B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator at 2026-08-04T19:38:10Z |
+| B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator at 2026-08-04T20:42:07Z |
 | B2 invalid token | HTTP 401 | Direct request with an invalid expired token |
 | B3 wrong audience | HTTP 401 | Direct request with an Azure Resource Manager token |
-| B6 unauthorized principal | HTTP 403 | Explicit parameter-file override at 2026-08-04T19:29:51Z; exact original principals restored afterward |
-| B1 after restoration | HTTP 200 and authenticated workflow response | Canonical validator at 2026-08-04T19:38:10Z |
+| B6 unauthorized principal | HTTP 403 | Explicit parameter-file override at 2026-08-04T20:36:24Z; captured live policy restored afterward |
+| B1 after restoration | HTTP 200 and authenticated workflow response | Canonical validator at 2026-08-04T20:42:07Z |
 | Public classroom resource cleanup | No Logic App private endpoint or App Service private DNS zone; four storage private endpoints retained | Azure inventory after cleanup |
 | Deployment history cleanup | No failed deployment records remain | Azure deployment inventory |
 
@@ -41,7 +41,7 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 | Function error bodies reset 401/403 to HTTP 200 | Error responses now use the isolated-worker `WriteAsJsonAsync` overload with an explicit status code. |
 | Function-inbound `Return401` required unprovisioned delegated consent | Function Easy Auth uses `AllowAnonymous` as a lab-only harness; the Logic App remains the strict security boundary under test. |
 | Incremental public-mode deployment retained an older Logic App private endpoint | `scripts/deploy.ps1` explicitly removes the retained endpoint when private app networking is disabled. |
-| B6 validator was coupled to `dev-westeurope.bicepparam` | B6 now captures, mutates, restores, and compares the exact live `authsettingsV2` principal list. |
+| B6 validator was coupled to `dev-westeurope.bicepparam` | B6 accepts an explicit environment parameter file for mutation, restores the captured live `authsettingsV2` properties directly, and compares the resulting principal list with the captured original. |
 | B1 validator asserted only HTTP 200 | B1 now asserts scenario propagation, audience, managed-identity object ID, and authenticated workflow principal. |
 | Public classroom deployment retained dual app ingress | The retained Logic App private endpoint and App Service private DNS zone were removed; storage private endpoints remain. |
 | Tracked `infra/main.json` represented the old topology | Regenerated from the current Bicep source and verified to include `enablePrivateAppNetworking`. |
