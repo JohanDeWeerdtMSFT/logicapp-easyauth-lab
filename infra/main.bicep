@@ -33,12 +33,16 @@ param deployFuncCallerDemo bool = false
 @description('Entra ID application client ID for the caller Function App Easy Auth registration. Required when deployFuncCallerDemo = true.')
 param funcCallerEntraClientId string = ''
 
+@description('Optional object ID used instead of the caller managed identity in Logic App Easy Auth allowedPrincipals. Intended only for isolated authorization tests such as B6.')
+param easyAuthAllowedPrincipalOverride string = ''
+
 // ── 1. Foundation ──────────────────────────────
 module foundation 'modules/foundation.bicep' = {
   name: 'foundation'
   params: {
     environmentName: environmentName
     location: location
+    disableStoragePublicAccess: deployFuncCallerDemo
   }
 }
 
@@ -48,6 +52,7 @@ module networking 'modules/networking.bicep' = if (deployFuncCallerDemo) {
   params: {
     environmentName: environmentName
     location: location
+    storageAccountName: foundation.outputs.storageAccountName
   }
 }
 
@@ -63,9 +68,9 @@ module logicApp 'modules/logicapp.bicep' = {
     appInsightsConnectionString: foundation.outputs.appInsightsConnectionString
     entraAppTenantId: entraAppTenantId
     // Wire VNet integration + private endpoint when func-caller demo is enabled
-    vnetIntegrationSubnetId: deployFuncCallerDemo ? networking.outputs.appIntegrationSubnetId : ''
-    privateEndpointSubnetId: deployFuncCallerDemo ? networking.outputs.privateEndpointSubnetId : ''
-    privateDnsZoneId: deployFuncCallerDemo ? networking.outputs.privateDnsZoneId : ''
+    vnetIntegrationSubnetId: deployFuncCallerDemo ? networking!.outputs.appIntegrationSubnetId : ''
+    privateEndpointSubnetId: deployFuncCallerDemo ? networking!.outputs.privateEndpointSubnetId : ''
+    privateDnsZoneId: deployFuncCallerDemo ? networking!.outputs.privateDnsZoneId : ''
   }
 }
 
@@ -100,7 +105,7 @@ module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDe
     appInsightsConnectionString: foundation.outputs.appInsightsConnectionString
     storageAccountName: foundation.outputs.storageAccountName
     storageAccountId: foundation.outputs.storageAccountId
-    vnetIntegrationSubnetId: networking.outputs.appIntegrationSubnetId
+    vnetIntegrationSubnetId: networking!.outputs.appIntegrationSubnetId
     entraAppClientId: funcCallerEntraClientId
     entraAppTenantId: entraAppTenantId
     logicAppHostname: logicApp.outputs.logicAppDefaultHostname
@@ -109,8 +114,11 @@ module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDe
 }
 
 // ── 4. Easy Auth on Logic App ────────────────────────
-// Compute allowedPrincipals safely: only include the Function App's principal ID when deployed.
-var easyAuthAllowedPrincipals = deployFuncCallerDemo ? [ funcCallerApp.outputs.functionAppPrincipalId ] : []
+// Default to the deployed caller identity. An explicit override supports isolated 403 tests.
+var defaultEasyAuthAllowedPrincipals = deployFuncCallerDemo ? [ funcCallerApp!.outputs.functionAppPrincipalId ] : []
+var easyAuthAllowedPrincipals = !empty(easyAuthAllowedPrincipalOverride)
+  ? [ easyAuthAllowedPrincipalOverride ]
+  : defaultEasyAuthAllowedPrincipals
 
 module easyAuth 'modules/easyauth.bicep' = {
   name: 'easyauth'
@@ -121,9 +129,6 @@ module easyAuth 'modules/easyauth.bicep' = {
     entraAppTenantId: entraAppTenantId
     allowedPrincipals: easyAuthAllowedPrincipals
   }
-  dependsOn: [
-    funcCallerApp
-  ]
 }
 
 // ── Outputs ────────────────────────────────────
@@ -132,7 +137,7 @@ output logicAppName string = logicApp.outputs.logicAppName
 output logicAppDefaultHostname string = logicApp.outputs.logicAppDefaultHostname
 output logicAppResourceId string = logicApp.outputs.logicAppResourceId
 output storageAccountName string = foundation.outputs.storageAccountName
-output functionAppCallerName string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppName : ''
-output functionAppCallerHostname string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppDefaultHostname : ''
-output functionAppCallerPrincipalId string = deployFuncCallerDemo ? funcCallerApp.outputs.functionAppPrincipalId : ''
+output functionAppCallerName string = deployFuncCallerDemo ? funcCallerApp!.outputs.functionAppName : ''
+output functionAppCallerHostname string = deployFuncCallerDemo ? funcCallerApp!.outputs.functionAppDefaultHostname : ''
+output functionAppCallerPrincipalId string = deployFuncCallerDemo ? funcCallerApp!.outputs.functionAppPrincipalId : ''
 

@@ -28,6 +28,8 @@ Remove `-WhatIf` to deploy. Then use [the deployment and validation guide](docs/
 > [!WARNING]
 > When the caller demo is enabled, the Logic App uses a private endpoint. ARM/Bicep deployment can work from a hosted agent, but app-content deployment and direct HTTP validation need network and DNS reachability to the target endpoints.
 
+The same private deployment also disables public access to the shared storage account and creates private endpoints plus VNet-linked DNS zones for Blob, Queue, Table, and File. Missing any of these storage paths can leave the Function or Logic Apps host unhealthy even when managed-identity RBAC is correct.
+
 ## Question 1: Does deploy.ps1 Handle Already-Created Resources?
 
 ### ✅ YES — Fully Idempotent

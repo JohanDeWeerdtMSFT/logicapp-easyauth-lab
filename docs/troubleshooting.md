@@ -11,7 +11,8 @@ Do these checks in order. A timeout is not evidence of an authentication failure
 | HTTP 401 | Authentication failed: missing/invalid token, wrong audience or issuer, or expired token | Caller `tokenClaims`, `LOGIC_APP_AUDIENCE`, and Easy Auth `allowedAudiences` | B2, B3, B4 |
 | HTTP 403 | Authentication succeeded but authorization failed | Token `objectId`, Function managed identity principal ID, and `allowedPrincipals` | B6 |
 | Timeout or DNS failure | Request did not reach Easy Auth | Private DNS resolution, VNet integration, private endpoint, NSG/route | Network check |
-| HTTP 404 or 405 | Endpoint path or method is wrong | `/api/workflows/httpTriggerWorkflow/...` and `POST` | Route check |
+| HTTP 404 or 405 | Endpoint path or method is wrong | `/api/httpTriggerWorkflow/...` and `POST` | Route check |
+| HTTP 503 or `AzureWebJobsStorage` authorization failure | Host cannot reach protected storage | Storage private endpoints and private DNS zones for Blob, Queue, Table, and File | Storage network check |
 
 Run the successful B1 test in [the canonical validation guide](lab3-testing-and-verification.md) first. It returns selected token claims without exposing the bearer token and shows how to reproduce and restore 401/403 conditions.
 

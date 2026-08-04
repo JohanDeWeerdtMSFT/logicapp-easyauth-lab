@@ -28,7 +28,7 @@ namespace CallerFunctionApp;
 ///
 /// Required application settings (configure in Azure Portal or local.settings.json):
 ///   LOGIC_APP_URL                      — Full invoke URL for the Logic App workflow
-///                                         Format: https://<logicapp>.azurewebsites.net/api/workflows/<name>/triggers/manual/invoke?api-version=2022-05-01
+///                                         Format: https://<logicapp>.azurewebsites.net/api/<name>/triggers/manual/invoke?api-version=2022-05-01
 ///                                         (Hostname is automatically extracted for token acquisition)
 ///   WEBSITE_AUTH_AAD_ALLOWED_TENANTS   — Entra ID tenant ID for token acquisition (optional, defaults to current tenant)
 /// </summary>
@@ -68,6 +68,28 @@ public class CallLogicApp
                 return badRequest;
             }
 
+            ScenarioRequest? scenarioRequest;
+            try
+            {
+                scenarioRequest = await ReadScenarioRequestAsync(req, cancellationToken);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Caller request body is not valid JSON.");
+                var invalidRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await invalidRequest.WriteAsJsonAsync(new
+                {
+                    error = "InvalidRequest",
+                    detail = "Request body must be valid JSON, for example: {\"scenario\":\"B1\"}."
+                }, cancellationToken);
+                return invalidRequest;
+            }
+
+            var scenario = string.IsNullOrWhiteSpace(scenarioRequest?.Scenario)
+                ? "default"
+                : scenarioRequest.Scenario.Trim();
+            var logicAppRequestUrl = AddQueryParameter(logicAppUrl, "scenario", scenario);
+
             // ── Step 2: Acquire bearer token from this Function App's managed identity ──────────
             var accessToken = await GetAccessTokenAsync(cancellationToken);
             var tokenClaims = ReadTokenClaims(accessToken.Token);
@@ -91,11 +113,12 @@ public class CallLogicApp
             {
                 message   = "Test from CallerFunctionApp",
                 source    = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") ?? "local-dev",
+                scenario,
                 timestamp = DateTime.UtcNow
             };
 
             var logicAppResponse = await CallLogicAppWithTokenAsync(
-                logicAppUrl,
+                logicAppRequestUrl,
                 accessToken.Token,
                 payload,
                 cancellationToken);
@@ -107,6 +130,7 @@ public class CallLogicApp
             {
                 status          = "success",
                 message         = "Bearer token flow verified — Easy Auth accepted the request.",
+                scenario,
                 logicAppResponse,
                 tokenClaims,
                 tokenExpiry     = accessToken.ExpiresOn,
@@ -190,6 +214,31 @@ public class CallLogicApp
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────────────────────────
+
+    private static async Task<ScenarioRequest?> ReadScenarioRequestAsync(
+        HttpRequestData request,
+        CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(
+            request.Body,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 1024,
+            leaveOpen: true);
+        var json = await reader.ReadToEndAsync(cancellationToken);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<ScenarioRequest>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+    }
+
+    private static string AddQueryParameter(string url, string name, string value)
+    {
+        var separator = url.Contains('?', StringComparison.Ordinal) ? '&' : '?';
+        return $"{url}{separator}{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}";
+    }
 
     private static TokenClaims ReadTokenClaims(string token)
     {
@@ -316,4 +365,6 @@ public class CallLogicApp
         string? ObjectId,
         string? CallerAppId,
         DateTimeOffset? ExpiresOn);
+
+    private sealed record ScenarioRequest(string? Scenario);
 }

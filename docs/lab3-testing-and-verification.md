@@ -31,6 +31,8 @@ Microsoft references:
   - Caller Function App registration: used by Easy Auth on the caller endpoint.
 - A machine that can reach the deployment endpoints. The Logic App is private when `-DeployFuncCallerDemo` is enabled, so direct tests of the Logic App require VNet routing and private DNS. The caller Function App performs the normal end-to-end test from inside the VNet.
 
+The private Lab 3 deployment creates private endpoints and VNet-linked DNS zones for the shared storage account's Blob, Queue, Table, and File services. These endpoints are required for both hosts to start when storage public network access is disabled. See [Deploy Standard logic apps with private storage](https://learn.microsoft.com/azure/logic-apps/deploy-single-tenant-logic-apps-private-storage-account).
+
 > [!IMPORTANT]
 > Do not log, paste, upload, or take screenshots of a complete bearer token. A bearer token is a credential. The sample caller decodes its token payload locally and reports only selected non-secret claims. Reading claims does not validate the token signature; Easy Auth performs signature, issuer, audience, lifetime, and policy enforcement.
 
@@ -111,7 +113,7 @@ Deploy [the workflow definition](../src/httpTriggerWorkflow/workflow.json) throu
 The script prints this unsigned invoke URL:
 
 ```text
-https://<logic-app-host>/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
+https://<logic-app-host>/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
 ```
 
 ## 4. Deploy the caller Function code
@@ -119,7 +121,7 @@ https://<logic-app-host>/api/workflows/httpTriggerWorkflow/triggers/manual/invok
 The infrastructure already configures the same unsigned URL and audience. Deploy the code and verify the settings:
 
 ```powershell
-$logicAppUrl = "https://$logicAppHost/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01"
+$logicAppUrl = "https://$logicAppHost/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01"
 
 ./solution/deploy.ps1 `
   -FunctionAppName $functionAppName `
@@ -162,7 +164,7 @@ Expected:
 
 | Setting | Expected value |
 | --- | --- |
-| `LOGIC_APP_URL` | Unsigned `/api/workflows/httpTriggerWorkflow/...` URL |
+| `LOGIC_APP_URL` | Unsigned `/api/httpTriggerWorkflow/...` URL |
 | `LOGIC_APP_AUDIENCE` | `api://<logic-app-client-id>` |
 | `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | Lab tenant ID |
 
@@ -182,6 +184,22 @@ Expected:
 - `enabled` is `true`.
 - `audiences` contains `api://<logic-app-client-id>`.
 - `principals` contains `$functionPrincipalId`.
+
+### Storage private connectivity
+
+```powershell
+az network private-endpoint list `
+  --resource-group $resourceGroup `
+  --query "[?contains(name, 'pe-laeasyauthlab')].{name:name,group:privateLinkServiceConnections[0].groupIds[0],state:privateLinkServiceConnections[0].privateLinkServiceConnectionState.status}" `
+  --output table
+
+az network private-dns zone list `
+  --resource-group $resourceGroup `
+  --query "[?contains(name, 'privatelink')].name" `
+  --output table
+```
+
+Expected: approved storage private endpoints and linked private DNS zones for `blob`, `queue`, `table`, and `file`, plus the Logic App `sites` private endpoint. Do not proceed while either host reports `Unable to access AzureWebJobsStorage`.
 
 ## 6. Run the successful managed-identity test
 
@@ -290,14 +308,46 @@ HTTP 403 means Easy Auth accepted the token as authenticated but the caller fail
 
 ### Reproduce unauthorized principal safely
 
-Save the current auth configuration before changing it:
+Run this exercise only in an isolated lab resource group. Get the Logic App's own managed identity object ID, which is valid but different from the caller identity:
 
 ```powershell
-$authBackup = az rest --method get --uri $authUri | ConvertFrom-Json
-$authBackup | ConvertTo-Json -Depth 100 | Set-Content "$env:TEMP\logicapp-authsettingsv2-backup.json"
+$nonCallerPrincipalId = az webapp identity show `
+  --name $logicAppName `
+  --resource-group $resourceGroup `
+  --query principalId `
+  --output tsv
 ```
 
-The preferred lab exercise is to redeploy with an intentionally different caller principal in an isolated test environment. If you temporarily remove the current caller from `allowedPrincipals`, expect the valid managed-identity token to receive HTTP 403. Restore the Bicep-defined configuration immediately by rerunning `scripts/deploy.ps1` with the original parameters.
+Preview and deploy the authorization-test override:
+
+```powershell
+./scripts/deploy.ps1 `
+  -EntraAppClientId $logicAppClientId `
+  -EntraAppTenantId $tenantId `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId $callerClientId `
+  -EasyAuthAllowedPrincipalOverride $nonCallerPrincipalId `
+  -WhatIf
+
+./scripts/deploy.ps1 `
+  -EntraAppClientId $logicAppClientId `
+  -EntraAppTenantId $tenantId `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId $callerClientId `
+  -EasyAuthAllowedPrincipalOverride $nonCallerPrincipalId
+```
+
+Invoke the caller with `{"scenario":"B6"}`. Expected: downstream HTTP 403 because the token is valid but its `oid` is not the allow-listed object ID.
+
+Restore immediately by redeploying the original parameters without `-EasyAuthAllowedPrincipalOverride`:
+
+```powershell
+./scripts/deploy.ps1 `
+  -EntraAppClientId $logicAppClientId `
+  -EntraAppTenantId $tenantId `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId $callerClientId
+```
 
 After restoration, verify:
 
@@ -315,7 +365,7 @@ Expected: the Function App principal ID is present and the next caller invocatio
 | --- | --- | --- | --- |
 | 401 | Authentication | `aud`, issuer/tenant, expiry, and bearer header | Restore `LOGIC_APP_AUDIENCE`, tenant ID, and Easy Auth allowed audiences. |
 | 403 | Authorization | Token `oid` versus `allowedPrincipals` | Redeploy the original Bicep parameters so the caller principal is allow-listed. |
-| 404 or 405 | Route/method | Unsigned URL and `POST` method | Use `/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01`. |
+| 404 or 405 | Route/method | Unsigned URL and `POST` method | Use `/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01`. |
 | Timeout or DNS error | Network | Resolve the Logic App hostname from the caller's reachable network | Check VNet integration, private endpoint, private DNS link, and route controls. |
 | Credential unavailable | Caller identity | Function App system-assigned identity | Enable or redeploy the managed identity. |
 | 200 but no run | Workflow/runtime | Workflow name, deployment, and run history time | Redeploy the workflow and correlate timestamps in Application Insights. |

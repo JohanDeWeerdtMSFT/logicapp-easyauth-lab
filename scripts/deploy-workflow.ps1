@@ -57,6 +57,19 @@ if (-not (Test-Path $WorkflowJsonPath)) {
     throw "Workflow definition not found at '$WorkflowJsonPath'."
 }
 
+$workflowArtifact = Get-Content $WorkflowJsonPath -Raw | ConvertFrom-Json
+$deploymentPayload = [ordered]@{
+    kind = $workflowArtifact.kind
+    properties = [ordered]@{
+        files = [ordered]@{
+            'workflow.json' = $workflowArtifact
+        }
+        flowState = 'Enabled'
+    }
+}
+$payloadPath = Join-Path ([System.IO.Path]::GetTempPath()) "logicapp-workflow-$([guid]::NewGuid()).json"
+$deploymentPayload | ConvertTo-Json -Depth 100 | Set-Content $payloadPath -Encoding utf8NoBOM
+
 az account set --subscription $SubscriptionId
 if ($LASTEXITCODE -ne 0) {
     throw "Could not select Azure subscription '$SubscriptionId'."
@@ -65,9 +78,14 @@ if ($LASTEXITCODE -ne 0) {
 $managementUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$LogicAppName/workflows/$WorkflowName" + '?api-version=2023-12-01'
 
 Write-Host "Deploying workflow '$WorkflowName' to Logic App '$LogicAppName'..." -ForegroundColor Cyan
-az rest --method put --uri $managementUri --body "@$WorkflowJsonPath" --output none
-if ($LASTEXITCODE -ne 0) {
-    throw "Workflow deployment failed for '$WorkflowName'."
+try {
+    az rest --method put --uri $managementUri --body "@$payloadPath" --output none
+    if ($LASTEXITCODE -ne 0) {
+        throw "Workflow deployment failed for '$WorkflowName'."
+    }
+}
+finally {
+    Remove-Item $payloadPath -Force -ErrorAction SilentlyContinue
 }
 
 $logicAppHostname = az webapp show `
@@ -79,7 +97,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($logicAppHostname)) {
     throw 'Workflow deployed, but the Logic App hostname could not be resolved.'
 }
 
-$invokeUrl = "https://$logicAppHostname/api/workflows/$WorkflowName/triggers/manual/invoke?api-version=2022-05-01"
+$invokeUrl = "https://$logicAppHostname/api/$WorkflowName/triggers/manual/invoke?api-version=2022-05-01"
 
 Write-Host "Workflow deployed successfully." -ForegroundColor Green
 Write-Host "Unsigned invoke URL (use with an Entra bearer token):" -ForegroundColor Green

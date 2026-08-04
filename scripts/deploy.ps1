@@ -52,7 +52,9 @@ param(
 
     [switch]$DeployFuncCallerDemo,
 
-    [string]$FuncCallerEntraClientId = ''
+    [string]$FuncCallerEntraClientId = '',
+
+    [string]$EasyAuthAllowedPrincipalOverride = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -137,6 +139,9 @@ try {
     if ($rgExists -eq 'true') {
         Write-Host "  Resource group '$resourceGroupName' already exists." -ForegroundColor Green
     }
+    elseif ($isWhatIf) {
+        throw "Resource group '$resourceGroupName' does not exist. Create it explicitly before running -WhatIf; preview mode does not create resources."
+    }
     else {
         Write-Host "  Creating resource group '$resourceGroupName' in '$Location'..." -ForegroundColor Yellow
         Invoke-AzCommand -Description "Creating resource group" `
@@ -166,6 +171,10 @@ try {
             throw "-FuncCallerEntraClientId is required when -DeployFuncCallerDemo is specified."
         }
         $deployParams += 'funcCallerEntraClientId=' + $FuncCallerEntraClientId
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($EasyAuthAllowedPrincipalOverride)) {
+        $deployParams += 'easyAuthAllowedPrincipalOverride=' + $EasyAuthAllowedPrincipalOverride
     }
 
     # ── Step 2/3: What-If or Deploy ─────────────────────────────────────────

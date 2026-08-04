@@ -10,6 +10,9 @@ param environmentName string
 @description('Azure region for all resources.')
 param location string
 
+@description('Disable public network access to the storage account. Enable only when private endpoints and DNS are deployed.')
+param disableStoragePublicAccess bool = false
+
 var baseName = 'la-easyauth-lab-${environmentName}'
 var suffix = uniqueString(resourceGroup().id)
 
@@ -29,6 +32,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
+    allowSharedKeyAccess: false
+    publicNetworkAccess: disableStoragePublicAccess ? 'Disabled' : 'Enabled'
   }
 }
 

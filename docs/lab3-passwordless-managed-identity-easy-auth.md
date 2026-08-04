@@ -133,7 +133,7 @@ flowchart LR
 
 | Setting | Example Value | Purpose |
 | --- | --- | --- |
-| `LOGIC_APP_URL` | `https://<logic-app-host>/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01` | Target workflow endpoint |
+| `LOGIC_APP_URL` | `https://<logic-app-host>/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01` | Target workflow endpoint |
 | `LOGIC_APP_AUDIENCE` | `api://<logic-app-client-id>` | Token audience for Easy Auth validation |
 | `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `<tenant-id>` | Tenant boundary for auth flow |
 
@@ -267,7 +267,7 @@ cd solution
 ./deploy.ps1 `
   -FunctionAppName $functionAppName `
   -ResourceGroupName $resourceGroup `
-  -LogicAppUrl "https://$logicAppHost/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -LogicAppUrl "https://$logicAppHost/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
   -LogicAppAudience $logicAppAudience `
   -TenantId $tenantId
 ```
