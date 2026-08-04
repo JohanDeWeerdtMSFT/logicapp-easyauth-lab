@@ -201,3 +201,5 @@ az group delete --name "rg-la-easyauth-lab-dev" --yes --no-wait
 - Active lab scope is Lab 3: app-host Easy Auth and managed identity patterns for Logic App + Function App.
 - Lab 1 and Lab 2 are treated as background design context rather than required trainee execution stages.
 - APIM remains the strategic enterprise gateway option for broad API estates, but this repo focuses first on core app-to-app authentication behavior.
+
+Copilot test
