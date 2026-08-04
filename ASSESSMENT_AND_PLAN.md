@@ -394,8 +394,24 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ## 8. Copilot implementation plan
 
+### Phase status tracker
+
+Status values: `Not started`, `In progress`, `Blocked`, `Done`.
+
+Update the status of a phase here and in the phase section below whenever work on that phase changes.
+
+| Phase | Name | Status | Last updated | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | Documentation structure | Not started | 2026-08-04 | `README.md` and `START-HERE.md` not yet reorganized. |
+| 2 | Identity and Easy Auth explanation | Not started | 2026-08-04 | Lab 3 docs exist but concept explanations still pending. |
+| 3 | Deployment guidance | Not started | 2026-08-04 | Prerequisite checklist and script parameters not yet updated. |
+| 4 | Validation and troubleshooting | Not started | 2026-08-04 | SAS-free validation path not yet consolidated. |
+| 5 | Private networking and CI/CD caveats | Not started | 2026-08-04 | `docs/07-private-networking-and-cicd.md` does not exist yet. |
+| 6 | Final review | Not started | 2026-08-04 | Blocked until phases 1-5 complete. |
+
 ### Phase 1: Documentation structure
 
+- Status: Not started
 - Task: Reorganize entry docs into a strict beginner-first progression that starts from the current private Lab 3 architecture and includes an explicit public-access variant when that is acceptable for the lab run.
 - Files to modify: `README.md`, `START-HERE.md`
 - Expected outcome: clear “start here → concepts → deployment → validation → troubleshooting” path.
@@ -403,6 +419,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 2: Identity and Easy Auth explanation
 
+- Status: Not started
 - Task: Add concise explanations of Easy Auth, Entra token flow, OAuth audience, OAuth scope, SAS replacement, and authn/authz boundaries.
 - Files to modify: `docs/lab3-passwordless-managed-identity-easy-auth.md`, `docs/lab3-managed-identity-bearer-token-flow.md`
 - Expected outcome: beginner can explain who calls what, with which token, and why.
@@ -410,6 +427,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 3: Deployment guidance
 
+- Status: Not started
 - Task: Clarify prerequisite data, subscription selection, deployment order, and automation paths for the current private path and the optional public-access path.
 - Files to modify: `README.md`, `DEPLOYMENT-FAQ.md`, `.env.example`, `scripts/deploy.ps1`, `docs/lab3-passwordless-managed-identity-easy-auth.md`
 - Expected outcome: fewer setup/deployment misconfigurations.
@@ -417,6 +435,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 4: Validation and troubleshooting
 
+- Status: Not started
 - Task: Remove SAS from active validation guidance and improve verification and root-cause navigation.
 - Files to modify: `docs/lab3-testing-and-verification.md`, `labs/lab3-bearer-token/docs/lab3-testing-and-verification.md`, `START-HERE.md`, `docs/troubleshooting.md`, `docs/evidence/scenario-ids.md`
 - Expected outcome: one SAS-free validation path with a fast route from symptom to root cause.
@@ -424,6 +443,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 5: Private networking and CI/CD caveats
 
+- Status: Not started
 - Task: Add consolidated caveats and deployment matrix for private environments.
 - Files to modify: `docs/07-private-networking-and-cicd.md` (new), `README.md`
 - Expected outcome: users understand hosted-runner limitations and when self-hosted is required.
@@ -431,6 +451,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 6: Final review
 
+- Status: Not started
 - Task: Perform consistency and link-quality pass across updated docs.
 - Files to modify: all touched markdown docs
 - Expected outcome: no conflicting guidance and no broken key links.
