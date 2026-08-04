@@ -155,6 +155,7 @@ Recommended learner journey for beginner-to-intermediate identity/networking aud
 | Critical | Deployment reliability | `.env.example` directs participants to set `AZURE_SUBSCRIPTION_ID`, but `scripts/deploy.ps1` does not read `.env` and instead sets a hard-coded subscription ID. | The documented quick start can deploy to an unintended subscription or fail before Bicep runs, which makes the lab unreliable and exposes a repository-specific identifier. | Update `scripts/deploy.ps1` to accept a subscription ID explicitly or load `AZURE_SUBSCRIPTION_ID` from `.env`; remove the hard-coded ID; validate that a value is present before `az account set`; and align README/START-HERE and `.env.example` with the selected input method. | Next Copilot implementation agent | `.env.example:8-10`, `scripts/deploy.ps1:54`, `scripts/deploy.ps1:92-94`, `START-HERE.md` |
 | High | Learning clarity | Concept explanations are spread across multiple files and not consistently ordered from “why” to “how.” | Beginners may deploy without understanding identity/security rationale. | Add a structured concepts-first section and unify cross-links in README and START-HERE. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/README.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/START-HERE.md` |
 | High | Authentication correctness | Audience/resource/scope and `allowedPrincipals` rationale are present but not consistently beginner-framed before hands-on steps. | Misconfiguration here causes 401/403 and confusion about identity trust model. | Add explicit beginner explanations and validation checklist in concept and testing docs. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-passwordless-managed-identity-easy-auth.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-testing-and-verification.md` |
+| High | Authentication correctness | Both active testing guides—`docs/lab3-testing-and-verification.md` and `labs/lab3-bearer-token/docs/lab3-testing-and-verification.md`—set `LOGIC_APP_URL` with `sp`, `sv`, and `sig` query parameters and instruct learners to retrieve a callback URL. `START-HERE.md` links the `labs/` copy. | The SAS-signed callback URLs contradict the mandatory managed-identity and bearer-token path, and duplicate guidance can leave learners following a SAS-based route. | Remove SAS callback URL instructions from both active guides, or consolidate them into one canonical SAS-free testing guide and update `START-HERE.md` to link only that guide. Configure `LOGIC_APP_URL` as the unsigned trigger endpoint and use the Entra bearer token as the required authorization mechanism. | Next Copilot implementation agent | `docs/lab3-testing-and-verification.md:298-331`, `labs/lab3-bearer-token/docs/lab3-testing-and-verification.md:298-331`, `START-HERE.md:13,46,68` |
 | High | Private networking + CI/CD | Private endpoint/VNet/private DNS are implemented as an optional Lab 3 pattern, but deployment constraints for hosted runners are not consolidated as a mandatory caveat section. | Participants may expect GitHub-hosted or Microsoft-hosted agents to deploy app content or validate private-only endpoints without network reachability. | Add dedicated private-networking-and-CI/CD caveats doc and link it prominently. Distinguish ARM/Bicep control-plane deployment from ZIP/Kudu deployment and runtime validation. | Next Copilot implementation agent | `infra/main.bicep`, `infra/modules/networking.bicep`, `infra/modules/logicapp.bicep`, Microsoft docs on private endpoint and agent networking |
 | Medium | Troubleshooting | Existing troubleshooting is broad, but lab-specific triage flow (auth vs authorization vs DNS path) can be sharper. | Faster diagnosis improves lab completion rate and confidence. | Add decision tree and scenario-ID mapping for common failures. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/troubleshooting.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/evidence/scenario-ids.md` |
 | Medium | Documentation authority | Required secondary blog references are not integrated into the lab as a formal caveat section. | Missing cross-source caveats weakens guidance on CI/CD and portal behavior nuances. | Include concise sourced summaries of both required articles and pair each point with Microsoft Learn authoritative references. | Next Copilot implementation agent | Tech Community URL, azcloudsecurity URL, Microsoft Learn refs |
@@ -337,12 +338,15 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 ### File: `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-testing-and-verification.md`
 
 - Change type: update
-- Summary: tighten validation and diagnostic pathways.
+- Summary: consolidate the SAS-free validation path and tighten diagnostic pathways.
 - Detailed instructions:
+  - Remove callback URL/SAS query parameter (`sp`, `sv`, and `sig`) instructions and configure the unsigned Logic App trigger endpoint with bearer-token authorization.
+  - Apply the same SAS removal to `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/docs/lab3-testing-and-verification.md`, or replace it with a pointer to this canonical guide and update `START-HERE.md` to link only the canonical guide.
   - Add a concise failure triage table mapping 401/403/timeout to next checks.
   - Add token-claim and DNS verification checkpoints.
 - Acceptance criteria:
   - User can distinguish auth failure from authorization and network failure in <10 minutes.
+  - No active learner path configures `LOGIC_APP_URL` with a SAS signature or requires retrieving a callback URL.
 
 ### File: `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/troubleshooting.md`
 
@@ -407,10 +411,10 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 4: Validation and troubleshooting
 
-- Task: Improve verification and root-cause navigation.
-- Files to modify: `docs/lab3-testing-and-verification.md`, `docs/troubleshooting.md`, `docs/evidence/scenario-ids.md`
-- Expected outcome: fast path from symptom to root cause.
-- Acceptance criteria: explicit mappings for 401 vs 403 vs timeout and required evidence capture.
+- Task: Remove SAS from active validation guidance and improve verification and root-cause navigation.
+- Files to modify: `docs/lab3-testing-and-verification.md`, `labs/lab3-bearer-token/docs/lab3-testing-and-verification.md`, `START-HERE.md`, `docs/troubleshooting.md`, `docs/evidence/scenario-ids.md`
+- Expected outcome: one SAS-free validation path with a fast route from symptom to root cause.
+- Acceptance criteria: both active testing paths remove SAS or one is replaced with a pointer to the canonical SAS-free guide; explicit mappings for 401 vs 403 vs timeout and required evidence capture.
 
 ### Phase 5: Private networking and CI/CD caveats
 
@@ -439,7 +443,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 - Current private-network Lab 3 path and optional public-access lab path are clearly separated.
 - Azure DevOps is prioritized for current learners, while GitHub Actions guidance is also included.
 - Fully automated workflow deployment guidance covers the current private endpoint/VNet constraints and the optional public-access variant.
-- The lab avoids SAS tokens for the primary secured flow.
+- The lab has one canonical active testing guide and no active learner path configures a SAS-signed Logic App callback URL; the primary secured flow uses managed identity and Entra bearer tokens.
 - APIM is clearly marked as an optional production extension, not required for beginner completion.
 - `Return401` versus `AllowAnonymous` portal manageability tradeoffs are documented as optional advanced scenarios.
 - The lab clearly separates lab/demo shortcuts from production-ready guidance.
