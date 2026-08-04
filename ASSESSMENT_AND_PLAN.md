@@ -16,6 +16,7 @@ Main gaps:
 
 - Beginner conceptual explanations are not consistently introduced before implementation steps.
 - The documented deployment path can miss the required Function caller because `scripts/deploy.ps1` does not expose or pass `deployFuncCallerDemo` and `funcCallerEntraClientId`, while `infra/main.bicep` defaults `deployFuncCallerDemo` to `false`.
+- The documented `.env` subscription setting is ignored by `scripts/deploy.ps1`, which instead selects a hard-coded subscription ID.
 - CI/CD and private-network deployment caveats are not consolidated in a single, explicit “deployment constraints” learning section.
 - External reference integration is incomplete: required blog references are not summarized in the lab itself.
 
@@ -31,6 +32,7 @@ Based on repository content, the effective current flow is:
 2. Understand active scope (Lab 3 only) and target architecture.
 3. Configure environment values using `.env.example` and deploy infra using `scripts/deploy.ps1`.
    - Important repository evidence: `infra/main.bicep` defaults `deployFuncCallerDemo` to `false`, and `scripts/deploy.ps1` currently passes `deployFunctionApp` but not `deployFuncCallerDemo` or `funcCallerEntraClientId`. The quick-start deployment path therefore can deploy the Logic App without the caller Function App that the end-to-end Function-to-Logic-App lab needs.
+   - Important repository evidence: `.env.example` instructs participants to set `AZURE_SUBSCRIPTION_ID`, but `scripts/deploy.ps1` does not load `.env` and instead selects a hard-coded subscription at line 54. The documented quick start can therefore target the wrong subscription or fail before Bicep deployment.
 4. Follow Lab 3 guides:
    - `docs/lab3-passwordless-managed-identity-easy-auth.md`
    - `docs/lab3-testing-and-verification.md`
@@ -150,6 +152,7 @@ Recommended learner journey for beginner-to-intermediate identity/networking aud
 | Priority | Area | Finding | Why it matters | Recommended fix | Suggested owner | Source or documentation reference |
 | --- | --- | --- | --- | --- | --- | --- |
 | Critical | Deployment reliability | The quick-start deployment path can omit the caller Function App required for the Function-to-Logic-App lab. `infra/main.bicep` defaults `deployFuncCallerDemo` to `false`, and `scripts/deploy.ps1` does not expose or pass `deployFuncCallerDemo` or `funcCallerEntraClientId`. | Participants following README/START-HERE can provision a Logic App without the caller Function App, so the primary Easy Auth learning scenario cannot be completed as described. | Update `scripts/deploy.ps1`, `.env.example`, README/START-HERE, and deployment docs to start from the current Lab 3 private-network architecture when the caller demo is enabled, then add an explicit “public access is acceptable for this lab run” variant. Include required `funcCallerEntraClientId` handling and validation that the Function caller output is present. | Next Copilot implementation agent | `infra/main.bicep:27-34`, `infra/main.bicep:45-68`, `infra/main.bicep:95-113`, `scripts/deploy.ps1:123-130` |
+| Critical | Deployment reliability | `.env.example` directs participants to set `AZURE_SUBSCRIPTION_ID`, but `scripts/deploy.ps1` does not read `.env` and instead sets a hard-coded subscription ID. | The documented quick start can deploy to an unintended subscription or fail before Bicep runs, which makes the lab unreliable and exposes a repository-specific identifier. | Update `scripts/deploy.ps1` to accept a subscription ID explicitly or load `AZURE_SUBSCRIPTION_ID` from `.env`; remove the hard-coded ID; validate that a value is present before `az account set`; and align README/START-HERE and `.env.example` with the selected input method. | Next Copilot implementation agent | `.env.example:8-10`, `scripts/deploy.ps1:54`, `scripts/deploy.ps1:92-94`, `START-HERE.md` |
 | High | Learning clarity | Concept explanations are spread across multiple files and not consistently ordered from “why” to “how.” | Beginners may deploy without understanding identity/security rationale. | Add a structured concepts-first section and unify cross-links in README and START-HERE. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/README.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/START-HERE.md` |
 | High | Authentication correctness | Audience/resource/scope and `allowedPrincipals` rationale are present but not consistently beginner-framed before hands-on steps. | Misconfiguration here causes 401/403 and confusion about identity trust model. | Add explicit beginner explanations and validation checklist in concept and testing docs. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-passwordless-managed-identity-easy-auth.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-testing-and-verification.md` |
 | High | Private networking + CI/CD | Private endpoint/VNet/private DNS are implemented as an optional Lab 3 pattern, but deployment constraints for hosted runners are not consolidated as a mandatory caveat section. | Participants may expect GitHub-hosted or Microsoft-hosted agents to deploy app content or validate private-only endpoints without network reachability. | Add dedicated private-networking-and-CI/CD caveats doc and link it prominently. Distinguish ARM/Bicep control-plane deployment from ZIP/Kudu deployment and runtime validation. | Next Copilot implementation agent | `infra/main.bicep`, `infra/modules/networking.bicep`, `infra/modules/logicapp.bicep`, Microsoft docs on private endpoint and agent networking |
@@ -297,14 +300,19 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 - Detailed instructions:
   - Add placeholders for enabling the Lab 3 caller demo and providing the caller Function App Entra client ID.
   - Clearly label current private-network values versus the optional public-access lab values.
+  - State whether `AZURE_SUBSCRIPTION_ID` is consumed from `.env` or supplied as an explicit deployment parameter, matching the revised deployment script.
 - Acceptance criteria:
   - A participant can see which values are required for the end-to-end Function-to-Logic-App caller path before running deployment.
+  - The subscription value shown in `.env.example` is consumed by the documented deployment command.
 
 ### File: `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/scripts/deploy.ps1`
 
 - Change type: update
 - Summary: expose and pass parameters required for the Function caller demo.
 - Detailed instructions:
+  - Remove the hard-coded subscription ID.
+  - Accept a subscription ID explicitly or load `AZURE_SUBSCRIPTION_ID` from `.env`; fail before deployment when no value is supplied.
+  - Use the resolved subscription value for `az account set` and deployment status output.
   - Add a switch or parameter for `deployFuncCallerDemo`.
   - Add `funcCallerEntraClientId` input and validate it when the caller demo is enabled.
   - Pass both values to `infra/main.bicep`.
@@ -392,10 +400,10 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 3: Deployment guidance
 
-- Task: Clarify prerequisite data, deployment order, and automation paths for the current private path and the optional public-access path.
+- Task: Clarify prerequisite data, subscription selection, deployment order, and automation paths for the current private path and the optional public-access path.
 - Files to modify: `README.md`, `DEPLOYMENT-FAQ.md`, `.env.example`, `scripts/deploy.ps1`, `docs/lab3-passwordless-managed-identity-easy-auth.md`
 - Expected outcome: fewer setup/deployment misconfigurations.
-- Acceptance criteria: prerequisite checklist includes Entra app registration and tenant/client IDs, and deployment script supports `deployFuncCallerDemo` plus `funcCallerEntraClientId`.
+- Acceptance criteria: prerequisite checklist includes Entra app registration and tenant/client IDs; the deployment script consumes the documented subscription value without a hard-coded ID; and the script supports `deployFuncCallerDemo` plus `funcCallerEntraClientId`.
 
 ### Phase 4: Validation and troubleshooting
 
