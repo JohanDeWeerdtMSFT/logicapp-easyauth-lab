@@ -1,29 +1,30 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Code\\CSU\\Ores\\EasyAuth\\labs\\lab3-bearer-token\\functions\\CallerFunctionApp\\CallerFunctionApp.csproj": {}
+    "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/CallerFunctionApp.csproj": {}
   },
   "projects": {
-    "C:\\Code\\CSU\\Ores\\EasyAuth\\labs\\lab3-bearer-token\\functions\\CallerFunctionApp\\CallerFunctionApp.csproj": {
+    "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/CallerFunctionApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Code\\CSU\\Ores\\EasyAuth\\labs\\lab3-bearer-token\\functions\\CallerFunctionApp\\CallerFunctionApp.csproj",
+        "projectUniqueName": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/CallerFunctionApp.csproj",
         "projectName": "CallerFunctionApp",
-        "projectPath": "C:\\Code\\CSU\\Ores\\EasyAuth\\labs\\lab3-bearer-token\\functions\\CallerFunctionApp\\CallerFunctionApp.csproj",
-        "packagesPath": "C:\\Users\\joweerdt\\.nuget\\packages\\",
-        "outputPath": "C:\\Code\\CSU\\Ores\\EasyAuth\\labs\\lab3-bearer-token\\functions\\CallerFunctionApp\\obj\\",
+        "projectPath": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/CallerFunctionApp.csproj",
+        "packagesPath": "/tmp/codeql-scratch-4bfedf023ba05242/dbs/csharp/working/packages",
+        "outputPath": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\joweerdt\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "https://packagefeedproxy.microsoft.io/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
+            "framework": "net8.0",
             "targetAlias": "net8.0",
             "projectReferences": {}
           }
@@ -38,10 +39,11 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
         "net8.0": {
+          "framework": "net8.0",
           "targetAlias": "net8.0",
           "dependencies": {
             "Azure.Core": {
@@ -90,15 +92,11 @@
               "version": "[8.0.29, 8.0.29]"
             },
             {
-              "name": "Microsoft.NETCore.App.Host.win-arm64",
+              "name": "Microsoft.NETCore.App.Host.linux-x64",
               "version": "[8.0.29, 8.0.29]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.29, 8.0.29]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
               "version": "[8.0.29, 8.0.29]"
             }
           ],
@@ -107,7 +105,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.110/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.302/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

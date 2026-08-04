@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CallerFunctionApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f7d7bb26e09b31b298a27c9265c75fdabd5181ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+66e4cc1038fba749bfe754f108d11d511c0c79fc")]
 [assembly: System.Reflection.AssemblyProductAttribute("CallerFunctionApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CallerFunctionApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
