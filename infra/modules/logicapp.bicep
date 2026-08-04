@@ -42,6 +42,11 @@ var storageBlobUri = 'https://${storageAccountName}.blob.${environment().suffixe
 var storageQueueUri = 'https://${storageAccountName}.queue.${environment().suffixes.storage}'
 var storageTableUri = 'https://${storageAccountName}.table.${environment().suffixes.storage}'
 
+resource storageIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${baseName}-storage-uami'
+  location: location
+}
+
 var baseAppSettings = [
   // Identity-based storage (no shared keys required)
   {
@@ -50,7 +55,15 @@ var baseAppSettings = [
   }
   {
     name: 'AzureWebJobsStorage__credential'
-    value: 'managedidentity'
+    value: 'managedIdentity'
+  }
+  {
+    name: 'AzureWebJobsStorage__credentialType'
+    value: 'managedIdentity'
+  }
+  {
+    name: 'AzureWebJobsStorage__managedIdentityResourceId'
+    value: storageIdentity.id
   }
   {
     name: 'AzureWebJobsStorage__blobServiceUri'
@@ -115,7 +128,10 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
   location: location
   kind: 'functionapp,workflowapp'
   identity: {
-    type: 'SystemAssigned'
+    type: 'SystemAssigned, UserAssigned'
+    userAssignedIdentities: {
+      '${storageIdentity.id}': {}
+    }
   }
   properties: {
     serverFarmId: appServicePlanId
@@ -203,6 +219,18 @@ resource roleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
     scope: storageAccount
     properties: {
       principalId: logicApp.identity.principalId
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role.roleId)
+      principalType: 'ServicePrincipal'
+    }
+  }
+]
+
+resource storageIdentityRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in storageRoles: {
+    name: guid(storageAccountId, storageIdentity.id, role.roleId)
+    scope: storageAccount
+    properties: {
+      principalId: storageIdentity.properties.principalId
       roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role.roleId)
       principalType: 'ServicePrincipal'
     }

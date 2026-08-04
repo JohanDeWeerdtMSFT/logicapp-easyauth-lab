@@ -121,19 +121,20 @@ flowchart LR
 - Plan: WS1
 - Easy Auth enabled
 - `allowedPrincipals` contains the Function App managed identity object ID
-- Private endpoint + private DNS integration
+- Public inbound access for the classroom path; Easy Auth remains the security boundary
+- Optional private endpoint + private DNS integration for production-oriented exercises
 
 ### Supporting Services
 
 - Storage account
 - Application Insights and Log Analytics
-- VNet and subnets for app integration + private endpoints
+- VNet and subnets for private storage connectivity
 
 ## App Settings (Function App)
 
 | Setting | Example Value | Purpose |
 | --- | --- | --- |
-| `LOGIC_APP_URL` | `https://<logic-app-host>/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01` | Target workflow endpoint |
+| `LOGIC_APP_URL` | `https://<logic-app-host>/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` | Target workflow endpoint |
 | `LOGIC_APP_AUDIENCE` | `api://<logic-app-client-id>` | Token audience for Easy Auth validation |
 | `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `<tenant-id>` | Tenant boundary for auth flow |
 
@@ -202,22 +203,16 @@ az resource list --resource-group $resourceGroup --query "[].{name:name,type:typ
 
 ### Step 2: Deploy workflow definition
 
-Use one of these options:
+Publish the Standard Logic Apps project as a ZIP artifact:
 
-#### Option A: Azure Portal
+```powershell
+./scripts/deploy-workflow.ps1 `
+  -SubscriptionId '<subscription-id>' `
+  -ResourceGroupName $resourceGroup `
+  -LogicAppName '<logic-app-name>'
+```
 
-1. Open [Azure Portal](https://portal.azure.com).
-2. Open your Logic App Standard resource.
-3. Go to **Workflows**.
-4. Create workflow `httpTriggerWorkflow`.
-5. Paste JSON from [src/httpTriggerWorkflow/workflow.json](../src/httpTriggerWorkflow/workflow.json).
-6. Save.
-
-#### Option B: VS Code extension
-
-1. Install [Azure Logic Apps (Standard)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-logic-apps).
-2. Connect to your Logic App Standard resource.
-3. Create workflow from JSON.
+The publisher verifies that the live trigger method is `POST`.
 
 ### Step 3: Add Function App identity to Logic App `allowedPrincipals`
 
@@ -267,7 +262,7 @@ cd solution
 ./deploy.ps1 `
   -FunctionAppName $functionAppName `
   -ResourceGroupName $resourceGroup `
-  -LogicAppUrl "https://$logicAppHost/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -LogicAppUrl "https://$logicAppHost/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -LogicAppAudience $logicAppAudience `
   -TenantId $tenantId
 ```
@@ -309,7 +304,7 @@ Expected traces:
 | 403 Forbidden | Caller identity not in `allowedPrincipals` | Function App principal ID and Easy Auth policy |
 | Workflow not found | Workflow not deployed | `httpTriggerWorkflow` exists and is saved |
 | Credential unavailable | Managed identity disabled | Function App identity status is `On` |
-| Network resolution issues | Private DNS or VNet path misconfigured | Private DNS link, VNet integration, private endpoint |
+| Network resolution issues | Private storage DNS or VNet path misconfigured | Private DNS links and VNet integration |
 
 ## Pattern Comparison
 
@@ -336,6 +331,6 @@ Authorization: Bearer <JWT>
 1. Managed identity removes credential management overhead.
 2. Easy Auth enforces token validation at the app edge.
 3. `allowedPrincipals` provides explicit caller allow-listing, which is the authorization decision.
-4. Private networking and identity checks are complementary controls.
+4. Private networking and identity checks are complementary controls; private inbound access is optional for this classroom lab.
 5. The audience proves *which API* the token was minted for; the principal check proves *who* may call it.
 6. No active learner step depends on a SAS-signed callback URL.

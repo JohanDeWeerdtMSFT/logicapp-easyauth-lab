@@ -1,0 +1,1545 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "9046762192750669575"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name (e.g. dev, test, prod). Used in all resource names."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Primary Azure region for deployment."
+      }
+    },
+    "easyAuthMode": {
+      "type": "string",
+      "defaultValue": "Return401",
+      "allowedValues": [
+        "Return401",
+        "AllowAnonymous"
+      ],
+      "metadata": {
+        "description": "Easy Auth unauthenticated-client action – the key toggle for this lab."
+      }
+    },
+    "entraAppClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra ID (AAD) application (client) ID for Easy Auth."
+      }
+    },
+    "entraAppTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra ID tenant ID."
+      }
+    },
+    "deployFunctionApp": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy an optional Function App for comparison testing."
+      }
+    },
+    "deployFuncCallerDemo": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy the Function App caller demo (Lab 3). Requires a separate Entra app registration for the Function App."
+      }
+    },
+    "enablePrivateAppNetworking": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable private inbound access for the Logic App. The public classroom path leaves this disabled while retaining VNet integration and private storage."
+      }
+    },
+    "funcCallerEntraClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Entra ID application client ID for the caller Function App Easy Auth registration. Required when deployFuncCallerDemo = true."
+      }
+    },
+    "easyAuthAllowedPrincipalOverride": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional object ID used instead of the caller managed identity in Logic App Easy Auth allowedPrincipals. Intended only for isolated authorization tests such as B6."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "foundation",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "disableStoragePublicAccess": {
+            "value": "[parameters('deployFuncCallerDemo')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "11922620989789701780"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name used in resource naming (e.g. dev, test, prod)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for all resources."
+              }
+            },
+            "disableStoragePublicAccess": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Disable public network access to the storage account. Enable only when private endpoints and DNS are deployed."
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('la-easyauth-lab-{0}', parameters('environmentName'))]",
+            "suffix": "[uniqueString(resourceGroup().id)]",
+            "storageRawName": "[replace(format('{0}{1}', variables('baseName'), variables('suffix')), '-', '')]",
+            "storageAccountName": "[toLower(take(variables('storageRawName'), 24))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false,
+                "publicNetworkAccess": "[if(parameters('disableStoragePublicAccess'), 'Disabled', 'Enabled')]"
+              }
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}-plan', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "tier": "WorkflowStandard",
+                "name": "WS1"
+              },
+              "kind": "elastic",
+              "properties": {
+                "maximumElasticWorkerCount": 20
+              }
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}-law', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[format('{0}-ai', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-law', variables('baseName')))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-law', variables('baseName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[variables('storageAccountName')]"
+            },
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            },
+            "appServicePlanId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('baseName')))]"
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-ai', variables('baseName'))), '2020-02-02').ConnectionString]"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-law', variables('baseName')))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('deployFuncCallerDemo')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "networking",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "enableAppPrivateIngress": {
+            "value": "[parameters('enablePrivateAppNetworking')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "3016910168084668992"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name used in resource naming."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for all network resources."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the shared storage account that requires private connectivity."
+              }
+            },
+            "enableAppPrivateIngress": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Create the App Service private DNS zone used by optional private Logic App ingress."
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('la-easyauth-lab-{0}', parameters('environmentName'))]",
+            "vnetName": "[format('{0}-vnet', variables('baseName'))]",
+            "storagePrivateLinkServices": [
+              {
+                "groupId": "blob",
+                "dnsZoneName": "[format('privatelink.blob.{0}', environment().suffixes.storage)]"
+              },
+              {
+                "groupId": "queue",
+                "dnsZoneName": "[format('privatelink.queue.{0}', environment().suffixes.storage)]"
+              },
+              {
+                "groupId": "table",
+                "dnsZoneName": "[format('privatelink.table.{0}', environment().suffixes.storage)]"
+              },
+              {
+                "groupId": "file",
+                "dnsZoneName": "[format('privatelink.file.{0}', environment().suffixes.storage)]"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('vnetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.0.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "snet-app-integration",
+                    "properties": {
+                      "addressPrefix": "10.0.0.0/24",
+                      "delegations": [
+                        {
+                          "name": "delegation-webfarms",
+                          "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "snet-privateendpoints",
+                    "properties": {
+                      "addressPrefix": "10.0.1.0/24",
+                      "privateEndpointNetworkPolicies": "Disabled"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "condition": "[parameters('enableAppPrivateIngress')]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "privatelink.azurewebsites.net",
+              "location": "global"
+            },
+            {
+              "condition": "[parameters('enableAppPrivateIngress')]",
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', 'privatelink.azurewebsites.net', format('{0}-vnet-link', variables('baseName')))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storagePrivateDnsZones",
+                "count": "[length(variables('storagePrivateLinkServices'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('storagePrivateLinkServices')[copyIndex()].dnsZoneName]",
+              "location": "global"
+            },
+            {
+              "copy": {
+                "name": "storagePrivateDnsZoneLinks",
+                "count": "[length(variables('storagePrivateLinkServices'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('storagePrivateLinkServices')[copyIndex()].dnsZoneName, format('{0}-{1}-vnet-link', variables('baseName'), variables('storagePrivateLinkServices')[copyIndex()].groupId))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('storagePrivateLinkServices')[copyIndex()].dnsZoneName)]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storagePrivateEndpoints",
+                "count": "[length(variables('storagePrivateLinkServices'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}-{1}', parameters('storageAccountName'), variables('storagePrivateLinkServices')[copyIndex()].groupId)]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-01-01').subnets[1].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('plsc-{0}-{1}', parameters('storageAccountName'), variables('storagePrivateLinkServices')[copyIndex()].groupId)]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+                      "groupIds": [
+                        "[variables('storagePrivateLinkServices')[copyIndex()].groupId]"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storagePrivateDnsZoneGroups",
+                "count": "[length(variables('storagePrivateLinkServices'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('pe-{0}-{1}', parameters('storageAccountName'), variables('storagePrivateLinkServices')[copyIndex()].groupId), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "[format('privatelink-{0}', variables('storagePrivateLinkServices')[copyIndex()].groupId)]",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('storagePrivateLinkServices')[copyIndex()].dnsZoneName)]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('storagePrivateLinkServices')[copyIndex()].dnsZoneName)]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}-{1}', parameters('storageAccountName'), variables('storagePrivateLinkServices')[copyIndex()].groupId))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            },
+            "appIntegrationSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-01-01').subnets[0].id]"
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-01-01').subnets[1].id]"
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "value": "[if(parameters('enableAppPrivateIngress'), resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net'), '')]"
+            },
+            "privateDnsZoneName": {
+              "type": "string",
+              "value": "[if(parameters('enableAppPrivateIngress'), 'privatelink.azurewebsites.net', '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundation')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "logicapp",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appServicePlanId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.appServicePlanId.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "entraAppTenantId": {
+            "value": "[parameters('entraAppTenantId')]"
+          },
+          "vnetIntegrationSubnetId": "[if(parameters('deployFuncCallerDemo'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'networking'), '2025-04-01').outputs.appIntegrationSubnetId.value), createObject('value', ''))]",
+          "privateEndpointSubnetId": "[if(and(parameters('deployFuncCallerDemo'), parameters('enablePrivateAppNetworking')), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'networking'), '2025-04-01').outputs.privateEndpointSubnetId.value), createObject('value', ''))]",
+          "privateDnsZoneId": "[if(and(parameters('deployFuncCallerDemo'), parameters('enablePrivateAppNetworking')), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'networking'), '2025-04-01').outputs.privateDnsZoneId.value), createObject('value', ''))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17981808726079036216"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name used in resource naming."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Logic App."
+              }
+            },
+            "appServicePlanId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the App Service Plan."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account used by the Logic App."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the storage account."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "entraAppTenantId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Entra ID tenant ID — used for WEBSITE_AUTH_AAD_ALLOWED_TENANTS."
+              }
+            },
+            "vnetIntegrationSubnetId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Subnet resource ID for outbound VNet integration. Leave empty to skip VNet integration."
+              }
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Subnet resource ID for the inbound private endpoint. Leave empty to skip (public access remains enabled)."
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the privatelink.azurewebsites.net private DNS zone. Required when privateEndpointSubnetId is set."
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('la-easyauth-lab-{0}', parameters('environmentName'))]",
+            "suffix": "[uniqueString(resourceGroup().id)]",
+            "logicAppName": "[format('{0}-la-{1}', variables('baseName'), variables('suffix'))]",
+            "storageBlobUri": "[format('https://{0}.blob.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "storageQueueUri": "[format('https://{0}.queue.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "storageTableUri": "[format('https://{0}.table.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "baseAppSettings": [
+              {
+                "name": "AzureWebJobsStorage__accountName",
+                "value": "[parameters('storageAccountName')]"
+              },
+              {
+                "name": "AzureWebJobsStorage__credential",
+                "value": "managedIdentity"
+              },
+              {
+                "name": "AzureWebJobsStorage__credentialType",
+                "value": "managedIdentity"
+              },
+              {
+                "name": "AzureWebJobsStorage__managedIdentityResourceId",
+                "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName')))]"
+              },
+              {
+                "name": "AzureWebJobsStorage__blobServiceUri",
+                "value": "[variables('storageBlobUri')]"
+              },
+              {
+                "name": "AzureWebJobsStorage__queueServiceUri",
+                "value": "[variables('storageQueueUri')]"
+              },
+              {
+                "name": "AzureWebJobsStorage__tableServiceUri",
+                "value": "[variables('storageTableUri')]"
+              },
+              {
+                "name": "FUNCTIONS_EXTENSION_VERSION",
+                "value": "~4"
+              },
+              {
+                "name": "FUNCTIONS_WORKER_RUNTIME",
+                "value": "node"
+              },
+              {
+                "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                "value": "~18"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[parameters('appInsightsConnectionString')]"
+              },
+              {
+                "name": "APP_KIND",
+                "value": "workflowApp"
+              },
+              {
+                "name": "AzureFunctionsJobHost__extensionBundle__id",
+                "value": "Microsoft.Azure.Functions.ExtensionBundle.Workflows"
+              },
+              {
+                "name": "AzureFunctionsJobHost__extensionBundle__version",
+                "value": "[1.*, 2.0.0)"
+              }
+            ],
+            "tenantAppSetting": "[if(empty(parameters('entraAppTenantId')), createArray(), createArray(createObject('name', 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS', 'value', parameters('entraAppTenantId'))))]",
+            "allAppSettings": "[concat(variables('baseAppSettings'), variables('tenantAppSetting'))]",
+            "hasVnetIntegration": "[not(empty(parameters('vnetIntegrationSubnetId')))]",
+            "hasPrivateEndpoint": "[not(empty(parameters('privateEndpointSubnetId')))]",
+            "storageRoles": [
+              {
+                "name": "blob-owner",
+                "roleId": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b"
+              },
+              {
+                "name": "queue-contrib",
+                "roleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88"
+              },
+              {
+                "name": "table-contrib",
+                "roleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+              },
+              {
+                "name": "account-contrib",
+                "roleId": "17d1049b-9a84-46fb-8f53-869881c3d3ab"
+              },
+              {
+                "name": "fileshare-contrib",
+                "roleId": "0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}-storage-uami', variables('baseName'))]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('logicAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp,workflowapp",
+              "identity": {
+                "type": "SystemAssigned, UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName'))))]": {}
+                }
+              },
+              "properties": {
+                "serverFarmId": "[parameters('appServicePlanId')]",
+                "httpsOnly": true,
+                "publicNetworkAccess": "[if(variables('hasPrivateEndpoint'), 'Disabled', 'Enabled')]",
+                "virtualNetworkSubnetId": "[if(variables('hasVnetIntegration'), parameters('vnetIntegrationSubnetId'), null())]",
+                "vnetRouteAllEnabled": "[variables('hasVnetIntegration')]",
+                "siteConfig": {
+                  "netFrameworkVersion": "v6.0",
+                  "appSettings": "[variables('allAppSettings')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName')))]"
+              ]
+            },
+            {
+              "condition": "[variables('hasPrivateEndpoint')]",
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}', variables('logicAppName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('privateEndpointSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('plsc-{0}', variables('logicAppName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]",
+                      "groupIds": [
+                        "sites"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]"
+              ]
+            },
+            {
+              "condition": "[and(variables('hasPrivateEndpoint'), not(empty(parameters('privateDnsZoneId'))))]",
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('pe-{0}', variables('logicAppName')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "privatelink-azurewebsites-net",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('logicAppName')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "roleAssignments",
+                "count": "[length(variables('storageRoles'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.Web/sites', variables('logicAppName')), variables('storageRoles')[copyIndex()].roleId)]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01', 'full').identity.principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageRoles')[copyIndex()].roleId)]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storageIdentityRoleAssignments",
+                "count": "[length(variables('storageRoles'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName'))), variables('storageRoles')[copyIndex()].roleId)]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName'))), '2023-01-31').principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageRoles')[copyIndex()].roleId)]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-storage-uami', variables('baseName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logicAppName": {
+              "type": "string",
+              "value": "[variables('logicAppName')]"
+            },
+            "logicAppDefaultHostname": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01').defaultHostName]"
+            },
+            "logicAppResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', variables('logicAppName'))]"
+            },
+            "logicAppPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('logicAppName')), '2023-12-01', 'full').identity.principalId]"
+            },
+            "privateEndpointId": {
+              "type": "string",
+              "value": "[if(variables('hasPrivateEndpoint'), resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('logicAppName'))), '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundation')]",
+        "[resourceId('Microsoft.Resources/deployments', 'networking')]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployFunctionApp')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "functionapp",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appServicePlanId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.appServicePlanId.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "enableEasyAuth": {
+            "value": true
+          },
+          "entraAppClientId": {
+            "value": "[parameters('entraAppClientId')]"
+          },
+          "entraAppTenantId": {
+            "value": "[parameters('entraAppTenantId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "16645257962431137112"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name used in resource naming."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Function App."
+              }
+            },
+            "appServicePlanId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the App Service Plan."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account used by the Function App."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the storage account (kept for interface consistency)."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "enableEasyAuth": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Whether to enable Easy Auth on the Function App."
+              }
+            },
+            "entraAppClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Entra ID application client ID (required when enableEasyAuth is true)."
+              }
+            },
+            "entraAppTenantId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Entra ID tenant ID (required when enableEasyAuth is true)."
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('la-easyauth-lab-{0}', parameters('environmentName'))]",
+            "suffix": "[uniqueString(resourceGroup().id)]",
+            "functionAppName": "[format('{0}-func-{1}', variables('baseName'), variables('suffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('functionAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[parameters('appServicePlanId')]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsStorage",
+                      "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value)]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~4"
+                    },
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "node"
+                    },
+                    {
+                      "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                      "value": "~18"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[parameters('enableEasyAuth')]",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true
+                },
+                "globalValidation": {
+                  "unauthenticatedClientAction": "Return401",
+                  "redirectToProvider": "azureActiveDirectory"
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "openIdIssuer": "[format('https://sts.windows.net/{0}/v2.0', parameters('entraAppTenantId'))]",
+                      "clientId": "[parameters('entraAppClientId')]"
+                    },
+                    "validation": {
+                      "allowedAudiences": [
+                        "[parameters('entraAppClientId')]"
+                      ]
+                    }
+                  }
+                },
+                "login": {
+                  "tokenStore": {
+                    "enabled": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[variables('functionAppName')]"
+            },
+            "functionAppDefaultHostname": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundation')]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployFuncCallerDemo')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "functionapp-caller",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "vnetIntegrationSubnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networking'), '2025-04-01').outputs.appIntegrationSubnetId.value]"
+          },
+          "entraAppClientId": {
+            "value": "[parameters('funcCallerEntraClientId')]"
+          },
+          "entraAppTenantId": {
+            "value": "[parameters('entraAppTenantId')]"
+          },
+          "logicAppHostname": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logicapp'), '2025-04-01').outputs.logicAppDefaultHostname.value]"
+          },
+          "logicAppEntraClientId": {
+            "value": "[parameters('entraAppClientId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "16442688179275932180"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name used in resource naming."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Function App."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the shared storage account."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the shared storage account (used for RBAC)."
+              }
+            },
+            "vnetIntegrationSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for outbound VNet integration."
+              }
+            },
+            "entraAppClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra ID (AAD) application client ID for the Function App's own Easy Auth registration."
+              }
+            },
+            "entraAppTenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra ID tenant ID."
+              }
+            },
+            "allowedPrincipals": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Object IDs of principals allowed to call this Function App via Easy Auth."
+              }
+            },
+            "logicAppHostname": {
+              "type": "string",
+              "metadata": {
+                "description": "Default hostname of the Logic App being called. Used to build LOGIC_APP_URL app setting."
+              }
+            },
+            "logicAppEntraClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra app client ID of the Logic App — used as the token audience when calling it via managed identity."
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('la-easyauth-lab-{0}', parameters('environmentName'))]",
+            "suffix": "[uniqueString(resourceGroup().id)]",
+            "functionAppName": "[format('{0}-caller-{1}', variables('baseName'), variables('suffix'))]",
+            "storageBlobUri": "[format('https://{0}.blob.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "storageQueueUri": "[format('https://{0}.queue.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "storageTableUri": "[format('https://{0}.table.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
+            "storageRoles": [
+              {
+                "name": "blob-owner",
+                "roleId": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b"
+              },
+              {
+                "name": "queue-contrib",
+                "roleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88"
+              },
+              {
+                "name": "table-contrib",
+                "roleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+              },
+              {
+                "name": "account-contrib",
+                "roleId": "17d1049b-9a84-46fb-8f53-869881c3d3ab"
+              },
+              {
+                "name": "fileshare-contrib",
+                "roleId": "0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}-caller-plan', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "tier": "Standard",
+                "name": "S1"
+              },
+              "kind": "app"
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('functionAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-caller-plan', variables('baseName')))]",
+                "httpsOnly": true,
+                "virtualNetworkSubnetId": "[parameters('vnetIntegrationSubnetId')]",
+                "vnetRouteAllEnabled": true,
+                "siteConfig": {
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsStorage__accountName",
+                      "value": "[parameters('storageAccountName')]"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage__credential",
+                      "value": "managedidentity"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage__blobServiceUri",
+                      "value": "[variables('storageBlobUri')]"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage__queueServiceUri",
+                      "value": "[variables('storageQueueUri')]"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage__tableServiceUri",
+                      "value": "[variables('storageTableUri')]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~4"
+                    },
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "dotnet-isolated"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "LOGIC_APP_URL",
+                      "value": "[format('https://{0}/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01', parameters('logicAppHostname'))]"
+                    },
+                    {
+                      "name": "LOGIC_APP_AUDIENCE",
+                      "value": "[format('api://{0}', parameters('logicAppEntraClientId'))]"
+                    },
+                    {
+                      "name": "WEBSITE_AUTH_AAD_ALLOWED_TENANTS",
+                      "value": "[parameters('entraAppTenantId')]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', format('{0}-caller-plan', variables('baseName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true,
+                  "runtimeVersion": "~1"
+                },
+                "globalValidation": {
+                  "requireAuthentication": true,
+                  "unauthenticatedClientAction": "AllowAnonymous"
+                },
+                "httpSettings": {
+                  "requireHttps": true,
+                  "routes": {
+                    "apiPrefix": "/.auth"
+                  },
+                  "forwardProxy": {
+                    "convention": "NoProxy"
+                  }
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "openIdIssuer": "[uri('https://sts.windows.net/', parameters('entraAppTenantId'))]",
+                      "clientId": "[parameters('entraAppClientId')]"
+                    },
+                    "validation": {
+                      "allowedAudiences": [
+                        "[parameters('entraAppClientId')]",
+                        "[format('api://{0}', parameters('entraAppClientId'))]"
+                      ],
+                      "defaultAuthorizationPolicy": {
+                        "allowedPrincipals": "[if(greater(length(parameters('allowedPrincipals')), 0), createObject('identities', parameters('allowedPrincipals')), createObject())]"
+                      }
+                    }
+                  }
+                },
+                "login": {
+                  "tokenStore": {
+                    "enabled": false
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storageRoleAssignments",
+                "count": "[length(variables('storageRoles'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageRoles')[copyIndex()].roleId)]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageRoles')[copyIndex()].roleId)]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[variables('functionAppName')]"
+            },
+            "functionAppDefaultHostname": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName]"
+            },
+            "functionAppResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+            },
+            "functionAppPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundation')]",
+        "[resourceId('Microsoft.Resources/deployments', 'logicapp')]",
+        "[resourceId('Microsoft.Resources/deployments', 'networking')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "easyauth",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "logicAppName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logicapp'), '2025-04-01').outputs.logicAppName.value]"
+          },
+          "easyAuthMode": {
+            "value": "[parameters('easyAuthMode')]"
+          },
+          "entraAppClientId": {
+            "value": "[parameters('entraAppClientId')]"
+          },
+          "entraAppTenantId": {
+            "value": "[parameters('entraAppTenantId')]"
+          },
+          "allowedPrincipals": "[if(not(empty(parameters('easyAuthAllowedPrincipalOverride'))), createObject('value', createArray(parameters('easyAuthAllowedPrincipalOverride'))), if(parameters('deployFuncCallerDemo'), createObject('value', createArray(reference(resourceId('Microsoft.Resources/deployments', 'functionapp-caller'), '2025-04-01').outputs.functionAppPrincipalId.value)), createObject('value', createArray())))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12014023943005322155"
+            }
+          },
+          "parameters": {
+            "logicAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Logic App to configure Easy Auth on."
+              }
+            },
+            "easyAuthMode": {
+              "type": "string",
+              "defaultValue": "AllowAnonymous",
+              "allowedValues": [
+                "AllowAnonymous",
+                "Return401"
+              ],
+              "metadata": {
+                "description": "Unauthenticated client action. Use Return401 for strict trigger enforcement or AllowAnonymous for portal-manageability investigations."
+              }
+            },
+            "entraAppClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra ID (AAD) application client ID (the App Registration representing the Logic App)."
+              }
+            },
+            "entraAppTenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra ID tenant ID."
+              }
+            },
+            "allowedAudiences": {
+              "type": "array",
+              "defaultValue": [
+                "[format('api://{0}', parameters('entraAppClientId'))]"
+              ],
+              "metadata": {
+                "description": "Allowed token audiences. Defaults to the Application ID URI (api://<client-id>) of the Logic App app registration, which is the audience requested by the caller Function App."
+              }
+            },
+            "allowedPrincipals": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Allowed principal (object) IDs. Restricts access to these identities (e.g., APIM system-assigned managed identity principal ID)."
+              }
+            },
+            "clientSecretSettingName": {
+              "type": "string",
+              "defaultValue": "MICROSOFT_PROVIDER_AUTHENTICATION_SECRET",
+              "metadata": {
+                "description": "Name of the app setting that holds the client secret (typically a Key Vault reference). Leave empty to skip."
+              }
+            }
+          },
+          "variables": {
+            "hasAllowedPrincipals": "[greater(length(parameters('allowedPrincipals')), 0)]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('logicAppName'), 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true,
+                  "runtimeVersion": "~1"
+                },
+                "globalValidation": {
+                  "requireAuthentication": true,
+                  "unauthenticatedClientAction": "[parameters('easyAuthMode')]"
+                },
+                "httpSettings": {
+                  "requireHttps": true,
+                  "routes": {
+                    "apiPrefix": "/.auth"
+                  },
+                  "forwardProxy": {
+                    "convention": "NoProxy"
+                  }
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "openIdIssuer": "[uri('https://sts.windows.net/', parameters('entraAppTenantId'))]",
+                      "clientId": "[parameters('entraAppClientId')]",
+                      "clientSecretSettingName": "[if(empty(parameters('clientSecretSettingName')), null(), parameters('clientSecretSettingName'))]"
+                    },
+                    "validation": {
+                      "allowedAudiences": "[parameters('allowedAudiences')]",
+                      "defaultAuthorizationPolicy": {
+                        "allowedPrincipals": "[if(variables('hasAllowedPrincipals'), createObject('identities', parameters('allowedPrincipals')), createObject())]"
+                      }
+                    }
+                  }
+                },
+                "login": {
+                  "tokenStore": {
+                    "enabled": true
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "easyAuthMode": {
+              "type": "string",
+              "value": "[parameters('easyAuthMode')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'functionapp-caller')]",
+        "[resourceId('Microsoft.Resources/deployments', 'logicapp')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "logicAppName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logicapp'), '2025-04-01').outputs.logicAppName.value]"
+    },
+    "logicAppDefaultHostname": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logicapp'), '2025-04-01').outputs.logicAppDefaultHostname.value]"
+    },
+    "logicAppResourceId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logicapp'), '2025-04-01').outputs.logicAppResourceId.value]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundation'), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "functionAppCallerName": {
+      "type": "string",
+      "value": "[if(parameters('deployFuncCallerDemo'), reference(resourceId('Microsoft.Resources/deployments', 'functionapp-caller'), '2025-04-01').outputs.functionAppName.value, '')]"
+    },
+    "functionAppCallerHostname": {
+      "type": "string",
+      "value": "[if(parameters('deployFuncCallerDemo'), reference(resourceId('Microsoft.Resources/deployments', 'functionapp-caller'), '2025-04-01').outputs.functionAppDefaultHostname.value, '')]"
+    },
+    "functionAppCallerPrincipalId": {
+      "type": "string",
+      "value": "[if(parameters('deployFuncCallerDemo'), reference(resourceId('Microsoft.Resources/deployments', 'functionapp-caller'), '2025-04-01').outputs.functionAppPrincipalId.value, '')]"
+    }
+  }
+}

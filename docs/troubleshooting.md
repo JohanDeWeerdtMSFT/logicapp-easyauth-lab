@@ -10,7 +10,7 @@ Do these checks in order. A timeout is not evidence of an authentication failure
 | --- | --- | --- | --- |
 | HTTP 401 | Authentication failed: missing/invalid token, wrong audience or issuer, or expired token | Caller `tokenClaims`, `LOGIC_APP_AUDIENCE`, and Easy Auth `allowedAudiences` | B2, B3, B4 |
 | HTTP 403 | Authentication succeeded but authorization failed | Token `objectId`, Function managed identity principal ID, and `allowedPrincipals` | B6 |
-| Timeout or DNS failure | Request did not reach Easy Auth | Private DNS resolution, VNet integration, private endpoint, NSG/route | Network check |
+| Timeout or DNS failure | Request did not reach Easy Auth | Public app access, or private DNS/routing in optional private-ingress mode | Network check |
 | HTTP 404 or 405 | Endpoint path or method is wrong | `/api/httpTriggerWorkflow/...` and `POST` | Route check |
 | HTTP 503 or `AzureWebJobsStorage` authorization failure | Host cannot reach protected storage | Storage private endpoints and private DNS zones for Blob, Queue, Table, and File | Storage network check |
 
@@ -161,6 +161,7 @@ az deployment operation cancel --resource-group rg-easyauth-lab-dev \
 2. Check `LOGIC_APP_AUDIENCE` on the caller Function App.
 3. Check the Logic App `authsettingsV2` `allowedAudiences` and Entra issuer/tenant.
 4. Confirm the unsigned invoke URL contains no `sp`, `sv`, or `sig` query parameters.
+5. Confirm the route contains the actual trigger name: `When_a_HTTP_request_is_received`.
 
 **Fix:**
 
@@ -335,9 +336,9 @@ az network private-dns record-set a list \
      --query "properties.{platformEnabled:platformSettings.enabled, unauthenticatedClientAction:platform.unauthenticatedClientAction}"
    ```
 
-2. **Verify HTTP trigger is set to AllowAnonymous:**
-   - Should be: `unauthenticatedClientAction = "AllowAnonymous"`
-   - Easy Auth validates the token, not the trigger
+2. **Verify Easy Auth uses the intended classroom mode:**
+   - Should be: `unauthenticatedClientAction = "Return401"`
+   - Missing bearer tokens must be rejected before the workflow runs
 
 3. **Check workflow input:**
    - Open Logic App in Portal → Designer

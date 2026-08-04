@@ -63,13 +63,10 @@ Step by step:
 
 1. The Function App asks Azure for a token using its **system-assigned managed identity**. No secret is stored in code or app settings.
    The code in [solution/CallerFunctionApp/CallLogicApp.cs](../solution/CallerFunctionApp/CallLogicApp.cs) reads the
-   `LOGIC_APP_CLIENT_ID` app setting and requests the scope `<logic-app-client-id>/.default`. It does not use the
-   `LOGIC_APP_AUDIENCE` app setting.
+   `LOGIC_APP_AUDIENCE` app setting and requests the scope `api://<logic-app-client-id>/.default`.
 2. Entra ID issues a short-lived access token whose `aud` claim names the Logic App app registration.
-   > **Configuration caveat:** [infra/modules/easyauth.bicep](../infra/modules/easyauth.bicep) currently defaults
-   > `allowedAudiences` to the Azure management-plane audiences rather than the Logic App app registration URI.
-   > Easy Auth rejects a token whose `aud` claim is not in that list, so if you see HTTP 401 during validation,
-   > align the requested scope and the configured allowed audiences before continuing.
+   [infra/modules/easyauth.bicep](../infra/modules/easyauth.bicep) configures the same
+   `api://<logic-app-client-id>` value in `allowedAudiences`.
 3. The Function App sends the token in the `Authorization` header, bearer scheme, to the workflow trigger URL. No signature query parameters are used.
 4. Easy Auth validates the token before the Logic App runtime sees the request.
 5. Easy Auth compares the caller principal with `allowedPrincipals`.
@@ -93,9 +90,7 @@ query parameters (`sp`, `sv`, and `sig`). That URL is effectively a secret in a 
 | Auditing and governance | Tied to the key, not to a caller identity | Tied to a directory identity in Entra ID |
 
 For that reason, the intended learner path in this lab authenticates with an Entra access token rather than a
-SAS-signed callback URL. Note that the current validation guide
-([labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md))
-still shows a SAS-signed callback URL as the endpoint value; that is a known gap and is being replaced.
+SAS-signed callback URL. The canonical validation guide uses the unsigned workflow URL and bearer token only.
 SAS remains relevant only as a platform caveat: the Logic Apps runtime and portal run history use their own
 SAS-based runtime calls, which is why Easy Auth mode choices can affect portal manageability.
 
@@ -108,7 +103,8 @@ Use this table first; the repository-wide guide is [docs/troubleshooting.md](tro
 | Symptom | Most likely cause | How to check | Fix |
 | --- | --- | --- | --- |
 | **401 Unauthorized** | Easy Auth could not validate the token: no `Authorization` header, wrong header format, expired token, or wrong issuer. | Confirm the `Authorization` header uses the bearer scheme followed by the token value. Check the Function App traces for a token-acquisition failure. | Send the token in the bearer scheme, and confirm the Easy Auth `openIdIssuer` matches your tenant ID in [infra/modules/easyauth.bicep](../infra/modules/easyauth.bicep). |
-| **401 with an audience error** | The token's `aud` claim is not in the Easy Auth `allowedAudiences` list. The caller requests `<logic-app-client-id>/.default`, while `allowedAudiences` defaults to the Azure management-plane audiences. | Decode the token and compare its `aud` claim with `properties.identityProviders.azureActiveDirectory.validation.allowedAudiences` on the `authsettingsV2` config. | Make the requested scope and the configured allowed audiences name the same resource, either the client ID or `api://<client-id>`. |
+| **401 with an audience error** | The token's `aud` claim does not equal `api://<logic-app-client-id>`. | Compare the returned selected `audience` claim with `authsettingsV2` `allowedAudiences`. | Restore `LOGIC_APP_AUDIENCE=api://<logic-app-client-id>` and verify the Application ID URI. |
+| **Managed identity token acquisition fails** | The Logic App app registration lacks `api://<client-id>` or its tenant service principal. | Run `az ad app show --id <client-id>` and `az ad sp show --id <client-id>`. | Rerun `scripts/deploy.ps1`, which verifies and creates these Entra objects when permitted. |
 | **403 Forbidden** | The token is valid, but the caller principal is not allow-listed. | Compare the Function App `identity.principalId` with the Logic App's `allowedPrincipals`. | Redeploy with `-DeployFuncCallerDemo` so the caller's principal ID is added to `allowedPrincipals`. |
 | **Token acquisition fails in the Function App** | The system-assigned managed identity is missing or disabled, so `DefaultAzureCredential` has no identity to use. | Check `identity.principalId` on the caller Function App; an empty value means no managed identity. | Redeploy [infra/modules/functionapp-caller.bicep](../infra/modules/functionapp-caller.bicep), which enables the system-assigned identity. |
 

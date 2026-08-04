@@ -4,15 +4,15 @@ targetScope = 'resourceGroup'
 // Function App (caller) module
 //
 // Represents the "caller" side of the demo:
-//   [Function App] → (private endpoint) → [Logic App Standard]
+//   [Function App] -> [Logic App Standard]
 //
 // Security posture:
-// - Inbound:  Easy Auth (AllowAnonymous + Entra token validation)
-//             allowedPrincipals restricts to specific callers
+// - Inbound:  Easy Auth is configured in AllowAnonymous mode so the Function
+//             can act as the classroom test harness.
 // - Outbound: Uses system-assigned managed identity to acquire an Entra
 //             bearer token for the Logic App audience before calling it
-// - Network:  VNet integration (outbound) so HTTP calls to the Logic App
-//             private endpoint stay on the VNet backbone
+// - Network:  VNet integration for private storage. Logic App ingress can be
+//             public for the classroom path or private for advanced exercises.
 // - Storage:  Identity-based (no shared keys)
 // ──────────────────────────────────────────────
 
@@ -79,8 +79,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
-    // Outbound VNet integration — routes all traffic through the VNet
-    // so calls to the Logic App private endpoint resolve via private DNS
+    // Outbound VNet integration provides access to private storage endpoints.
     virtualNetworkSubnetId: vnetIntegrationSubnetId
     vnetRouteAllEnabled: true
     siteConfig: {
@@ -125,7 +124,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         // then sends it as Authorization: Bearer <token> to the Logic App.
         {
           name: 'LOGIC_APP_URL'
-          value: 'https://${logicAppHostname}/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01'
+          value: 'https://${logicAppHostname}/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01'
         }
         {
           name: 'LOGIC_APP_AUDIENCE'
@@ -142,9 +141,8 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 
 // ── Easy Auth on Function App ──
 // Protects inbound HTTP trigger calls.
-// AllowAnonymous ensures the Functions runtime still receives the request;
-// token validation happens in the Easy Auth middleware for authenticated calls.
-// allowedPrincipals restricts which identities can invoke this Function App.
+// AllowAnonymous keeps the classroom harness simple. The security assertion
+// under test is the Function managed identity calling the strict Logic App.
 resource functionAppAuthSettings 'Microsoft.Web/sites/config@2023-12-01' = {
   name: 'authsettingsV2'
   parent: functionApp

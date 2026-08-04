@@ -19,6 +19,9 @@ param location string
 @description('Name of the shared storage account that requires private connectivity.')
 param storageAccountName string
 
+@description('Create the App Service private DNS zone used by optional private Logic App ingress.')
+param enableAppPrivateIngress bool = false
+
 var baseName = 'la-easyauth-lab-${environmentName}'
 var vnetName = '${baseName}-vnet'
 var storagePrivateLinkServices = [
@@ -76,13 +79,13 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
 }
 
 // ── Private DNS zone — resolves *.azurewebsites.net to private IPs ──
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (enableAppPrivateIngress) {
   name: 'privatelink.azurewebsites.net'
   location: 'global'
 }
 
 // Link the DNS zone to the VNet so all VMs/apps in the VNet use private resolution
-resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (enableAppPrivateIngress) {
   parent: privateDnsZone
   name: '${baseName}-vnet-link'
   location: 'global'
@@ -155,5 +158,5 @@ output vnetId string = vnet.id
 // Subnet IDs — referenced by apps for VNet integration and private endpoint placement
 output appIntegrationSubnetId string = vnet.properties.subnets[0].id
 output privateEndpointSubnetId string = vnet.properties.subnets[1].id
-output privateDnsZoneId string = privateDnsZone.id
-output privateDnsZoneName string = privateDnsZone.name
+output privateDnsZoneId string = enableAppPrivateIngress ? privateDnsZone.id : ''
+output privateDnsZoneName string = enableAppPrivateIngress ? privateDnsZone.name : ''

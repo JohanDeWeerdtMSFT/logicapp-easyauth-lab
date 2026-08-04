@@ -29,7 +29,7 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 
 ## Step 1 - Understand the Goal
 
-1. Read [README.md](README.md), especially the **Before you deploy** prerequisites and the private networking warning.
+1. Read [README.md](README.md), especially the **Before you deploy** prerequisites and classroom networking choice.
 2. Skim [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md).
 
 ## Step 2 - Learn the Identity Concepts
@@ -47,7 +47,7 @@ After reading it you should be able to explain, in your own words:
 ## Step 3 - Review What Gets Deployed
 
 1. Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md).
-2. Read [docs/lab3-testing-evidence-summary.md](docs/lab3-testing-evidence-summary.md).
+2. Read [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
 ## Step 4 - Deploy Infrastructure
 
@@ -58,11 +58,14 @@ Run:
   -DeployFuncCallerDemo -FuncCallerEntraClientId "{callerClientId}"
 ```
 
-`-DeployFuncCallerDemo` is what creates the caller Function App, the virtual network, the
-private endpoint, and the caller principal allow-list. Without it the deployment only creates the
+`-DeployFuncCallerDemo` creates the caller Function App, the virtual network and private storage
+connectivity, and the caller principal allow-list. App endpoints remain public in the classroom default. Without it the deployment only creates the
 Logic App and its Easy Auth configuration, and Steps 5 and 6 below cannot be completed.
 `{callerClientId}` is the client ID of the **second** Entra app registration, the one that represents
 the caller Function App.
+
+For the optional private-ingress exercise, add `-EnablePrivateAppNetworking` and use a VNet-connected
+deployment executor. See [Private networking and CI/CD](docs/07-private-networking-and-cicd.md).
 
 Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 
@@ -70,6 +73,7 @@ Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 
 1. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md). It deploys the workflow and caller code, validates selected access-token claims without exposing the token, and proves Easy Auth behavior.
 2. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
+3. Compare the deployment with [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
 ## Step 6 - Confirm Success
 
@@ -88,7 +92,7 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 | Where are expected scenarios? | [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
 | Where is troubleshooting? | [docs/troubleshooting.md](docs/troubleshooting.md) |
 | Where are the identity concepts explained? | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
-| How do I clean up resources? | [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md#clean-up--undeploy) |
+| How do I clean up resources? | [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md#question-2-is-there-an-undeploy-option) |
 | Is Codespaces supported? | Yes, via `.devcontainer/devcontainer.json`. |
 
 ## Recommended Reading Order

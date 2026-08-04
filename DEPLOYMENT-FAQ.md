@@ -10,7 +10,8 @@ The active Function-to-Logic-App path requires two Microsoft Entra app registrat
 | Tenant ID | Configures the Entra issuer boundary | `-EntraAppTenantId` |
 | Logic App client ID | Defines the Logic App API audience | `-EntraAppClientId` |
 | Caller Function client ID | Configures Easy Auth for the caller app | `-FuncCallerEntraClientId` |
-| Caller demo switch | Creates the caller, VNet, private endpoint, and principal allow-list | `-DeployFuncCallerDemo` |
+| Caller demo switch | Creates the caller, private storage network, and principal allow-list | `-DeployFuncCallerDemo` |
+| Private app ingress | Optional Logic App private endpoint for advanced exercises | `-EnablePrivateAppNetworking` |
 
 Preview first:
 
@@ -26,9 +27,9 @@ Preview first:
 Remove `-WhatIf` to deploy. Then use [the deployment and validation guide](docs/lab3-testing-and-verification.md) to deploy the workflow and Function code.
 
 > [!WARNING]
-> When the caller demo is enabled, the Logic App uses a private endpoint. ARM/Bicep deployment can work from a hosted agent, but app-content deployment and direct HTTP validation need network and DNS reachability to the target endpoints.
+> The classroom default keeps both app endpoints public so ZIP deployment and validation work from the learner workstation. Easy Auth remains enabled and the Logic App uses `Return401`. Add `-EnablePrivateAppNetworking` only when the deployment executor has private DNS and routing to the Logic App and SCM endpoints.
 
-The same private deployment also disables public access to the shared storage account and creates private endpoints plus VNet-linked DNS zones for Blob, Queue, Table, and File. Missing any of these storage paths can leave the Function or Logic Apps host unhealthy even when managed-identity RBAC is correct.
+The deployment disables public access to the shared storage account and creates private endpoints plus VNet-linked DNS zones for Blob, Queue, Table, and File. Missing any of these storage paths can leave the Function or Logic Apps host unhealthy even when managed-identity RBAC is correct.
 
 ## Question 1: Does deploy.ps1 Handle Already-Created Resources?
 

@@ -2,7 +2,7 @@ using '../main.bicep'
 
 param environmentName = 'dev'
 param location = 'westeurope'
-param easyAuthMode = 'AllowAnonymous'
+param easyAuthMode = 'Return401'
 
 // Lab 1 + Lab 3: Logic App Entra app registration
 // az ad app create --display-name "la-easyauth-lab-dev"
@@ -15,4 +15,5 @@ param deployFunctionApp = false
 // Function App caller Entra app registration for its own Easy Auth
 // az ad app create --display-name "la-easyauth-lab-caller-dev"
 param deployFuncCallerDemo = true
+param enablePrivateAppNetworking = false
 param funcCallerEntraClientId = 'a571dbde-47f4-4e3d-a1f8-1b012d065786'

@@ -9,22 +9,27 @@ Use this reference card while testing and deploying Lab 3. Print it, bookmark it
 Before you start testing, verify these infrastructure components are in place:
 
 **Function App Configuration:**
+
 - [ ] Plan: Standard (S1) or higher
 - [ ] System-assigned managed identity: Enabled
 - [ ] VNet integration: Enabled (routed through app integration subnet)
-- [ ] Easy Auth configured
+- [ ] Easy Auth enabled with AllowAnonymous mode (lab harness only)
 
 **Logic App Configuration:**
-- [ ] Public network access: Disabled
-- [ ] Easy Auth enabled with AllowAnonymous mode
+
+- [ ] Public network access: Enabled for the classroom path
+- [ ] Easy Auth enabled with Return401 mode
 - [ ] Function App's managed identity principal ID in allowedPrincipals
 
 **Network Configuration:**
+
 - [ ] Virtual Network: 10.0.0.0/16 deployed
-- [ ] Private DNS Zone: privatelink.azurewebsites.net created
-- [ ] Private Endpoint: Created and linked to Logic App
+- [ ] Storage private DNS zones created for Blob, Queue, Table, and File
+- [ ] Storage private endpoints approved
+- [ ] Logic App private endpoint is optional
 
 **Monitoring:**
+
 - [ ] Application Insights: Connected to Function App
 
 ---
@@ -44,8 +49,8 @@ dotnet add package Newtonsoft.Json         # For JSON serialization
 ### Application Settings (Required)
 
 | Setting | Example Value | Source |
-|---------|---------------|--------|
-| `LOGIC_APP_URL` | `https://easyauth-logic-xyz.azurewebsites.net/api/workflows/workflow1/triggers/manual/invoke?...` | Logic App > Settings > Callback URL |
+| --- | --- | --- |
+| `LOGIC_APP_URL` | `https://<logic-app>.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` | Deployment output |
 | `LOGIC_APP_AUDIENCE` | `api://11111111-1111-1111-1111-111111111111` | Logic App > Entra ID > Client ID |
 | `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `{tenantId}` | Tenant ID |
 
@@ -97,7 +102,7 @@ FUNC_URL=$(az functionapp function show \
 # Call function
 curl -X POST "$FUNC_URL" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{"scenario":"B1"}'
 ```
 
 ### 3. Monitor Logs
@@ -118,7 +123,7 @@ az monitor app-insights query \
 
 ### Function App Logs (Application Insights)
 
-```
+```text
 ✅ Bearer token acquired successfully
 ✅ Calling Logic App at: https://easyauth-logic-xyz.azurewebsites.net/...
 ✅ Logic App response: 200 OK
@@ -127,31 +132,29 @@ az monitor app-insights query \
 
 ### Bearer Token (JWT)
 
-Decode at https://jwt.io:
+Use the caller response `tokenClaims` object. Do not copy a bearer token into an online decoder.
 
 ```json
 {
-  "aud": "api://11111111-1111-1111-1111-111111111111",  ← Logic App client ID
+  "audience": "api://11111111-1111-1111-1111-111111111111",
   "iss": "https://login.microsoftonline.com/00922812-791e-41c8-a99e-45c3ed784cf5/v2.0",
-  "appid": "22222222-2222-2222-2222-222222222222",       ← Function App MI principal ID
-  "oid": "22222222-2222-2222-2222-222222222222",
-  "exp": 1720000000,
-  "iat": 1719996400
+  "objectId": "22222222-2222-2222-2222-222222222222",
+  "expiresOn": "2026-08-04T18:00:00Z"
 }
 ```
 
 ### Logic App Run History
 
-- **Trigger:** manual/invoke ✅
+- **Trigger:** When_a_HTTP_request_is_received ✅
 - **Status:** Succeeded ✅
-- **Input Headers:** Authorization: Bearer eyJ... ✅
+- **Authentication:** Principal ID matches the Function managed identity ✅
 
 ---
 
 ## 🚨 Common Errors & Quick Fixes
 
 | Error | Cause | Fix |
-|-------|-------|-----|
+| --- | --- | --- |
 | **401 Unauthorized** | Wrong audience in token | Check `LOGIC_APP_AUDIENCE` matches Logic App client ID |
 | **401 Unauthorized** | Token expired (shouldn't happen) | Re-issue token, check time sync |
 | **403 Forbidden** | Principal not in allowedPrincipals | Get Function App MI principal ID, add to Bicep, redeploy |
@@ -164,12 +167,12 @@ Decode at https://jwt.io:
 ## 📈 Metrics to Capture
 
 | Metric | Tool | Expected |
-|--------|------|----------|
+| --- | --- | --- |
 | Token acquisition time | Application Insights | < 1 second |
 | HTTP request roundtrip | Application Insights | < 2 seconds |
 | Success rate | Application Insights | 100% |
-| JWT signature validity | jwt.io | RS256 verified ✅ |
-| Token expiry | jwt.io | 3600 seconds (1 hour) |
+| Token audience | Caller selected claims | Logic App Application ID URI |
+| Token expiry | Caller selected claims | Future timestamp |
 | Easy Auth validation | Logic App runs | Success with bearer token |
 
 ---
@@ -177,7 +180,7 @@ Decode at https://jwt.io:
 ## 📸 Evidence to Capture
 
 1. **Screenshot 1:** Function App logs showing "✅ Bearer token acquired"
-2. **Screenshot 2:** JWT decoded at jwt.io with aud and appid
+2. **Screenshot 2:** Caller response with selected audience and object ID claims
 3. **Screenshot 3:** Logic App run history showing Succeeded status
 4. **Screenshot 4:** Application Insights KQL query results
 5. **Document:** Timestamps matching Function App log → Logic App run
@@ -195,14 +198,14 @@ Decode at https://jwt.io:
 
 ## 🎯 Test Result Template
 
-```
+```text
 TEST DATE: ___________
 TESTER: ___________
 RESULT: ☐ PASS  ☐ FAIL
 
 EVIDENCE CAPTURED:
 ☐ Function App logs
-☐ JWT token (decoded)
+☐ Selected token claims (no bearer token)
 ☐ Logic App run
 ☐ AppInsights query
 ☐ End-to-end latency

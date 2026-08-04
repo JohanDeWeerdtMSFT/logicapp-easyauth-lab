@@ -28,7 +28,7 @@ namespace CallerFunctionApp;
 ///
 /// Required application settings (configure in Azure Portal or local.settings.json):
 ///   LOGIC_APP_URL                      — Full invoke URL for the Logic App workflow
-///                                         Format: https://<logicapp>.azurewebsites.net/api/<name>/triggers/manual/invoke?api-version=2022-05-01
+///                                         Format: https://<logicapp>.azurewebsites.net/api/<name>/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01
 ///                                         (Hostname is automatically extracted for token acquisition)
 ///   WEBSITE_AUTH_AAD_ALLOWED_TENANTS   — Entra ID tenant ID for token acquisition (optional, defaults to current tenant)
 /// </summary>
@@ -64,7 +64,7 @@ public class CallLogicApp
                     error  = "MissingConfiguration",
                     detail = "LOGIC_APP_URL must be configured as an application setting.",
                     fix    = "In Azure Portal: Function App → Configuration → Application settings"
-                }, cancellationToken);
+                }, HttpStatusCode.BadRequest, cancellationToken);
                 return badRequest;
             }
 
@@ -81,7 +81,7 @@ public class CallLogicApp
                 {
                     error = "InvalidRequest",
                     detail = "Request body must be valid JSON, for example: {\"scenario\":\"B1\"}."
-                }, cancellationToken);
+                }, HttpStatusCode.BadRequest, cancellationToken);
                 return invalidRequest;
             }
 
@@ -157,7 +157,7 @@ public class CallLogicApp
                     "Verify WEBSITE_AUTH_AAD_ALLOWED_TENANTS matches the tenant where the Logic App is registered",
                     "Confirm the Logic App Easy Auth is enabled with platform.enabled = true"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.Unauthorized, cancellationToken);
             return res;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
@@ -177,7 +177,7 @@ public class CallLogicApp
                     "Get Function App Object ID: az webapp identity show --name <func-app-name> --resource-group <rg>",
                     "Add to Logic App Easy Auth: authsettingsV2 → identityProviders → azureActiveDirectory → validation → allowedPrincipals → identities"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.Forbidden, cancellationToken);
             return res;
         }
         catch (CredentialUnavailableException ex)
@@ -197,7 +197,7 @@ public class CallLogicApp
                     "Enable system-assigned managed identity: Function App → Identity → System assigned → On",
                     "When running locally, sign in with: az login --tenant <tenant-id>"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.InternalServerError, cancellationToken);
             return res;
         }
         catch (Exception ex)
@@ -208,7 +208,7 @@ public class CallLogicApp
             {
                 error  = "InternalError",
                 detail = ex.Message
-            }, cancellationToken);
+            }, HttpStatusCode.InternalServerError, cancellationToken);
             return res;
         }
     }

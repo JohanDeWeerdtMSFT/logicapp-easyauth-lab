@@ -27,8 +27,11 @@ param entraAppTenantId string
 @description('Deploy an optional Function App for comparison testing.')
 param deployFunctionApp bool = false
 
-@description('Deploy the Function App → Logic App private-endpoint demo (Lab 3). Requires separate Entra app registration for the Function App.')
+@description('Deploy the Function App caller demo (Lab 3). Requires a separate Entra app registration for the Function App.')
 param deployFuncCallerDemo bool = false
+
+@description('Enable private inbound access for the Logic App. The public classroom path leaves this disabled while retaining VNet integration and private storage.')
+param enablePrivateAppNetworking bool = false
 
 @description('Entra ID application client ID for the caller Function App Easy Auth registration. Required when deployFuncCallerDemo = true.')
 param funcCallerEntraClientId string = ''
@@ -53,6 +56,7 @@ module networking 'modules/networking.bicep' = if (deployFuncCallerDemo) {
     environmentName: environmentName
     location: location
     storageAccountName: foundation.outputs.storageAccountName
+    enableAppPrivateIngress: enablePrivateAppNetworking
   }
 }
 
@@ -67,10 +71,10 @@ module logicApp 'modules/logicapp.bicep' = {
     storageAccountId: foundation.outputs.storageAccountId
     appInsightsConnectionString: foundation.outputs.appInsightsConnectionString
     entraAppTenantId: entraAppTenantId
-    // Wire VNet integration + private endpoint when func-caller demo is enabled
+    // VNet integration supports private storage; Logic App private ingress is optional.
     vnetIntegrationSubnetId: deployFuncCallerDemo ? networking!.outputs.appIntegrationSubnetId : ''
-    privateEndpointSubnetId: deployFuncCallerDemo ? networking!.outputs.privateEndpointSubnetId : ''
-    privateDnsZoneId: deployFuncCallerDemo ? networking!.outputs.privateDnsZoneId : ''
+    privateEndpointSubnetId: deployFuncCallerDemo && enablePrivateAppNetworking ? networking!.outputs.privateEndpointSubnetId : ''
+    privateDnsZoneId: deployFuncCallerDemo && enablePrivateAppNetworking ? networking!.outputs.privateDnsZoneId : ''
   }
 }
 
@@ -90,11 +94,11 @@ module functionApp 'modules/functionapp.bicep' = if (deployFunctionApp) {
   }
 }
 
-// ── 5. Function App Caller + Easy Auth (func → Logic App via private endpoint) ──
+// ── 5. Function App Caller + Easy Auth ──
 // Deploys a dedicated Function App with:
 //   - Outbound VNet integration → routes HTTP calls through the VNet
 //   - System-assigned managed identity → used to acquire Entra tokens for the Logic App
-//   - Easy Auth (AllowAnonymous + allowedPrincipals) protecting its own inbound trigger
+//   - Easy Auth configured in AllowAnonymous mode for the classroom test harness
 // The Logic App Easy Auth is updated (module easyauth above) to only allow this
 // Function App’s managed identity principal ID.
 module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDemo) {
