@@ -23,12 +23,13 @@ The primary learning scenario is:
 
 Work through these in order. Steps 1 and 2 are conceptual and take about 15 minutes.
 
-1. **Understand the scenario**: a Function App calls a Logic App Standard workflow, and the workflow only accepts the call when the caller proves its identity with a Microsoft Entra ID access token.
+1. **Understand the scenario**: a Function App calls a Logic App Standard workflow, and in the call path you build here the caller proves its identity with a Microsoft Entra ID access token that Easy Auth validates against `allowedPrincipals`. This is the behavior of the active learner call; it does not disable the Logic Apps request trigger's own default SAS authentication path, which still exists on the platform.
 2. **Understand the identity concepts**: read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md). It explains Easy Auth, Microsoft Entra ID, managed identity, access token, audience, resource, scope, authentication versus authorization, and why Easy Auth replaces SAS tokens.
 3. **Check identity prerequisites**:
    - An Azure subscription and permission to create resources in a resource group.
-   - Permission to create a Microsoft Entra [app registration](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app) (at least the Application Developer role), and permission to set its [Application ID URI / exposed API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes).
-   - Your tenant ID and the app registration client ID; both are required by `scripts/deploy.ps1`.
+   - Permission to create a Microsoft Entra [app registration](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app), and permission to set its [Application ID URI / exposed API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes). Microsoft Entra lets users register applications by default; if your tenant has disabled that setting, you need the Application Developer role or an administrator who creates and assigns the app registration for you.
+   - Two app registrations when you enable the Lab 3 caller demo: one representing the Logic App (`entraAppClientId`) and one representing the caller Function App (`funcCallerEntraClientId`).
+   - Your tenant ID and both client IDs. `scripts/deploy.ps1` takes them as `-EntraAppTenantId`, `-EntraAppClientId`, and `-FuncCallerEntraClientId` (the last one together with `-DeployFuncCallerDemo`).
 4. **Check networking prerequisites**: see the warning below.
 
 > [!WARNING]

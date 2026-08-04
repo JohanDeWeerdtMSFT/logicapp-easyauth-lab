@@ -43,7 +43,11 @@ param(
     [Parameter(Mandatory)]
     [string]$EntraAppTenantId,
 
-    [switch]$DeployFunctionApp
+    [switch]$DeployFunctionApp,
+
+    [switch]$DeployFuncCallerDemo,
+
+    [string]$FuncCallerEntraClientId = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -67,6 +71,7 @@ Write-Host "  Subscription  : $subscriptionId"
 Write-Host "  Bicep Template: $bicepFile"
 Write-Host "  Mode          : $(if ($WhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
 Write-Host "  Function App  : $(if ($DeployFunctionApp) { 'Yes' } else { 'No' })"
+Write-Host "  Caller Demo   : $(if ($DeployFuncCallerDemo) { 'Yes' } else { 'No' })"
 Write-Host ""
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -126,8 +131,16 @@ try {
         'entraAppClientId=' + $EntraAppClientId,
         'entraAppTenantId=' + $EntraAppTenantId,
         'easyAuthMode=' + $unauthAction,
-        'deployFunctionApp=' + $DeployFunctionApp.ToString().ToLower()
+        'deployFunctionApp=' + $DeployFunctionApp.ToString().ToLower(),
+        'deployFuncCallerDemo=' + $DeployFuncCallerDemo.ToString().ToLower()
     )
+
+    if ($DeployFuncCallerDemo) {
+        if ([string]::IsNullOrWhiteSpace($FuncCallerEntraClientId)) {
+            throw "-FuncCallerEntraClientId is required when -DeployFuncCallerDemo is specified."
+        }
+        $deployParams += 'funcCallerEntraClientId=' + $FuncCallerEntraClientId
+    }
 
     # ── Step 2/3: What-If or Deploy ─────────────────────────────────────────
     if ($WhatIf) {

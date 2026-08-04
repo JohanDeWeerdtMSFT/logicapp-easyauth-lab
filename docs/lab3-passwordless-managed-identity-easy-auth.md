@@ -59,7 +59,9 @@ query parameters. That URL behaves like a secret in a link: anyone holding it ca
 access keys are regenerated, and the call is not tied to a directory identity.
 
 The Entra token flow instead proves the caller identity, uses short-lived tokens issued on demand, and allow-lists the
-caller explicitly. For that reason no active learner path in this lab configures a SAS-signed callback URL.
+caller explicitly. For that reason the intended learner path in this lab does not rely on a SAS-signed callback URL
+for authentication. The current validation guide still shows a SAS-signed callback URL as the endpoint value, which
+is a known gap that is being replaced.
 See [Secure access and data for workflows in Azure Logic Apps](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app).
 
 ## Fast Trainee Path

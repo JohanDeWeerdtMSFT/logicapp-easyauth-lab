@@ -402,8 +402,8 @@ Update the status of a phase here and in the phase section below whenever work o
 
 | Phase | Name | Status | Last updated | Notes |
 | --- | --- | --- | --- | --- |
-| 1 | Documentation structure | Not started | 2026-08-04 | `README.md` and `START-HERE.md` not yet reorganized. |
-| 2 | Identity and Easy Auth explanation | Not started | 2026-08-04 | Lab 3 docs exist but concept explanations still pending. |
+| 1 | Documentation structure | Done | 2026-08-04 | `README.md` and `START-HERE.md` reorganized into start here → concepts → deployment → validation. |
+| 2 | Identity and Easy Auth explanation | Done | 2026-08-04 | Easy Auth, token flow, audience/scope, and authn/authz explanations added to the Lab 3 concept docs. |
 | 3 | Deployment guidance | Not started | 2026-08-04 | Prerequisite checklist and script parameters not yet updated. |
 | 4 | Validation and troubleshooting | Not started | 2026-08-04 | SAS-free validation path not yet consolidated. |
 | 5 | Private networking and CI/CD caveats | Not started | 2026-08-04 | `docs/07-private-networking-and-cicd.md` does not exist yet. |
@@ -411,7 +411,7 @@ Update the status of a phase here and in the phase section below whenever work o
 
 ### Phase 1: Documentation structure
 
-- Status: Not started
+- Status: Done
 - Task: Reorganize entry docs into a strict beginner-first progression that starts from the current private Lab 3 architecture and includes an explicit public-access variant when that is acceptable for the lab run.
 - Files to modify: `README.md`, `START-HERE.md`
 - Expected outcome: clear “start here → concepts → deployment → validation → troubleshooting” path.
@@ -419,7 +419,7 @@ Update the status of a phase here and in the phase section below whenever work o
 
 ### Phase 2: Identity and Easy Auth explanation
 
-- Status: Not started
+- Status: Done
 - Task: Add concise explanations of Easy Auth, Entra token flow, OAuth audience, OAuth scope, SAS replacement, and authn/authz boundaries.
 - Files to modify: `docs/lab3-passwordless-managed-identity-easy-auth.md`, `docs/lab3-managed-identity-bearer-token-flow.md`
 - Expected outcome: beginner can explain who calls what, with which token, and why.

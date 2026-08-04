@@ -54,8 +54,15 @@ After reading it you should be able to explain, in your own words:
 Run:
 
 ```powershell
-./scripts/deploy.ps1 -EntraAppClientId "{clientId}" -EntraAppTenantId "{tenantId}"
+./scripts/deploy.ps1 -EntraAppClientId "{clientId}" -EntraAppTenantId "{tenantId}" `
+  -DeployFuncCallerDemo -FuncCallerEntraClientId "{callerClientId}"
 ```
+
+`-DeployFuncCallerDemo` is what creates the caller Function App, the virtual network, the
+private endpoint, and the caller principal allow-list. Without it the deployment only creates the
+Logic App and its Easy Auth configuration, and Steps 5 and 6 below cannot be completed.
+`{callerClientId}` is the client ID of the **second** Entra app registration, the one that represents
+the caller Function App.
 
 Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 

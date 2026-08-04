@@ -49,7 +49,7 @@ sequenceDiagram
     participant A as Easy Auth (App Service platform)
     participant W as httpTriggerWorkflow (Logic App Standard)
 
-    F->>E: 1. Request token for api://<logic-app-client-id>/.default
+    F->>E: 1. Request token for <logic-app-client-id>/.default
     E-->>F: 2. Signed JWT access token (short lived)
     F->>A: 3. HTTPS POST with Authorization header, bearer scheme
     A->>A: 4. Authentication - validate signature, issuer, aud, expiry
@@ -61,7 +61,14 @@ sequenceDiagram
 Step by step:
 
 1. The Function App asks Azure for a token using its **system-assigned managed identity**. No secret is stored in code or app settings.
+   The code in [solution/CallerFunctionApp/CallLogicApp.cs](../solution/CallerFunctionApp/CallLogicApp.cs) reads the
+   `LOGIC_APP_CLIENT_ID` app setting and requests the scope `<logic-app-client-id>/.default`. It does not use the
+   `LOGIC_APP_AUDIENCE` app setting.
 2. Entra ID issues a short-lived access token whose `aud` claim names the Logic App app registration.
+   > **Configuration caveat:** [infra/modules/easyauth.bicep](../infra/modules/easyauth.bicep) currently defaults
+   > `allowedAudiences` to the Azure management-plane audiences rather than the Logic App app registration URI.
+   > Easy Auth rejects a token whose `aud` claim is not in that list, so if you see HTTP 401 during validation,
+   > align the requested scope and the configured allowed audiences before continuing.
 3. The Function App sends the token in the `Authorization` header, bearer scheme, to the workflow trigger URL. No signature query parameters are used.
 4. Easy Auth validates the token before the Logic App runtime sees the request.
 5. Easy Auth compares the caller principal with `allowedPrincipals`.
@@ -84,7 +91,10 @@ query parameters (`sp`, `sv`, and `sig`). That URL is effectively a secret in a 
 | Who can call | Anyone who obtains the URL | Only principals listed in `allowedPrincipals` |
 | Auditing and governance | Tied to the key, not to a caller identity | Tied to a directory identity in Entra ID |
 
-For that reason, the active learner path in this lab never configures a SAS-signed callback URL.
+For that reason, the intended learner path in this lab authenticates with an Entra access token rather than a
+SAS-signed callback URL. Note that the current validation guide
+([labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](../labs/lab3-bearer-token/docs/lab3-testing-and-verification.md))
+still shows a SAS-signed callback URL as the endpoint value; that is a known gap and is being replaced.
 SAS remains relevant only as a platform caveat: the Logic Apps runtime and portal run history use their own
 SAS-based runtime calls, which is why Easy Auth mode choices can affect portal manageability.
 
