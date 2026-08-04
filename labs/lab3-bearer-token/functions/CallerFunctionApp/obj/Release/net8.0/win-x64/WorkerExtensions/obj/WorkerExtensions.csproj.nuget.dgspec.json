@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Code\\CSU\\Ores\\EasyAuth\\solution\\CallerFunctionApp\\obj\\Release\\net8.0\\win-x64\\WorkerExtensions\\WorkerExtensions.csproj": {}
+    "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/Release/net8.0/win-x64/WorkerExtensions/WorkerExtensions.csproj": {}
   },
   "projects": {
-    "C:\\Code\\CSU\\Ores\\EasyAuth\\solution\\CallerFunctionApp\\obj\\Release\\net8.0\\win-x64\\WorkerExtensions\\WorkerExtensions.csproj": {
+    "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/Release/net8.0/win-x64/WorkerExtensions/WorkerExtensions.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Code\\CSU\\Ores\\EasyAuth\\solution\\CallerFunctionApp\\obj\\Release\\net8.0\\win-x64\\WorkerExtensions\\WorkerExtensions.csproj",
+        "projectUniqueName": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/Release/net8.0/win-x64/WorkerExtensions/WorkerExtensions.csproj",
         "projectName": "Microsoft.Azure.Functions.Worker.Extensions",
-        "projectPath": "C:\\Code\\CSU\\Ores\\EasyAuth\\solution\\CallerFunctionApp\\obj\\Release\\net8.0\\win-x64\\WorkerExtensions\\WorkerExtensions.csproj",
-        "packagesPath": "C:\\Users\\joweerdt\\.nuget\\packages\\",
-        "outputPath": "C:\\Code\\CSU\\Ores\\EasyAuth\\solution\\CallerFunctionApp\\obj\\Release\\net8.0\\win-x64\\WorkerExtensions\\obj\\",
+        "projectPath": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/Release/net8.0/win-x64/WorkerExtensions/WorkerExtensions.csproj",
+        "packagesPath": "/tmp/codeql-scratch-4bfedf023ba05242/dbs/csharp/working/packages",
+        "outputPath": "/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/labs/lab3-bearer-token/functions/CallerFunctionApp/obj/Release/net8.0/win-x64/WorkerExtensions/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\joweerdt\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net6.0"
@@ -24,6 +24,7 @@
         },
         "frameworks": {
           "net6.0": {
+            "framework": "net6.0",
             "targetAlias": "net6.0",
             "projectReferences": {}
           }
@@ -37,10 +38,12 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
         "net6.0": {
+          "framework": "net6.0",
           "targetAlias": "net6.0",
           "dependencies": {
             "Microsoft.NET.Sdk.Functions": {
@@ -64,12 +67,22 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Users\\joweerdt\\.azurelogicapps\\dependencies\\DotNetSDK\\sdk\\8.0.422\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.302/RuntimeIdentifierGraph.json"
         }
       }
     }

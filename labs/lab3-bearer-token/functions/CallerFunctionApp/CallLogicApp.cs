@@ -190,20 +190,14 @@ public class CallLogicApp
     /// </summary>
     private async Task<AccessToken> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        var tenantId  = Environment.GetEnvironmentVariable("WEBSITE_AUTH_AAD_ALLOWED_TENANTS");
-        
-        // Extract the app registration client ID from the Logic App URL for use as a resource
-        // Example: https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net
-        // Client ID: 786594a8-6b38-40cf-8c6b-d434b539dd46 (the Logic App's Entra app registration)
-        // 
-        // For DefaultAzureCredential, we need to use a resource that Entra ID recognizes.
-        // The Logic App's hostname is NOT a valid resource in Entra ID.
-        // Instead, we construct a scope using the app registration's client ID:
-        // Resource format that Entra ID accepts: 2ebb3a00-e3fd-4773-b6cc-3da280a6da16/.default
-        // where 2ebb3a00-e3fd-4773-b6cc-3da280a6da16 is the client ID
-        
-        var logicAppClientId = Environment.GetEnvironmentVariable("LOGIC_APP_CLIENT_ID")
-                               ?? "786594a8-6b38-40cf-8c6b-d434b539dd46"; // Default for this lab
+        var tenantId = Environment.GetEnvironmentVariable("WEBSITE_AUTH_AAD_ALLOWED_TENANTS");
+
+        // LOGIC_APP_AUDIENCE is the app setting deployed alongside this Function App
+        // (see infra/modules/functionapp-caller.bicep) and it must match one of the
+        // allowedAudiences configured on the Logic App's Easy Auth (infra/modules/easyauth.bicep).
+        // Its value is the Application ID URI, e.g. api://<logic-app-app-registration-client-id>.
+        var logicAppAudience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE")
+                               ?? "api://786594a8-6b38-40cf-8c6b-d434b539dd46"; // Default for this lab
 
         // DefaultAzureCredential tries: env vars → managed identity → Azure CLI → Visual Studio → …
         // In production the managed identity is used automatically.
@@ -213,13 +207,14 @@ public class CallLogicApp
         });
 
         _logger.LogInformation(
-            "Acquiring token for Logic App (client ID): {ClientId}, tenant: {TenantId}",
-            logicAppClientId, tenantId ?? "<default>");
+            "Acquiring token for Logic App (audience): {Audience}, tenant: {TenantId}",
+            logicAppAudience, tenantId ?? "<default>");
 
-        // Use the client ID as the resource for token acquisition
-        // This scope format is what Entra ID expects for app-to-app authentication
+        // Use the Application ID URI (audience) as the resource for token acquisition.
+        // This scope format is what Entra ID expects for app-to-app authentication and
+        // matches the aud claim validated by Easy Auth's allowedAudiences.
         return await credential.GetTokenAsync(
-            new TokenRequestContext(scopes: [$"{logicAppClientId}/.default"]),
+            new TokenRequestContext(scopes: [$"{logicAppAudience}/.default"]),
             cancellationToken);
     }
 
