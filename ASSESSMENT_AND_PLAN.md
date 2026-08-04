@@ -149,7 +149,7 @@ Recommended learner journey for beginner-to-intermediate identity/networking aud
 
 | Priority | Area | Finding | Why it matters | Recommended fix | Suggested owner | Source or documentation reference |
 | --- | --- | --- | --- | --- | --- | --- |
-| Critical | Deployment reliability | The quick-start deployment path can omit the caller Function App required for the Function-to-Logic-App lab. `infra/main.bicep` defaults `deployFuncCallerDemo` to `false`, and `scripts/deploy.ps1` does not expose or pass `deployFuncCallerDemo` or `funcCallerEntraClientId`. | Participants following README/START-HERE can provision a Logic App without the caller Function App, so the primary Easy Auth learning scenario cannot be completed as described. | Update `scripts/deploy.ps1`, `.env.example`, README/START-HERE, and deployment docs to support a public-network first-run option and an explicit Lab 3 caller/private-network option. Include required `funcCallerEntraClientId` handling and validation that the Function caller output is present. | Next Copilot implementation agent | `infra/main.bicep:27-34`, `infra/main.bicep:45-68`, `infra/main.bicep:95-113`, `scripts/deploy.ps1:123-130` |
+| Critical | Deployment reliability | The quick-start deployment path can omit the caller Function App required for the Function-to-Logic-App lab. `infra/main.bicep` defaults `deployFuncCallerDemo` to `false`, and `scripts/deploy.ps1` does not expose or pass `deployFuncCallerDemo` or `funcCallerEntraClientId`. | Participants following README/START-HERE can provision a Logic App without the caller Function App, so the primary Easy Auth learning scenario cannot be completed as described. | Update `scripts/deploy.ps1`, `.env.example`, README/START-HERE, and deployment docs to start from the current Lab 3 private-network architecture when the caller demo is enabled, then add an explicit “public access is acceptable for this lab run” variant. Include required `funcCallerEntraClientId` handling and validation that the Function caller output is present. | Next Copilot implementation agent | `infra/main.bicep:27-34`, `infra/main.bicep:45-68`, `infra/main.bicep:95-113`, `scripts/deploy.ps1:123-130` |
 | High | Learning clarity | Concept explanations are spread across multiple files and not consistently ordered from “why” to “how.” | Beginners may deploy without understanding identity/security rationale. | Add a structured concepts-first section and unify cross-links in README and START-HERE. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/README.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/START-HERE.md` |
 | High | Authentication correctness | Audience/resource/scope and `allowedPrincipals` rationale are present but not consistently beginner-framed before hands-on steps. | Misconfiguration here causes 401/403 and confusion about identity trust model. | Add explicit beginner explanations and validation checklist in concept and testing docs. | Next Copilot implementation agent | `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-passwordless-managed-identity-easy-auth.md`, `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-testing-and-verification.md` |
 | High | Private networking + CI/CD | Private endpoint/VNet/private DNS are implemented as an optional Lab 3 pattern, but deployment constraints for hosted runners are not consolidated as a mandatory caveat section. | Participants may expect GitHub-hosted or Microsoft-hosted agents to deploy app content or validate private-only endpoints without network reachability. | Add dedicated private-networking-and-CI/CD caveats doc and link it prominently. Distinguish ARM/Bicep control-plane deployment from ZIP/Kudu deployment and runtime validation. | Next Copilot implementation agent | `infra/main.bicep`, `infra/modules/networking.bicep`, `infra/modules/logicapp.bicep`, Microsoft docs on private endpoint and agent networking |
@@ -189,13 +189,20 @@ Recommended learner journey for beginner-to-intermediate identity/networking aud
 
 ### Repository evidence
 
-From IaC modules, the repository includes optional private networking patterns:
+From IaC modules, the repository currently treats the complete Lab 3 Function-caller path as a private-network pattern:
 
 - `deployFuncCallerDemo` defaults to `false` in `infra/main.bicep`, and the networking module/private endpoint wiring is conditional on that flag.
-- VNet + subnets (`snet-app-integration`, `snet-privateendpoints`) and private DNS zone link are created in `infra/modules/networking.bicep` only when the caller demo is enabled.
+- When `deployFuncCallerDemo` is enabled, VNet + subnets (`snet-app-integration`, `snet-privateendpoints`) and private DNS zone link are created in `infra/modules/networking.bicep`.
 - Logic App module (`infra/modules/logicapp.bicep`) can disable public network access when private endpoint is configured (`publicNetworkAccess: Disabled`).
 - Private endpoint and private DNS zone group are configured for Logic App host.
 - Function App caller module uses VNet integration for outbound traffic (`vnetRouteAllEnabled: true`).
+
+### Current-first lab posture and public-access option
+
+- The improved lab should start by documenting what currently exists: enabling the Lab 3 caller demo implies private endpoint, private DNS, and VNet integration.
+- During the lab, add a clearly marked note for environments where public access is acceptable, such as classroom or first-run validation scenarios. That note should explain exactly which future deployment option, parameter, or Bicep lines make the Logic App reachable publicly.
+- Do not make learners infer public-vs-private behavior from comments or uncommenting code alone. If the implementation agent adds a public variant, it should be an explicit, named deployment mode with acceptance criteria and warnings.
+- The public variant should still use Easy Auth, managed identity, Entra access tokens, and `allowedPrincipals`; only network reachability changes.
 
 ### What changes when public access is disabled
 
@@ -207,8 +214,8 @@ From IaC modules, the repository includes optional private networking patterns:
 
 | Executor | ARM/Bicep infrastructure deployment through Azure Resource Manager | ZIP/Kudu or workflow-content deployment to private app/SCM endpoint | Runtime validation against private endpoint | Recommendation |
 | --- | --- | --- | --- | --- |
-| Developer laptop | Usually works with Azure sign-in and RBAC because ARM is a public control-plane endpoint. | Works only when the laptop has route and DNS access to the private app and SCM hostnames. | Works only when connected through VPN/ExpressRoute/peering or another reachable network path. | Good for public quickstart; private variant requires network setup first. |
-| GitHub-hosted runner | Can still deploy ARM/Bicep resources through ARM if credentials/RBAC are correct. | Fails for private-only app/SCM endpoints unless special network access is provided. | Fails for private-only endpoint validation without route and DNS access. | Use for public-network quickstart or pure ARM deployment; use self-hosted for private app-content deployment. |
+| Developer laptop | Usually works with Azure sign-in and RBAC because ARM is a public control-plane endpoint. | Works only when the laptop has route and DNS access to the private app and SCM hostnames. | Works only when connected through VPN/ExpressRoute/peering or another reachable network path. | Good for the optional public-access variant; current private path requires network setup first. |
+| GitHub-hosted runner | Can still deploy ARM/Bicep resources through ARM if credentials/RBAC are correct. | Fails for private-only app/SCM endpoints unless special network access is provided. | Fails for private-only endpoint validation without route and DNS access. | Use for the optional public-access variant or pure ARM deployment; use self-hosted for private app-content deployment. |
 | Azure DevOps Microsoft-hosted agent | Can still deploy ARM/Bicep resources through ARM if service connection/RBAC are correct. | Fails for private-only app/SCM endpoints unless special network access is provided. | Fails for private-only endpoint validation without route and DNS access. | Primary audience uses Azure DevOps, so include both public and private pipeline examples. |
 | Self-hosted GitHub runner in reachable VNet | Works if outbound access to ARM is allowed. | Works when private DNS and routing to app and SCM endpoints are configured. | Works when NSG/UDR/firewall rules allow the path. | Recommended for GitHub Actions private-network track. |
 | Self-hosted Azure DevOps agent in reachable VNet | Works if outbound access to ARM is allowed. | Works when private DNS and routing to app and SCM endpoints are configured. | Works when NSG/UDR/firewall rules allow the path. | Recommended for Azure DevOps private-network track. |
@@ -226,7 +233,7 @@ From IaC modules, the repository includes optional private networking patterns:
 - Warn that hosted CI runners can deploy ARM/Bicep resources through Azure Resource Manager but may be unable to deploy workflow/function content or validate private-only app endpoints.
 - Warn that private DNS misconfiguration can present as generic timeout/auth failures.
 - Warn that production pipelines may need self-hosted agents in reachable networks.
-- Warn that the lab should start with a public-network quickstart variant for first-run Easy Auth learning, then add private networking as an optional hardening track because the Easy Auth mechanism is the core learning goal.
+- Warn that the current Lab 3 caller demo is private-network oriented when enabled. If public access is acceptable for a given lab run, document the exact switch or code change separately and keep the identity flow unchanged.
 
 ### Portal/monitoring limitations to call out
 
@@ -236,7 +243,7 @@ From IaC modules, the repository includes optional private networking patterns:
 
 ### Required secondary references
 
-1. **Microsoft Tech Community blog**
+1. **Microsoft Tech Community blog (secondary Microsoft source, not Microsoft Learn)**
    URL: https://techcommunity.microsoft.com/blog/integrationsonazureblog/easy-auth-configuration-for-logic-app-standard-through-cicd/4520539
    - Summary: The article explains why Logic App Standard run-history inputs/outputs can fail after enabling Easy Auth. Requests reach App Service Easy Auth before the Logic App runtime. Portal run-history details rely on runtime SAS access, so strict Easy Auth (`unauthenticatedClientAction: Return401`) can block those requests before the runtime validates them.
    - Why it matters to this lab: Learners might believe all 401 responses mean the Function caller token is wrong, while the failure can instead be portal/run-history traffic blocked by the App Service layer.
@@ -245,16 +252,16 @@ From IaC modules, the repository includes optional private networking patterns:
    - Monitoring/portal implication: Include a required validation step for portal run history, trigger/action inputs, and outputs after changing Easy Auth.
    - Private networking implication: Private endpoints add another failure mode; the agent or user loading run history must still have DNS and route reachability to the relevant app endpoints.
 
-2. **Community blog (azcloudsecurity)**
+2. **Community blog (azcloudsecurity, not official Microsoft documentation)**
    URL: https://azcloudsecurity.io/blog/logic-app-standard-easy-auth
    - Summary: The article describes securing Logic App Standard with Easy Auth for machine-to-machine calls. It emphasizes a minimal app registration as the Logic App audience, managed identity as caller, tenant/audience/principal validation, and the risk that SAS keys can bypass the intended token-only model unless disabled or checked in the workflow.
    - Why it matters to this lab: The lab’s Function App caller is analogous to the article’s managed-identity caller pattern, even though APIM is out of scope for the main learner track.
-   - Caveats to add: Label this as community guidance and validate recommendations against Microsoft Learn. The article discusses an undocumented `logicAppsAccessControlConfiguration.triggers.sasAuthenticationPolicy.state: Disabled` setting; the lab should avoid relying on undocumented behavior for beginner completion unless the owner explicitly accepts the risk.
+   - Caveats to add: Treat this as non-official community context only and validate recommendations against Microsoft Learn before implementation. The article discusses an undocumented `logicAppsAccessControlConfiguration.triggers.sasAuthenticationPolicy.state: Disabled` setting; the lab should avoid relying on undocumented behavior for beginner completion unless the owner explicitly accepts the risk.
    - CI/CD implication: Automate app registration/auth settings carefully with least-privilege Entra permissions; avoid broad application administrator permissions where possible.
-   - Monitoring/portal implication: The article confirms the portal manageability tradeoff around `AllowAnonymous` and strict Easy Auth; document this as an advanced operational decision.
+   - Monitoring/portal implication: The article reports the portal manageability tradeoff around `AllowAnonymous` and strict Easy Auth; document this as an advanced operational decision and validate implementation choices against Microsoft Learn or product documentation.
    - Private networking implication: The article is primarily about identity and Easy Auth, not private endpoint deployment mechanics, so pair it with Microsoft Learn private endpoint and DNS documentation.
 
-Microsoft Learn remains the authoritative source for App Service Easy Auth, Logic Apps trigger security, managed identities, private endpoints, and deployment guidance.
+Microsoft Learn remains the authoritative source for App Service Easy Auth, Logic Apps trigger security, managed identities, private endpoints, and deployment guidance. Community content can be mentioned for context, but it must be clearly labeled as non-official and must not override documented Microsoft guidance.
 
 ## 7. Proposed repository changes
 
@@ -264,8 +271,8 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 - Summary: improve entry flow, concept-first framing, and private networking/CI-CD warning signposts.
 - Detailed instructions:
   - Add a short “Before you deploy” section with identity and networking prerequisites.
-  - Present a public-network quickstart first so learners can focus on Easy Auth before private networking.
-  - Add a separate private-network hardening path that explains private endpoint, private DNS, and runner placement requirements.
+  - Start with the current Lab 3 private-network architecture when the caller demo is enabled.
+  - Add a clearly marked “public access is acceptable for this lab run” path that explains what to change or enable, while preserving Easy Auth and managed identity.
   - Add explicit warning box for private endpoint + hosted runner limitations.
   - Link directly to a dedicated private networking and CI/CD caveats doc.
 - Acceptance criteria:
@@ -289,7 +296,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 - Summary: add explicit variables for the caller Function App and deployment mode.
 - Detailed instructions:
   - Add placeholders for enabling the Lab 3 caller demo and providing the caller Function App Entra client ID.
-  - Clearly label public quickstart versus private-network hardening values.
+  - Clearly label current private-network values versus the optional public-access lab values.
 - Acceptance criteria:
   - A participant can see which values are required for the end-to-end Function-to-Logic-App caller path before running deployment.
 
@@ -304,7 +311,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
   - Print deployment outputs for the caller Function App and fail fast when expected outputs are missing for the Lab 3 track.
 - Acceptance criteria:
   - The documented Lab 3 deployment command provisions the caller Function App when requested.
-  - Public quickstart remains possible without private networking.
+  - Public-access lab runs are possible only through an explicit documented option; otherwise the current Lab 3 caller path remains private-network oriented.
 
 ### File: `/home/runner/work/logicapp-easyauth-lab/logicapp-easyauth-lab/docs/lab3-passwordless-managed-identity-easy-auth.md`
 
@@ -371,10 +378,10 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 1: Documentation structure
 
-- Task: Reorganize entry docs into a strict beginner-first progression with a public-network quickstart and optional private-network hardening path.
+- Task: Reorganize entry docs into a strict beginner-first progression that starts from the current private Lab 3 architecture and includes an explicit public-access variant when that is acceptable for the lab run.
 - Files to modify: `README.md`, `START-HERE.md`
 - Expected outcome: clear “start here → concepts → deployment → validation → troubleshooting” path.
-- Acceptance criteria: no ambiguous first steps; private networking caveat visible early.
+- Acceptance criteria: no ambiguous first steps; current private networking behavior is visible early; the public-access variant is clearly optional and explicit.
 
 ### Phase 2: Identity and Easy Auth explanation
 
@@ -385,7 +392,7 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ### Phase 3: Deployment guidance
 
-- Task: Clarify prerequisite data, deployment order, and automation paths for public and private networking.
+- Task: Clarify prerequisite data, deployment order, and automation paths for the current private path and the optional public-access path.
 - Files to modify: `README.md`, `DEPLOYMENT-FAQ.md`, `.env.example`, `scripts/deploy.ps1`, `docs/lab3-passwordless-managed-identity-easy-auth.md`
 - Expected outcome: fewer setup/deployment misconfigurations.
 - Acceptance criteria: prerequisite checklist includes Entra app registration and tenant/client IDs, and deployment script supports `deployFuncCallerDemo` plus `funcCallerEntraClientId`.
@@ -421,9 +428,9 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 - The lab includes validation steps with expected outcomes.
 - The lab includes troubleshooting steps with root-cause flow.
 - Private networking and CI/CD caveats are documented in a dedicated section.
-- Public-network quickstart and private-network hardening paths are clearly separated.
+- Current private-network Lab 3 path and optional public-access lab path are clearly separated.
 - Azure DevOps is prioritized for current learners, while GitHub Actions guidance is also included.
-- Fully automated workflow deployment guidance covers public networking and private endpoint/VNet constraints.
+- Fully automated workflow deployment guidance covers the current private endpoint/VNet constraints and the optional public-access variant.
 - The lab avoids SAS tokens for the primary secured flow.
 - APIM is clearly marked as an optional production extension, not required for beginner completion.
 - `Return401` versus `AllowAnonymous` portal manageability tradeoffs are documented as optional advanced scenarios.
@@ -431,16 +438,17 @@ Microsoft Learn remains the authoritative source for App Service Easy Auth, Logi
 
 ## 10. Open questions
 
-The repository owner clarified the original open questions as follows:
+Repository owner feedback to incorporate:
 
-1. **Private networking default:** Do not require private networking by default for all participants. The current Bicep can start with private networking when the caller demo is enabled, but the most important learning goal is Easy Auth. Provide a public-network quickstart for first-run learning and a separate private-network hardening path.
-2. **Primary CI/CD system:** Current learners use Azure DevOps, so prioritize Azure DevOps examples. Still include GitHub Actions guidance and runner caveats for both systems.
-3. **Automated workflow deployment:** Include a fully automated workflow deployment path, such as CLI/ZIP/ARM where appropriate. Describe how setup differs when public networking is available versus when VNet/private endpoints are in place.
-4. **APIM scope:** Add APIM as an optional production extension track, not as a prerequisite for the core learner path.
-5. **Identity constraints:** Remove SAS tokens from the mandatory learner completion path. The required learning path should use managed identity, Entra access tokens, Easy Auth validation, and principal allow-listing.
-6. **Portal manageability tradeoffs:** Treat `Return401` versus `AllowAnonymous`, and related portal/run-history behavior, as optional advanced scenarios rather than required outcomes.
+1. **Start from what currently exists:** The improved lab should begin with the repository’s current Lab 3 posture. When the caller demo is enabled, the implementation currently creates private networking resources. The lab can then explain what to change or enable if public access is acceptable for a given lab run.
+2. **Documentation authority:** Focus recommendations on documented Microsoft guidance. Community content can be mentioned, but it must be clearly labeled as non-official and should not be the basis for required implementation steps.
+3. **Primary CI/CD system:** Current learners use Azure DevOps, so prioritize Azure DevOps examples. Still include GitHub Actions guidance and runner caveats for both systems.
+4. **Automated workflow deployment:** Include a fully automated workflow deployment path, such as CLI/ZIP/ARM where appropriate. Describe how setup differs when public networking is available versus when VNet/private endpoints are in place.
+5. **APIM scope:** Add APIM as an optional production extension track, not as a prerequisite for the core learner path.
+6. **Identity constraints:** Remove SAS tokens from the mandatory learner completion path. The required learning path should use managed identity, Entra access tokens, Easy Auth validation, and principal allow-listing.
+7. **Portal manageability tradeoffs:** Treat `Return401` versus `AllowAnonymous`, and related portal/run-history behavior, as optional advanced scenarios rather than required outcomes.
 
 Remaining clarification for implementation:
 
-- Should the implementation agent update Bicep to support both public Function-caller deployment and private Function-caller deployment separately, or should `deployFuncCallerDemo` continue to imply private networking?
-- Should the lab rely on documented workflow conditions to prevent SAS usage, or should it include the community-described undocumented `logicAppsAccessControlConfiguration.triggers.sasAuthenticationPolicy.state: Disabled` setting only as optional background?
+- Should the implementation agent introduce a separate, explicit public-access deployment mode for the Function-caller demo, or should the lab only document manual edits/uncomments for public classroom runs?
+- Should the lab rely only on documented workflow conditions to prevent SAS usage, or should it mention the community-described undocumented `logicAppsAccessControlConfiguration.triggers.sasAuthenticationPolicy.state: Disabled` setting only as non-official background?
