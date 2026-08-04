@@ -1,5 +1,33 @@
 # Deployment FAQ
 
+## Lab 3 deployment inputs
+
+The active Function-to-Logic-App path requires two Microsoft Entra app registrations:
+
+| Input | Purpose | How it is supplied |
+| --- | --- | --- |
+| Subscription ID | Selects the Azure subscription | `-SubscriptionId`, process `AZURE_SUBSCRIPTION_ID`, or `.env` |
+| Tenant ID | Configures the Entra issuer boundary | `-EntraAppTenantId` |
+| Logic App client ID | Defines the Logic App API audience | `-EntraAppClientId` |
+| Caller Function client ID | Configures Easy Auth for the caller app | `-FuncCallerEntraClientId` |
+| Caller demo switch | Creates the caller, VNet, private endpoint, and principal allow-list | `-DeployFuncCallerDemo` |
+
+Preview first:
+
+```powershell
+./scripts/deploy.ps1 `
+    -EntraAppClientId '<logic-app-client-id>' `
+    -EntraAppTenantId '<tenant-id>' `
+    -DeployFuncCallerDemo `
+    -FuncCallerEntraClientId '<caller-function-client-id>' `
+    -WhatIf
+```
+
+Remove `-WhatIf` to deploy. Then use [the deployment and validation guide](docs/lab3-testing-and-verification.md) to deploy the workflow and Function code.
+
+> [!WARNING]
+> When the caller demo is enabled, the Logic App uses a private endpoint. ARM/Bicep deployment can work from a hosted agent, but app-content deployment and direct HTTP validation need network and DNS reachability to the target endpoints.
+
 ## Question 1: Does deploy.ps1 Handle Already-Created Resources?
 
 ### ✅ YES — Fully Idempotent
@@ -266,7 +294,8 @@ All updates verified and working correctly!
 
 ### To Deploy
 ```powershell
-.\scripts\deploy.ps1 -EntraAppClientId "..." -EntraAppTenantId "..."
+.\scripts\deploy.ps1 -EntraAppClientId "..." -EntraAppTenantId "..." `
+    -DeployFuncCallerDemo -FuncCallerEntraClientId "..."
 ```
 
 ### To Undeploy (Delete All Resources)

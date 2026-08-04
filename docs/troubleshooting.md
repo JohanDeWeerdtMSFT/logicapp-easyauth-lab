@@ -2,6 +2,19 @@
 
 This guide helps you diagnose and fix common issues in the Easy Auth lab.
 
+## Start with the failing layer
+
+Do these checks in order. A timeout is not evidence of an authentication failure.
+
+| Symptom | Meaning in this lab | First evidence to inspect | Scenario |
+| --- | --- | --- | --- |
+| HTTP 401 | Authentication failed: missing/invalid token, wrong audience or issuer, or expired token | Caller `tokenClaims`, `LOGIC_APP_AUDIENCE`, and Easy Auth `allowedAudiences` | B2, B3, B4 |
+| HTTP 403 | Authentication succeeded but authorization failed | Token `objectId`, Function managed identity principal ID, and `allowedPrincipals` | B6 |
+| Timeout or DNS failure | Request did not reach Easy Auth | Private DNS resolution, VNet integration, private endpoint, NSG/route | Network check |
+| HTTP 404 or 405 | Endpoint path or method is wrong | `/api/workflows/httpTriggerWorkflow/...` and `POST` | Route check |
+
+Run the successful B1 test in [the canonical validation guide](lab3-testing-and-verification.md) first. It returns selected token claims without exposing the bearer token and shows how to reproduce and restore 401/403 conditions.
+
 ---
 
 ## Common Issues and Solutions
@@ -139,16 +152,14 @@ az deployment operation cancel --resource-group rg-easyauth-lab-dev \
 
 #### ❌ Function App returns "401 Unauthorized"
 
-**Cause:** Bearer token is invalid or missing
+**Cause:** The downstream Logic App Easy Auth rejected a missing or invalid bearer token.
 
 **Diagnosis:**
-```bash
-# Check if Function App Easy Auth is enabled
-az resource show --resource-group rg-easyauth-lab-dev \
-  --resource-type "Microsoft.Web/sites/config" \
-  --name la-easyauth-lab-dev-caller-xxx/authsettingsv2 \
-  --query "properties.{httpSettings:httpSettings, login:login, identityProviders:identityProviders}"
-```
+
+1. Inspect `tokenClaims.audience` in the caller response or Application Insights. It must be `api://<logic-app-client-id>`.
+2. Check `LOGIC_APP_AUDIENCE` on the caller Function App.
+3. Check the Logic App `authsettingsV2` `allowedAudiences` and Entra issuer/tenant.
+4. Confirm the unsigned invoke URL contains no `sp`, `sv`, or `sig` query parameters.
 
 **Fix:**
 
@@ -179,7 +190,7 @@ az resource show --resource-group rg-easyauth-lab-dev \
 
 #### ❌ Function App returns "403 Forbidden"
 
-**Cause:** Token is valid but caller is not in allowedPrincipals
+**Cause:** The token is valid, but the authenticated caller is not in `allowedPrincipals`.
 
 **Fix:**
 
@@ -196,8 +207,10 @@ az resource show --resource-group rg-easyauth-lab-dev \
    az resource show --resource-group rg-easyauth-lab-dev \
      --resource-type "Microsoft.Web/sites/config" \
      --name la-easyauth-lab-dev-la-xxx/authsettingsv2 \
-     --query "properties.identityProviders.azureActiveDirectory.allowedPrincipals"
+   --query "properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities"
    ```
+
+    Compare the returned principal with `tokenClaims.objectId`. In this lab both must equal the Function App system-assigned managed identity principal ID.
 
 3. **If Function App principal is missing, add it:**
    ```bash

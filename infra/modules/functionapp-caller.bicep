@@ -125,7 +125,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         // then sends it as Authorization: Bearer <token> to the Logic App.
         {
           name: 'LOGIC_APP_URL'
-          value: 'https://${logicAppHostname}/api/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01'
+          value: 'https://${logicAppHostname}/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01'
         }
         {
           name: 'LOGIC_APP_AUDIENCE'

@@ -45,9 +45,9 @@ workflow trigger. See [Authentication and authorization in App Service and Azure
 
 The caller Function App uses its **system-assigned managed identity**, enabled in
 [infra/modules/functionapp-caller.bicep](../infra/modules/functionapp-caller.bicep). Azure supplies the credential,
-so no secret is stored in code or app settings. The code reads the `LOGIC_APP_CLIENT_ID` app setting (the Logic
-App's Entra app registration client ID) and asks Microsoft Entra ID for an access token using the scope
-`<logic-app-client-id>/.default`, then sends it in the HTTP `Authorization` header using the bearer scheme. See
+so no secret is stored in code or app settings. The code reads the `LOGIC_APP_AUDIENCE` app setting (the Logic
+App's Application ID URI) and asks Microsoft Entra ID for an access token using the scope
+`api://<logic-app-client-id>/.default`, then sends it in the HTTP `Authorization` header using the bearer scheme. See
 [solution/CallerFunctionApp/CallLogicApp.cs](../solution/CallerFunctionApp/CallLogicApp.cs),
 [What are managed identities for Azure resources?](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview)
 and the [client credentials flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-client-creds-grant-flow).
@@ -60,8 +60,7 @@ access keys are regenerated, and the call is not tied to a directory identity.
 
 The Entra token flow instead proves the caller identity, uses short-lived tokens issued on demand, and allow-lists the
 caller explicitly. For that reason the intended learner path in this lab does not rely on a SAS-signed callback URL
-for authentication. The current validation guide still shows a SAS-signed callback URL as the endpoint value, which
-is a known gap that is being replaced.
+for authentication. The validation guide uses only the unsigned workflow endpoint plus the bearer token.
 See [Secure access and data for workflows in Azure Logic Apps](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app).
 
 ## Fast Trainee Path
@@ -175,6 +174,23 @@ Easy Auth checks:
 4. Caller principal against `allowedPrincipals`
 
 ## Deployment Steps
+
+### Deploy the Lab 3 infrastructure
+
+Set `AZURE_SUBSCRIPTION_ID` in `.env`, sign in to Azure, and preview before deploying:
+
+```powershell
+az login --tenant '<tenant-id>'
+
+./scripts/deploy.ps1 `
+  -EntraAppClientId '<logic-app-client-id>' `
+  -EntraAppTenantId '<tenant-id>' `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId '<caller-function-client-id>' `
+  -WhatIf
+```
+
+Remove `-WhatIf` after reviewing the changes. The deployment must return the Logic App name and hostname, caller Function App name and hostname, and caller principal ID. Continue with [the canonical deployment and validation guide](lab3-testing-and-verification.md).
 
 ### Step 1: Verify deployed resources
 

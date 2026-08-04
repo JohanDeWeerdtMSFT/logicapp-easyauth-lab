@@ -195,12 +195,16 @@ Fill `.env` with your tenant/subscription/region values.
 
 ```powershell
 az login
-./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"
+./scripts/deploy.ps1 `
+    -EntraAppClientId "<logic-app-client-id>" `
+    -EntraAppTenantId "<tenant-id>" `
+    -DeployFuncCallerDemo `
+    -FuncCallerEntraClientId "<caller-function-client-id>"
 ```
 
 ### Step 3: Deploy code and validate
 
-- Follow: [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md)
+- Follow: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
 
 ---
@@ -215,7 +219,7 @@ One-click startup flow:
 2. Wait for container setup to complete.
 3. Run `az login --use-device-code`.
 4. Configure `.env` from `.env.example`.
-5. Run `./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"`.
+5. Run `./scripts/deploy.ps1 -EntraAppClientId "<logic-app-client-id>" -EntraAppTenantId "<tenant-id>" -DeployFuncCallerDemo -FuncCallerEntraClientId "<caller-function-client-id>"`.
 
 The container includes Azure CLI, PowerShell, and .NET 8.
 

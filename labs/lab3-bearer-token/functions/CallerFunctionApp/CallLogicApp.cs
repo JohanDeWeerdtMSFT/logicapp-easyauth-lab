@@ -70,9 +70,18 @@ public class CallLogicApp
 
             // ── Step 2: Acquire bearer token from this Function App's managed identity ──────────
             var accessToken = await GetAccessTokenAsync(cancellationToken);
+            var tokenClaims = ReadTokenClaims(accessToken.Token);
             _logger.LogInformation(
                 "Bearer token acquired. Expiry: {Expiry}",
                 accessToken.ExpiresOn.ToString("o"));
+            _logger.LogInformation(
+                "Token claims inspected locally. Audience: {Audience}; Issuer: {Issuer}; " +
+                "Object ID: {ObjectId}; Caller app claim: {CallerAppId}; Expires: {ExpiresOn}",
+                tokenClaims.Audience,
+                tokenClaims.Issuer,
+                tokenClaims.ObjectId,
+                tokenClaims.CallerAppId,
+                tokenClaims.ExpiresOn);
 
             // ── Step 3: POST to Logic App with bearer token in Authorization header ───────────
             // NOTE: No SAS signature or callback URL is needed.
@@ -99,6 +108,7 @@ public class CallLogicApp
                 status          = "success",
                 message         = "Bearer token flow verified — Easy Auth accepted the request.",
                 logicAppResponse,
+                tokenClaims,
                 tokenExpiry     = accessToken.ExpiresOn,
                 timestamp       = DateTime.UtcNow
             }, cancellationToken);
@@ -181,6 +191,52 @@ public class CallLogicApp
 
     // ── Private helpers ──────────────────────────────────────────────────────────────────────────
 
+    private static TokenClaims ReadTokenClaims(string token)
+    {
+        var segments = token.Split('.');
+        if (segments.Length != 3)
+        {
+            throw new InvalidOperationException("The acquired access token is not a three-segment JWT.");
+        }
+
+        var payload = segments[1].Replace('-', '+').Replace('_', '/');
+        payload += (payload.Length % 4) switch
+        {
+            2 => "==",
+            3 => "=",
+            0 => string.Empty,
+            _ => throw new InvalidOperationException("The acquired access token has invalid Base64Url encoding.")
+        };
+
+        using var document = JsonDocument.Parse(Convert.FromBase64String(payload));
+        var claims = document.RootElement;
+        var expiresOn = claims.TryGetProperty("exp", out var expiryClaim) && expiryClaim.TryGetInt64(out var expiry)
+            ? DateTimeOffset.FromUnixTimeSeconds(expiry)
+            : (DateTimeOffset?)null;
+
+        return new TokenClaims(
+            GetStringClaim(claims, "aud"),
+            GetStringClaim(claims, "iss"),
+            GetStringClaim(claims, "oid"),
+            GetStringClaim(claims, "azp") ?? GetStringClaim(claims, "appid"),
+            expiresOn);
+    }
+
+    private static string? GetStringClaim(JsonElement claims, string claimName)
+    {
+        if (!claims.TryGetProperty(claimName, out var claim))
+        {
+            return null;
+        }
+
+        return claim.ValueKind switch
+        {
+            JsonValueKind.String => claim.GetString(),
+            JsonValueKind.Array => string.Join(",", claim.EnumerateArray().Select(value => value.GetString())),
+            _ => claim.ToString()
+        };
+    }
+
     /// <summary>
     /// Acquires a bearer token for the Logic App resource using DefaultAzureCredential.
     /// Uses the Logic App's Entra app registration client ID (GUID format) as the resource identifier.
@@ -253,4 +309,11 @@ public class CallLogicApp
 
         return await response.Content.ReadAsStringAsync(cancellationToken);
     }
+
+    private sealed record TokenClaims(
+        string? Audience,
+        string? Issuer,
+        string? ObjectId,
+        string? CallerAppId,
+        DateTimeOffset? ExpiresOn);
 }

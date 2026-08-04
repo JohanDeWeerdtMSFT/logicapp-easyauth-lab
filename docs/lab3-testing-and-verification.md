@@ -1,560 +1,338 @@
-# Lab 3: Complete Testing & Deployment Guide
+# Lab 3 deployment, testing, and verification
 
-This guide walks you through creating a test Function App that calls Logic App using managed identity bearer tokens, 
-deploying it to Azure, running tests, and collecting evidence that everything works correctly.
+Use this guide to deploy the active Lab 3 assets and prove that the caller Function App reaches the Logic App Standard workflow by using its system-assigned managed identity and a Microsoft Entra access token.
 
-**By the end of this guide, you'll have:**
-- A working Function App that uses managed identity to acquire bearer tokens
-- Complete evidence that the bearer token flow is secure and functional
-- Logs and screenshots documenting the entire flow
-- Understanding of how to troubleshoot common issues
+The required learner path does not use a Logic Apps SAS callback URL. The invoke URL must not contain `sp`, `sv`, or `sig` query parameters.
 
-**Time Required:** Approximately 60 minutes total
+## What you will prove
 
----
+By the end of this guide, you will have evidence that:
 
-## Table of Contents
+1. The Function App has a system-assigned managed identity.
+2. The Function App requests a token for `api://<logic-app-client-id>/.default`.
+3. The token audience, issuer, object ID, caller app claim, and expiry have the expected values.
+4. Easy Auth accepts the valid token and creates a Logic App run.
+5. Easy Auth rejects a token with the wrong audience with HTTP 401.
+6. Easy Auth rejects an authenticated but unauthorized principal with HTTP 403.
 
-1. [Prerequisites](#prerequisites--setup) — What you need before starting
-2. [Infrastructure Verification](#verify-infrastructure-deployment) — Confirm everything is deployed
-3. [Create Your Test Function](#create-test-function-app-with-bearer-token-code) — Build and deploy the test code
-4. [Deploy to Azure](#run--monitor-tests) — Publish to your Function App
-5. [Collect Evidence](#collect-evidence) — Capture proof that it works
-6. [Troubleshooting](#troubleshooting-checklist) — Solutions for common issues
+Microsoft references:
 
----
+- [App Service authentication and authorization](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization)
+- [Microsoft identity platform access-token claims](https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference)
+- [Managed identities for Azure resources](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview)
+- [Secure access and data in Azure Logic Apps](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app)
 
-## Prerequisites & Setup
+## Prerequisites
 
-### What You'll Need
+- Azure CLI, PowerShell 7, .NET 8 SDK, and Azure Functions Core Tools 4.
+- An Azure subscription where you can create the lab resources.
+- Permission to create or use two Microsoft Entra app registrations:
+  - Logic App API registration: used as the token audience.
+  - Caller Function App registration: used by Easy Auth on the caller endpoint.
+- A machine that can reach the deployment endpoints. The Logic App is private when `-DeployFuncCallerDemo` is enabled, so direct tests of the Logic App require VNet routing and private DNS. The caller Function App performs the normal end-to-end test from inside the VNet.
 
-**Azure Access:**
-- Contributor role on the subscription containing `{resourceGroupName}`
-- Access to Entra ID tenant (`{tenantId}`)
-- Owner or higher role on resource group `rg-la-easyauth-lab-dev`
+> [!IMPORTANT]
+> Do not log, paste, upload, or take screenshots of a complete bearer token. A bearer token is a credential. The sample caller decodes its token payload locally and reports only selected non-secret claims. Reading claims does not validate the token signature; Easy Auth performs signature, issuer, audience, lifetime, and policy enforcement.
 
-**Your Local Machine:**
-- Azure Functions Core Tools (version 4 or higher)
-- Visual Studio Code (recommended) or Visual Studio
-- .NET 6 SDK or higher
-- PowerShell or Bash terminal
-- Azure CLI (optional but recommended)
+## 1. Configure deployment values
 
-### Install Azure Functions Core Tools
-
-**Windows (PowerShell):**
-```powershell
-winget install Microsoft.AzureFunctionsCoreTools
-```
-
-**macOS (Homebrew):**
-```bash
-brew tap azure/azurecli && brew install azure-functions
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
-sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list'
-sudo apt-get update && sudo apt-get install azure-functions-core-tools-4
-```
-
-**Verify Installation:**
-```bash
-func --version
-# Should output version 4.x or higher
-```
-
----
-
-## Verify Infrastructure Deployment
-
-Before you write any code, confirm that Lab 3 infrastructure is correctly deployed in Azure.
-
-Navigate to `rg-la-easyauth-lab-dev` and verify:
-
-- [ ] **Function App (S1 or higher):**
-  - Name: `easyauth-func-*` (verify in Bicep)
-  - Plan: Standard (S1+) — required for VNet integration
-  - Managed Identity: System-assigned enabled
-  - VNet integration: Enabled (via App Service plan)
-
-- [ ] **Logic App (WS1):**
-  - Name: `easyauth-logic-*`
-  - Public network access: **Disabled**
-  - VNet integration: Enabled
-
-- [ ] **Virtual Network (10.0.0.0/16):**
-  - Subnets:
-    - App integration: 10.0.0.0/24
-    - Private endpoint: 10.0.1.0/24
-
-- [ ] **Private DNS Zone:**
-  - Name: `privatelink.azurewebsites.net`
-  - Records: `*.azurewebsites.net` → Private endpoint IP (10.0.1.x)
-
-- [ ] **Private Endpoint:**
-  - Target: Logic App
-  - VNet: easyauth-vnet
-  - Subnet: Private endpoint (10.0.1.0/24)
-
-### 2️⃣ Verify Easy Auth Configuration (CLI)
-
-```bash
-# Get Function App Easy Auth settings
-az functionapp auth show \
-  --resource-group rg-la-easyauth-lab-dev \
-  --name easyauth-func-<suffix>
-
-# Expected output should show:
-# - unauthenticatedClientAction: "AllowAnonymous"
-# - defaultProvider: "AzureActiveDirectory"
-```
-
-### 3️⃣ Verify Managed Identity (PowerShell)
+Copy the environment template and set the subscription ID:
 
 ```powershell
-# Get Function App principal ID
-$funcApp = az functionapp show `
-  --resource-group rg-la-easyauth-lab-dev `
-  --name easyauth-func-<suffix> `
-  --query identity.principalId -o tsv
-
-Write-Host "Function App Principal ID: $funcApp"
-
-# Should be a GUID like: 12345678-1234-1234-1234-123456789012
+Copy-Item .env.example .env
 ```
 
----
-
-## Create Test Function App with Bearer Token Code
-
-### ✅ Step 1: Create HttpTrigger Function
-
-```bash
-# Navigate to workspace
-cd c:\Code\CSU\Ores\EasyAuth
-
-# Create new function project (if not using existing)
-func new --language CSharp --template "HTTP trigger" --name CallLogicApp
-
-# Navigate to function directory
-cd CallLogicApp
-```
-
-### ✅ Step 2: Add Required NuGet Packages
-
-```bash
-# Add Azure SDK dependencies
-dotnet add package Azure.Identity
-dotnet add package Azure.Core
-dotnet add package Newtonsoft.Json
-```
-
-### ✅ Step 3: Implement Bearer Token Acquisition
-
-**File: `CallLogicApp.cs`**
-
-```csharp
-using System;
-using System.Net;
-using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-
-namespace CallLogicApp
-{
-    public static class CallLogicApp
-    {
-        [Function("CallLogicApp")]
-        public static async Task<HttpResponseData> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]
-            HttpRequestData req,
-            FunctionContext executionContext)
-        {
-            var log = executionContext.GetLogger("CallLogicApp");
-            log.LogInformation("C# HTTP trigger function started.");
-
-            try
-            {
-                // 1️⃣ Get bearer token from managed identity
-                var token = await GetAccessTokenAsync(log);
-                log.LogInformation("✅ Bearer token acquired successfully");
-
-                // 2️⃣ Get Logic App URL from config
-                var logicAppUrl = Environment.GetEnvironmentVariable("LOGIC_APP_URL");
-                var audience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE");
-
-                if (string.IsNullOrEmpty(logicAppUrl) || string.IsNullOrEmpty(audience))
-                {
-                    log.LogError("❌ Missing LOGIC_APP_URL or LOGIC_APP_AUDIENCE in app settings");
-                    return req.CreateResponse(HttpStatusCode.BadRequest);
-                }
-
-                // 3️⃣ Call Logic App with bearer token
-                var testPayload = new { message = "Test from Function App", timestamp = DateTime.UtcNow };
-                var response = await CallLogicAppAsync(logicAppUrl, token, testPayload, log);
-
-                log.LogInformation("✅ Logic App call succeeded: {response}", response);
-
-                var okResponse = req.CreateResponse(HttpStatusCode.OK);
-                await okResponse.WriteAsJsonAsync(new
-                {
-                    status = "success",
-                    message = "Bearer token flow validated",
-                    logicAppResponse = response,
-                    timestamp = DateTime.UtcNow
-                });
-
-                return okResponse;
-            }
-            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                log.LogError("❌ 401 Unauthorized — Token invalid (signature, audience, or expiry)");
-                var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
-                await errorResponse.WriteAsJsonAsync(new { error = "Unauthorized", details = ex.Message });
-                return errorResponse;
-            }
-            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
-            {
-                log.LogError("❌ 403 Forbidden — Principal ID not in allowedPrincipals list");
-                var errorResponse = req.CreateResponse(HttpStatusCode.Forbidden);
-                await errorResponse.WriteAsJsonAsync(new { error = "Forbidden", details = ex.Message });
-                return errorResponse;
-            }
-            catch (Exception ex)
-            {
-                log.LogError("❌ Error: {error}", ex.Message);
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteAsJsonAsync(new { error = "Internal error", details = ex.Message });
-                return errorResponse;
-            }
-        }
-
-        private static async Task<string> GetAccessTokenAsync(ILogger log)
-        {
-            var credential = new DefaultAzureCredential(
-                new DefaultAzureCredentialOptions
-                {
-                    TenantId = Environment.GetEnvironmentVariable("WEBSITE_AUTH_AAD_ALLOWED_TENANTS")
-                }
-            );
-
-            var audience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE");
-            var tokenResponse = await credential.GetTokenAsync(
-                new TokenRequestContext(new[] { $"{audience}/.default" })
-            );
-
-            log.LogInformation("Token acquired, expires: {expiry}", tokenResponse.ExpiresOn);
-            return tokenResponse.Token;
-        }
-
-        private static async Task<string> CallLogicAppAsync(
-            string url,
-            string token,
-            object payload,
-            ILogger log)
-        {
-            using (var httpClient = new System.Net.Http.HttpClient())
-            {
-                // Add bearer token to Authorization header
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-                var content = new System.Net.Http.StringContent(
-                    JsonConvert.SerializeObject(payload),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                log.LogInformation("Calling Logic App at: {url}", url);
-                var response = await httpClient.PostAsync(url, content);
-
-                log.LogInformation("Logic App response: {status}", response.StatusCode);
-                response.EnsureSuccessStatusCode();
-
-                var responseBody = await response.Content.ReadAsStringAsync();
-                return responseBody;
-            }
-        }
-    }
-}
-```
-
-### ✅ Step 4: Configure local.settings.json
-
-**File: `local.settings.json`**
-
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=<storage>;AccountKey=<key>",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "LOGIC_APP_URL": "https://easyauth-logic-<suffix>.azurewebsites.net/api/workflows/workflow1/triggers/manual/invoke?api-version=2022-05-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=<token>",
-    "LOGIC_APP_AUDIENCE": "api://<logic-app-client-id>",
-    "WEBSITE_AUTH_AAD_ALLOWED_TENANTS": "00922812-791e-41c8-a99e-45c3ed784cf5"
-  }
-}
-```
-
----
-
-## Run & Monitor Tests
-
-### 🏃 Step 1: Deploy Function App to Azure
-
-```bash
-# Publish to Azure
-func azure functionapp publish easyauth-func-<suffix> --build remote
-
-# Verify deployment in portal
-# Navigate to: Function Apps > easyauth-func-<suffix> > Functions > CallLogicApp
-```
-
-### 🏃 Step 2: Set Application Settings in Azure
+At minimum, replace `AZURE_SUBSCRIPTION_ID` in `.env`. Keep these values available for the commands below:
 
 ```powershell
-$funcAppName = "easyauth-func-<suffix>"
-$rgName = "rg-la-easyauth-lab-dev"
-
-# Get Logic App callback URL (from Logic App > Settings > Callback URL)
-# Get Logic App client ID (from Logic App > Entra ID > Client ID)
-
-az functionapp config appsettings set `
-  --name $funcAppName `
-  --resource-group $rgName `
-  --settings LOGIC_APP_URL="<callback-url>" `
-  LOGIC_APP_AUDIENCE="api://<client-id>" `
-  WEBSITE_AUTH_AAD_ALLOWED_TENANTS="00922812-791e-41c8-a99e-45c3ed784cf5"
+$logicAppClientId = '<logic-app-app-registration-client-id>'
+$callerClientId = '<caller-function-app-registration-client-id>'
+$tenantId = '<tenant-id>'
+$resourceGroup = 'rg-la-easyauth-lab-dev'
 ```
 
-### 🏃 Step 3: Invoke Function
+The deployment script resolves the subscription in this order:
 
-```bash
-# Get Function URL (from portal or CLI)
-FUNC_URL=$(az functionapp function show \
-  --resource-group rg-la-easyauth-lab-dev \
-  --name easyauth-func-<suffix> \
-  --function-name CallLogicApp \
-  --query invokeUrlTemplate -o tsv)
+1. `-SubscriptionId`
+2. Process environment variable `AZURE_SUBSCRIPTION_ID`
+3. `AZURE_SUBSCRIPTION_ID` in the repository `.env` file
 
-echo "Function URL: $FUNC_URL"
+## 2. Preview and deploy infrastructure
 
-# Call function (POST request)
-curl -X POST "$FUNC_URL" \
-  -H "Content-Type: application/json" \
-  -d '{"test": "data"}'
+Sign in and preview the Bicep deployment:
+
+```powershell
+az login --tenant $tenantId
+
+./scripts/deploy.ps1 `
+  -EntraAppClientId $logicAppClientId `
+  -EntraAppTenantId $tenantId `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId $callerClientId `
+  -WhatIf
 ```
 
-### 📊 Step 4: Monitor in Application Insights
+Review the changes, then deploy without `-WhatIf`:
 
-```bash
-# Tail live logs from Function App
-func azure functionapp logstream easyauth-func-<suffix>
-
-# Expected output:
-# ✅ Bearer token acquired successfully
-# ✅ Logic App call succeeded
+```powershell
+./scripts/deploy.ps1 `
+  -EntraAppClientId $logicAppClientId `
+  -EntraAppTenantId $tenantId `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId $callerClientId
 ```
 
----
+Record these outputs:
 
-## Collect Evidence
+- Logic App name and hostname
+- Caller Function App name and hostname
+- Caller principal ID
 
-### ✅ Evidence Type 1: Function App Logs (Application Insights)
+Set them for later commands:
 
-**Location:** Azure Portal → Function App → Application Insights → Logs
+```powershell
+$logicAppName = '<logic-app-name-from-output>'
+$logicAppHost = '<logic-app-hostname-from-output>'
+$functionAppName = '<caller-function-app-name-from-output>'
+$functionAppHost = '<caller-function-app-hostname-from-output>'
+$functionPrincipalId = '<caller-principal-id-from-output>'
+```
 
-**Query:**
+## 3. Deploy the workflow
+
+Deploy [the workflow definition](../src/httpTriggerWorkflow/workflow.json) through the Azure Resource Manager API:
+
+```powershell
+./scripts/deploy-workflow.ps1 `
+  -LogicAppName $logicAppName `
+  -ResourceGroupName $resourceGroup
+```
+
+The script prints this unsigned invoke URL:
+
+```text
+https://<logic-app-host>/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
+```
+
+## 4. Deploy the caller Function code
+
+The infrastructure already configures the same unsigned URL and audience. Deploy the code and verify the settings:
+
+```powershell
+$logicAppUrl = "https://$logicAppHost/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01"
+
+./solution/deploy.ps1 `
+  -FunctionAppName $functionAppName `
+  -ResourceGroupName $resourceGroup `
+  -LogicAppUrl $logicAppUrl `
+  -LogicAppAudience "api://$logicAppClientId" `
+  -TenantId $tenantId
+```
+
+> [!NOTE]
+> ZIP deployment needs network access to the target Function App deployment endpoint. If you later make that app private, run this step from a developer machine or self-hosted agent with the required route and DNS resolution.
+
+## 5. Verify configuration before calling
+
+### Managed identity
+
+```powershell
+$actualPrincipalId = az functionapp identity show `
+  --name $functionAppName `
+  --resource-group $resourceGroup `
+  --query principalId `
+  --output tsv
+
+$actualPrincipalId
+```
+
+Expected: a GUID equal to `$functionPrincipalId`.
+
+### Caller application settings
+
+```powershell
+az functionapp config appsettings list `
+  --name $functionAppName `
+  --resource-group $resourceGroup `
+  --query "[?name=='LOGIC_APP_URL' || name=='LOGIC_APP_AUDIENCE' || name=='WEBSITE_AUTH_AAD_ALLOWED_TENANTS'].{name:name,value:value}" `
+  --output table
+```
+
+Expected:
+
+| Setting | Expected value |
+| --- | --- |
+| `LOGIC_APP_URL` | Unsigned `/api/workflows/httpTriggerWorkflow/...` URL |
+| `LOGIC_APP_AUDIENCE` | `api://<logic-app-client-id>` |
+| `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | Lab tenant ID |
+
+### Logic App Easy Auth policy
+
+```powershell
+$subscriptionId = az account show --query id --output tsv
+$authUri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$logicAppName/config/authsettingsv2?api-version=2023-12-01"
+
+az rest --method get --uri $authUri `
+  --query "properties.{enabled:platform.enabled,action:globalValidation.unauthenticatedClientAction,audiences:identityProviders.azureActiveDirectory.validation.allowedAudiences,principals:identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities}" `
+  --output json
+```
+
+Expected:
+
+- `enabled` is `true`.
+- `audiences` contains the Logic App client ID and `api://<logic-app-client-id>`.
+- `principals` contains `$functionPrincipalId`.
+
+## 6. Run the successful managed-identity test
+
+```powershell
+$response = Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://$functionAppHost/api/CallLogicApp" `
+  -ContentType 'application/json' `
+  -Body '{"scenario":"B1"}'
+
+$response | ConvertTo-Json -Depth 10
+```
+
+Expected: HTTP 200 with `status` equal to `success` and a `tokenClaims` object.
+
+## 7. Validate the access-token claims
+
+Compare the returned claim metadata with the deployment values:
+
+| Claim | Expected value | Why it matters |
+| --- | --- | --- |
+| `audience` | `api://<logic-app-client-id>` | Proves the token was minted for the receiving API, not another Azure resource. |
+| `issuer` | Your tenant's Entra issuer | Proves which tenant issued the token. |
+| `objectId` | Function App managed identity principal ID | Identifies the calling service principal. |
+| `callerAppId` | Managed-identity client identifier from the issued token | Identifies the client represented in `azp` or `appid`, depending on token version. |
+| `expiresOn` | A future timestamp | Confirms the token was current when acquired. |
+
+Run these comparisons:
+
+```powershell
+$response.tokenClaims.audience -eq "api://$logicAppClientId"
+$response.tokenClaims.objectId -eq $functionPrincipalId
+[DateTimeOffset]$response.tokenClaims.expiresOn -gt [DateTimeOffset]::UtcNow
+```
+
+Expected: all three expressions return `True`.
+
+This inspects the claims students need to understand without exposing the bearer token. The successful request through Easy Auth is the evidence that the platform accepted the token's signature, issuer, audience, lifetime, and authorized principal.
+
+## 8. Validate that Easy Auth is working
+
+Use all four signals, not only the caller's HTTP status:
+
+1. The caller returns HTTP 200.
+2. The response reports the expected token audience and object ID.
+3. A new `httpTriggerWorkflow` run appears at the same time in Logic App run history.
+4. Application Insights contains the caller messages `Bearer token acquired`, `Token claims inspected locally`, and `Logic App response: HTTP 200`.
+
+Application Insights query:
 
 ```kusto
 traces
-| where cloud_RoleName == "easyauth-func-<suffix>"
-| where message startswith "✅" or message startswith "❌"
-| project timestamp, message, severityLevel
-| order by timestamp desc
-| limit 50
+| where timestamp > ago(30m)
+| where message has_any ("Bearer token acquired", "Token claims inspected locally", "Logic App response")
+| project timestamp, message, severityLevel, operation_Id
+| order by timestamp asc
 ```
 
-**Screenshot:** Capture successful logs showing:
-- ✅ Bearer token acquired successfully
-- ✅ Logic App call succeeded
-
-### ✅ Evidence Type 2: Bearer Token Structure (JWT Decode)
-
-**Capture token from logs, then decode at https://jwt.io:**
-
-```
-Header:
-{
-  "alg": "RS256",
-  "typ": "JWT",
-  "kid": "..."
-}
-
-Payload:
-{
-  "aud": "api://<logic-app-client-id>",
-  "iss": "https://login.microsoftonline.com/00922812-791e-41c8-a99e-45c3ed784cf5/v2.0",
-  "appid": "<function-app-principal-id>",
-  "oid": "<function-app-principal-id>",
-  "exp": 1234567890,
-  "iat": 1234567890,
-  ...
-}
-```
-
-**Screenshot:** Show decoded JWT with `aud` and `appid` fields
-
-### ✅ Evidence Type 3: Logic App Execution History
-
-**Location:** Azure Portal → Logic App → Run history
-
-**Check:**
-- Trigger: `manual/invoke` (from Function App)
-- Status: **Succeeded** (green checkmark)
-- Inputs: Bearer token in Authorization header
-- Outputs: Logic App response body
-
-**Screenshot:** Show successful run with:
-- Timestamp matching Function App log
-- Authorization: Bearer token present
-- Status: Succeeded
-
-### ✅ Evidence Type 4: End-to-End Request Flow Trace
-
-**File: Create `docs/lab3-test-evidence.md`**
-
-```markdown
-## Lab 3 Test Evidence — 2026-07-03
-
-### Test Scenario
-Function App (CallLogicApp) → Logic App (workflow1) using managed identity bearer token
-
-### Verification Steps
-
-1. **Bearer Token Acquisition**
-   - Managed Identity: ✅ Enabled on Function App
-   - Token endpoint: ✅ Responsive
-   - Scope: ✅ api://<logic-app-client-id>/.default
-
-2. **Network Connectivity**
-   - Function App → Private DNS Zone: ✅ Resolved
-   - Private DNS Zone → Private Endpoint: ✅ Routed
-   - Private Endpoint → Logic App: ✅ Connected
-
-3. **Easy Auth Validation**
-   - JWT Signature: ✅ Valid (RS256)
-   - Audience (`aud`): ✅ Matches Logic App client ID
-   - Expiry (`exp`): ✅ Not expired
-   - Principal ID (`oid`): ✅ In allowedPrincipals
-
-4. **Logic App Execution**
-   - Trigger fired: ✅ Yes (timestamp matched)
-   - Payload received: ✅ Yes
-   - Actions executed: ✅ Yes
-   - Response returned: ✅ Yes
-
-### Metrics
-
-- Token acquisition time: ~500ms
-- HTTP request time: ~800ms
-- End-to-end latency: ~1.3s
-- Success rate: 100% (10/10 calls)
-
-### Conclusion
-
-✅ **Lab 3 bearer token flow is fully functional**
-
-The Function App successfully:
-1. Acquires bearer token from Entra ID using managed identity
-2. Routes traffic through VNet to private DNS zone
-3. Resolves private DNS to Logic App private endpoint IP
-4. Sends HTTP request with bearer token to Logic App
-5. Easy Auth validates token and executes workflow
-```
-
-### ✅ Evidence Type 5: Error Scenarios (Optional but Recommended)
-
-Create test cases for 6 error scenarios:
+Directly calling the unsigned private Logic App endpoint without a bearer token should not create an authorized run. From a machine with private endpoint reachability:
 
 ```powershell
-# Error Test 1: Invalid token signature (simulate by modifying token)
-# Expected: 401 Unauthorized
-
-# Error Test 2: Wrong audience
-# Action: Set LOGIC_APP_AUDIENCE to wrong client ID
-# Expected: 401 Unauthorized + Easy Auth rejects token
-
-# Error Test 3: Expired token
-# Action: Wait 1 hour or mock expired token
-# Expected: 401 Unauthorized
-
-# Error Test 4: Principal not in allowedPrincipals
-# Action: Temporarily remove Function App principal from allowedPrincipals
-# Expected: 403 Forbidden
-
-# Error Test 5: Network isolation broken
-# Action: Delete private endpoint
-# Expected: Timeout or 404 (cannot resolve DNS)
-
-# Error Test 6: Managed Identity disabled
-# Action: Remove system-assigned identity from Function App
-# Expected: AuthenticationFailedException
+try {
+  Invoke-WebRequest -Method Post -Uri $logicAppUrl -ContentType 'application/json' -Body '{}'
+} catch {
+  [int]$_.Exception.Response.StatusCode
+}
 ```
 
----
+Expected in strict `Return401` mode: `401`. In the optional `AllowAnonymous` manageability mode, use the scenario matrix and workflow evidence to distinguish platform behavior; do not interpret network timeouts as authentication results.
 
-## Troubleshooting Checklist
+## 9. Diagnose HTTP 401
 
-| Issue | Root Cause | Verification Step | Fix |
-|-------|-----------|-------------------|-----|
-| **401 Unauthorized** | Invalid token signature | Decode JWT at jwt.io, verify RS256 | Check tenant ID, re-issue token |
-| **401 Unauthorized** | Wrong audience | JWT `aud` claim != Logic App client ID | Update LOGIC_APP_AUDIENCE setting |
-| **403 Forbidden** | Principal not in allowedPrincipals | Get Function App principal ID, check Bicep | Add principal to allowedPrincipals in Bicep |
-| **AuthenticationFailedException** | Managed identity not enabled | Portal → Function App → Identity | Enable system-assigned identity |
-| **Network timeout** | Private DNS not resolving | nslookup from Function App VNet | Verify private DNS zone, CNAME records |
-| **Network timeout** | Private endpoint deleted | Portal → Private Endpoints | Redeploy private endpoint via Bicep |
-| **Invalid URI** | LOGIC_APP_URL malformed | Check format: `https://<app>.azurewebsites.net/...` | Regenerate callback URL from Logic App |
-| **500 Internal Error** | Unhandled exception | Check Application Insights logs | Review C# exception, add error handler |
+HTTP 401 means authentication failed before the workflow accepted the request. Common causes are a missing token, wrong audience, wrong issuer, invalid signature, or expired token.
 
----
+### Reproduce wrong audience safely
 
-## Proof of Concept Summary
+Temporarily set the caller to request a token for Azure Resource Manager:
 
-| Aspect | Evidence | Status |
-|--------|----------|--------|
-| **Infrastructure** | Resource group + all 17 resources deployed | ✅ |
-| **Managed Identity** | System-assigned MI on Function App | ✅ |
-| **Bearer Token** | JWT with correct audience, expiry, claims | ✅ |
-| **Easy Auth Validation** | Token signature, audience, expiry verified | ✅ |
-| **Network Isolation** | Private DNS + private endpoint + VNet | ✅ |
-| **End-to-End Flow** | Function App → Logic App with bearer token | ✅ |
-| **Application Logs** | Success logs in Application Insights | ✅ |
-| **Logic App Execution** | Workflow triggered and executed | ✅ |
+```powershell
+az functionapp config appsettings set `
+  --name $functionAppName `
+  --resource-group $resourceGroup `
+  --settings LOGIC_APP_AUDIENCE='https://management.azure.com'
 
----
+az functionapp restart --name $functionAppName --resource-group $resourceGroup
+```
 
-## Next Steps
+Invoke the caller again. Expected: the caller reports downstream HTTP 401 and no successful workflow run appears.
 
-1. ✅ Deploy Function App with CallLogicApp function using C# code above
-2. ✅ Configure application settings (LOGIC_APP_URL, LOGIC_APP_AUDIENCE)
-3. ✅ Invoke function and monitor logs in Application Insights
-4. ✅ Capture JWT token and decode at jwt.io
-5. ✅ Document results in test evidence file
-6. ✅ Run error scenario tests and capture failures
-7. ✅ Archive all evidence (screenshots, logs, test report)
+Restore immediately:
 
----
+```powershell
+az functionapp config appsettings set `
+  --name $functionAppName `
+  --resource-group $resourceGroup `
+  --settings LOGIC_APP_AUDIENCE="api://$logicAppClientId"
 
-## Reference
+az functionapp restart --name $functionAppName --resource-group $resourceGroup
+```
 
-- **Lab 3 Documentation:** [docs/lab3-managed-identity-bearer-token-flow.md](lab3-managed-identity-bearer-token-flow.md)
-- **HTML Documentation:** [documentation/architecture/lab3-bearer-token-flow.html](../documentation/architecture/lab3-bearer-token-flow.html)
-- **Code Examples:** See section "8. C# Code Examples" in HTML documentation
-- **Bicep Infrastructure:** [infra/modules/](../infra/modules/)
+Confirm the next invocation returns HTTP 200.
+
+## 10. Diagnose HTTP 403
+
+HTTP 403 means Easy Auth accepted the token as authenticated but the caller failed the authorization policy. In this lab, compare the token `oid` and Function principal ID with `allowedPrincipals`.
+
+### Reproduce unauthorized principal safely
+
+Save the current auth configuration before changing it:
+
+```powershell
+$authBackup = az rest --method get --uri $authUri | ConvertFrom-Json
+$authBackup | ConvertTo-Json -Depth 100 | Set-Content "$env:TEMP\logicapp-authsettingsv2-backup.json"
+```
+
+The preferred lab exercise is to redeploy with an intentionally different caller principal in an isolated test environment. If you temporarily remove the current caller from `allowedPrincipals`, expect the valid managed-identity token to receive HTTP 403. Restore the Bicep-defined configuration immediately by rerunning `scripts/deploy.ps1` with the original parameters.
+
+After restoration, verify:
+
+```powershell
+az rest --method get --uri $authUri `
+  --query "properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities" `
+  --output json
+```
+
+Expected: the Function App principal ID is present and the next caller invocation returns HTTP 200.
+
+## 11. Failure triage
+
+| Symptom | Layer | First check | Typical fix |
+| --- | --- | --- | --- |
+| 401 | Authentication | `aud`, issuer/tenant, expiry, and bearer header | Restore `LOGIC_APP_AUDIENCE`, tenant ID, and Easy Auth allowed audiences. |
+| 403 | Authorization | Token `oid` versus `allowedPrincipals` | Redeploy the original Bicep parameters so the caller principal is allow-listed. |
+| 404 or 405 | Route/method | Unsigned URL and `POST` method | Use `/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01`. |
+| Timeout or DNS error | Network | Resolve the Logic App hostname from the caller's reachable network | Check VNet integration, private endpoint, private DNS link, and route controls. |
+| Credential unavailable | Caller identity | Function App system-assigned identity | Enable or redeploy the managed identity. |
+| 200 but no run | Workflow/runtime | Workflow name, deployment, and run history time | Redeploy the workflow and correlate timestamps in Application Insights. |
+
+Continue with [the detailed troubleshooting guide](troubleshooting.md) when the first check does not isolate the cause.
+
+## 12. Evidence checklist
+
+Capture values, not secrets:
+
+- [ ] Infrastructure deployment output showing Logic App name, caller name, hostname, and principal ID.
+- [ ] Easy Auth query showing enabled platform, allowed audiences, and allowed principal.
+- [ ] Successful caller response with selected `tokenClaims`; redact other identifiers if required by your organization.
+- [ ] Three `True` claim comparisons.
+- [ ] Application Insights trace correlation for token acquisition and HTTP 200.
+- [ ] Logic App run-history entry with matching timestamp.
+- [ ] 401 wrong-audience result and successful restoration.
+- [ ] 403 unauthorized-principal result in an isolated environment and successful restoration.
+
+Never include a complete access token, SAS signature, client secret, storage key, or connection string in evidence.

@@ -1,33 +1,86 @@
-# Deploy the workflow definition to the Logic App
-$resourceGroup = "rg-la-easyauth-lab-dev"
-$logicAppName = "la-easyauth-lab-dev-la-daaq6t5xzrpaw"
-$workflowName = "httpTriggerWorkflow"
-$subscriptionId = "6851693c-0b74-4462-8da8-cd498b088827"
+<#
+.SYNOPSIS
+    Deploys the HTTP-trigger workflow definition to an existing Logic App Standard resource.
 
-$workflowJsonPath = "c:\Code\CSU\Ores\EasyAuth\src\httpTriggerWorkflow\workflow.json"
+.EXAMPLE
+    .\deploy-workflow.ps1 `
+      -LogicAppName "la-easyauth-lab-dev-la-abc123" `
+      -ResourceGroupName "rg-la-easyauth-lab-dev"
 
-Write-Host "Deploying workflow: $workflowName to Logic App: $logicAppName"
+    When -SubscriptionId is omitted, the script reads AZURE_SUBSCRIPTION_ID from
+    the process environment or the repository .env file.
+#>
 
-# Read the workflow definition
-$workflowDef = Get-Content $workflowJsonPath -Raw
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$LogicAppName,
 
-# Deploy via REST API
-$uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$logicAppName/workflows/$workflowName" + "?api-version=2022-09-01"
+    [Parameter(Mandatory)]
+    [string]$ResourceGroupName,
 
-Write-Host "URI: $uri"
-Write-Host ""
-Write-Host "Deployment in progress..."
+    [string]$SubscriptionId = '',
 
-$response = az rest --method put --uri "$uri" --body "$workflowDef" 2>&1
+    [string]$WorkflowName = 'httpTriggerWorkflow',
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Workflow deployed successfully" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Callback URL:"
-    az rest --method post `
-      --uri "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$logicAppName/workflows/$workflowName/triggers/When_a_HTTP_request_is_received/listCallbackUrl?api-version=2022-09-01" `
-      --query value -o tsv
-} else {
-    Write-Host "❌ Deployment failed" -ForegroundColor Red
-    Write-Host $response
+    [string]$WorkflowJsonPath = ''
+)
+
+$ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $SubscriptionId = [Environment]::GetEnvironmentVariable('AZURE_SUBSCRIPTION_ID')
 }
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $envFile = Join-Path $PSScriptRoot '..\.env'
+    if (Test-Path $envFile) {
+        $subscriptionLine = Get-Content $envFile | Where-Object {
+            $_ -match '^\s*AZURE_SUBSCRIPTION_ID\s*='
+        } | Select-Object -First 1
+
+        if ($subscriptionLine) {
+            $SubscriptionId = ($subscriptionLine -split '=', 2)[1].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or $SubscriptionId -eq 'your-subscription-id-here') {
+    throw 'Provide -SubscriptionId, set AZURE_SUBSCRIPTION_ID, or configure AZURE_SUBSCRIPTION_ID in .env.'
+}
+
+if ([string]::IsNullOrWhiteSpace($WorkflowJsonPath)) {
+    $WorkflowJsonPath = Join-Path $PSScriptRoot '..\src\httpTriggerWorkflow\workflow.json'
+}
+
+if (-not (Test-Path $WorkflowJsonPath)) {
+    throw "Workflow definition not found at '$WorkflowJsonPath'."
+}
+
+az account set --subscription $SubscriptionId
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not select Azure subscription '$SubscriptionId'."
+}
+
+$managementUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$LogicAppName/workflows/$WorkflowName" + '?api-version=2023-12-01'
+
+Write-Host "Deploying workflow '$WorkflowName' to Logic App '$LogicAppName'..." -ForegroundColor Cyan
+az rest --method put --uri $managementUri --body "@$WorkflowJsonPath" --output none
+if ($LASTEXITCODE -ne 0) {
+    throw "Workflow deployment failed for '$WorkflowName'."
+}
+
+$logicAppHostname = az webapp show `
+    --name $LogicAppName `
+    --resource-group $ResourceGroupName `
+    --query defaultHostName `
+    --output tsv
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($logicAppHostname)) {
+    throw 'Workflow deployed, but the Logic App hostname could not be resolved.'
+}
+
+$invokeUrl = "https://$logicAppHostname/api/workflows/$WorkflowName/triggers/manual/invoke?api-version=2022-05-01"
+
+Write-Host "Workflow deployed successfully." -ForegroundColor Green
+Write-Host "Unsigned invoke URL (use with an Entra bearer token):" -ForegroundColor Green
+Write-Host "  $invokeUrl"

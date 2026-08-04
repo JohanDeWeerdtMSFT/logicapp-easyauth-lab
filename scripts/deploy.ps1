@@ -23,8 +23,11 @@
     - Appropriate Azure subscription permissions (Contributor or higher)
 
 .EXAMPLE
-    .\deploy.ps1 -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..."
+    .\deploy.ps1 -SubscriptionId "00000000-..." -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..."
     .\deploy.ps1 -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..." -WhatIf
+
+    When -SubscriptionId is omitted, the script reads AZURE_SUBSCRIPTION_ID from
+    the process environment or the repository .env file.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -36,6 +39,8 @@ param(
 
     [ValidateSet('Return401', 'AllowAnonymous')]
     [string]$EasyAuthMode = 'Return401',
+
+    [string]$SubscriptionId = '',
 
     [Parameter(Mandatory)]
     [string]$EntraAppClientId,
@@ -52,10 +57,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $SubscriptionId = [Environment]::GetEnvironmentVariable('AZURE_SUBSCRIPTION_ID')
+}
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $envFile = Join-Path $PSScriptRoot '..\.env'
+    if (Test-Path $envFile) {
+        $subscriptionLine = Get-Content $envFile | Where-Object {
+            $_ -match '^\s*AZURE_SUBSCRIPTION_ID\s*='
+        } | Select-Object -First 1
+
+        if ($subscriptionLine) {
+            $SubscriptionId = ($subscriptionLine -split '=', 2)[1].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or $SubscriptionId -eq 'your-subscription-id-here') {
+    throw 'Provide -SubscriptionId, set AZURE_SUBSCRIPTION_ID, or configure AZURE_SUBSCRIPTION_ID in .env.'
+}
+
 # ── Variables ────────────────────────────────────────────────────────────────
 $namingPrefix       = 'la-easyauth-lab'
 $resourceGroupName  = "rg-${namingPrefix}-${EnvironmentName}"
-$subscriptionId     = '6851693c-0b74-4462-8da8-cd498b088827'
 $bicepFile          = Join-Path $PSScriptRoot '..\infra\main.bicep'
 $deploymentName     = "easyauth-lab-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 
@@ -67,7 +92,7 @@ Write-Host "  Environment   : $EnvironmentName"
 Write-Host "  Location      : $Location"
 Write-Host "  Easy Auth Mode: $EasyAuthMode"
 Write-Host "  Resource Group: $resourceGroupName"
-Write-Host "  Subscription  : $subscriptionId"
+Write-Host "  Subscription  : $SubscriptionId"
 Write-Host "  Bicep Template: $bicepFile"
 Write-Host "  Mode          : $(if ($WhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
 Write-Host "  Function App  : $(if ($DeployFunctionApp) { 'Yes' } else { 'No' })"
@@ -96,7 +121,7 @@ try {
 
     # Set subscription context
     Invoke-AzCommand -Description "Setting subscription context" `
-        -Arguments @('account', 'set', '--subscription', $subscriptionId)
+        -Arguments @('account', 'set', '--subscription', $SubscriptionId)
 
     # Verify logged-in identity
     $accountJson = Invoke-AzCommand -Description "Verifying Azure CLI login" `
@@ -191,6 +216,24 @@ try {
             Write-Host "  Function App Name  : $($outputs.functionAppName.value)"
         }
 
+        if ($DeployFuncCallerDemo) {
+            $requiredCallerOutputs = @(
+                'functionAppCallerName',
+                'functionAppCallerHostname',
+                'functionAppCallerPrincipalId'
+            )
+            foreach ($outputName in $requiredCallerOutputs) {
+                if (-not $outputs.PSObject.Properties[$outputName] -or
+                    [string]::IsNullOrWhiteSpace($outputs.$outputName.value)) {
+                    throw "Deployment did not return required caller output '$outputName'."
+                }
+            }
+
+            Write-Host "  Caller Function App: $($outputs.functionAppCallerName.value)"
+            Write-Host "  Caller Hostname    : $($outputs.functionAppCallerHostname.value)"
+            Write-Host "  Caller Principal ID: $($outputs.functionAppCallerPrincipalId.value)"
+        }
+
         # ── Step 4: Summary ──────────────────────────────────────────────────
         Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
         Write-Host   "║  Deployment Succeeded                                        ║" -ForegroundColor Green
@@ -205,15 +248,10 @@ try {
         Write-Host "  1. Deploy workflow code:"
         Write-Host "       az logicapp deployment source config-zip --name $logicAppName --resource-group $resourceGroupName --src <zip-path>"
         Write-Host ""
-        Write-Host "  2. Run validation (Track B — trigger security):"
-        Write-Host "       .\validate.ps1 -LogicAppName $logicAppName -ResourceGroupName $resourceGroupName ``"
-        Write-Host "           -EntraAppClientId $EntraAppClientId -EntraAppTenantId $EntraAppTenantId ``"
-        Write-Host "           -ClientSecret (Read-Host -AsSecureString 'Client secret')"
+        Write-Host "  2. Deploy the caller code and run the managed-identity validation guide:"
+        Write-Host "       docs/lab3-testing-and-verification.md"
         Write-Host ""
-        Write-Host "  3. Run validation (Track A — portal manageability):"
-        Write-Host "       .\validate.ps1 ... -TestMode TrackA"
-        Write-Host ""
-        Write-Host "  4. Portal verification (manual):"
+        Write-Host "  3. Portal verification (manual):"
         Write-Host "       https://portal.azure.com/#@/resource$logicAppId/logicApp"
         Write-Host ""
     }

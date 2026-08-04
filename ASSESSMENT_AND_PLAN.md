@@ -404,8 +404,8 @@ Update the status of a phase here and in the phase section below whenever work o
 | --- | --- | --- | --- | --- |
 | 1 | Documentation structure | Done | 2026-08-04 | `README.md` and `START-HERE.md` reorganized into start here → concepts → deployment → validation. |
 | 2 | Identity and Easy Auth explanation | Done | 2026-08-04 | Easy Auth, token flow, audience/scope, and authn/authz explanations added to the Lab 3 concept docs. |
-| 3 | Deployment guidance | Not started | 2026-08-04 | Prerequisite checklist and script parameters not yet updated. |
-| 4 | Validation and troubleshooting | Not started | 2026-08-04 | SAS-free validation path not yet consolidated. |
+| 3 | Deployment guidance | Done | 2026-08-04 | Subscription resolution, workflow deployment, caller outputs, endpoint/method alignment, environment template, and deployment guidance updated. |
+| 4 | Validation and troubleshooting | Done | 2026-08-04 | Canonical SAS-free guide now validates token claims, Easy Auth, 401/403 outcomes, logs, run history, and evidence handling. |
 | 5 | Private networking and CI/CD caveats | Not started | 2026-08-04 | `docs/07-private-networking-and-cicd.md` does not exist yet. |
 | 6 | Final review | Not started | 2026-08-04 | Blocked until phases 1-5 complete. |
 
@@ -427,7 +427,7 @@ Update the status of a phase here and in the phase section below whenever work o
 
 ### Phase 3: Deployment guidance
 
-- Status: Not started
+- Status: Done
 - Task: Clarify prerequisite data, subscription selection, deployment order, and automation paths for the current private path and the optional public-access path.
 - Files to modify: `README.md`, `DEPLOYMENT-FAQ.md`, `.env.example`, `scripts/deploy.ps1`, `docs/lab3-passwordless-managed-identity-easy-auth.md`
 - Expected outcome: fewer setup/deployment misconfigurations.
@@ -435,7 +435,7 @@ Update the status of a phase here and in the phase section below whenever work o
 
 ### Phase 4: Validation and troubleshooting
 
-- Status: Not started
+- Status: Done
 - Task: Remove SAS from active validation guidance and improve verification and root-cause navigation.
 - Files to modify: `docs/lab3-testing-and-verification.md`, `labs/lab3-bearer-token/docs/lab3-testing-and-verification.md`, `START-HERE.md`, `docs/troubleshooting.md`, `docs/evidence/scenario-ids.md`
 - Expected outcome: one SAS-free validation path with a fast route from symptom to root cause.
