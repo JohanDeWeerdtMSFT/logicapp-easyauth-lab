@@ -62,6 +62,11 @@ Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 ## Step 5 - Deploy and Validate App Flow
 
 1. Follow [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md).
+   > **Note:** Some steps in that guide still reference a SAS-signed callback URL
+   > (`sp`, `sv`, `sig` parameters) as an example `LOGIC_APP_URL` value. The active
+   > learner path in this lab authenticates with an Entra access token, not a SAS
+   > signature; treat the callback URL in that guide as an illustrative endpoint
+   > format only, not as a required SAS-based authentication step.
 2. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
 
 ## Step 6 - Confirm Success
