@@ -11,8 +11,8 @@ Implementation and validation steps live in the canonical guides:
 
 ## The scenario in one sentence
 
-A Function App must start a Logic App Standard workflow, and the Logic App must only accept that call
-when the caller proves *who it is* with a Microsoft Entra ID access token, not because the caller knows a secret URL.
+The active learner call starts a Logic App Standard workflow by presenting a Microsoft Entra ID access token.
+This path proves *who the caller is* rather than relying on a SAS-signed callback URL; it does not imply that the platform's separate SAS option is disabled.
 
 ## Terminology for beginners
 
