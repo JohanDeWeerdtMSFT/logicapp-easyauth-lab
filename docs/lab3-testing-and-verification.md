@@ -180,7 +180,7 @@ az rest --method get --uri $authUri `
 Expected:
 
 - `enabled` is `true`.
-- `audiences` contains the Logic App client ID and `api://<logic-app-client-id>`.
+- `audiences` contains `api://<logic-app-client-id>`.
 - `principals` contains `$functionPrincipalId`.
 
 ## 6. Run the successful managed-identity test
