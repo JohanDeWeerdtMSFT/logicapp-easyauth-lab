@@ -411,7 +411,7 @@ Never include a complete access token, SAS signature, client secret, storage key
 
 ## 13. Run the automated scenario matrix
 
-After the manual learning steps, run the canonical validator. Supply the parameter file for the environment being tested; B6 captures the live principal list, deploys the temporary override, restores with that parameter file, and compares the restored list with the captured original.
+After the manual learning steps, run the canonical validator. Supply the parameter file for the environment being tested; B6 captures the live Easy Auth policy, deploys the temporary override from that parameter file, restores the captured policy directly, and compares the restored principal list with the captured original.
 
 ```powershell
 ./scripts/validate.ps1 `
