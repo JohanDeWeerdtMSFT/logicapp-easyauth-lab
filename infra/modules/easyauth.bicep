@@ -33,8 +33,10 @@ param entraAppClientId string
 @description('Entra ID tenant ID.')
 param entraAppTenantId string
 
-@description('Allowed token audiences. Defaults to management plane audiences.')
-param allowedAudiences array = environment().authentication.audiences
+@description('Allowed token audiences. Defaults to the Application ID URI (api://<client-id>) of the Logic App app registration, which is the audience requested by the caller Function App.')
+param allowedAudiences array = [
+  'api://${entraAppClientId}'
+]
 
 @description('Allowed principal (object) IDs. Restricts access to these identities (e.g., APIM system-assigned managed identity principal ID).')
 param allowedPrincipals array = []
