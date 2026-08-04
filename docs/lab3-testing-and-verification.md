@@ -25,7 +25,7 @@ Microsoft references:
 ## Prerequisites
 
 - Azure CLI, PowerShell 7, .NET 8 SDK, and Azure Functions Core Tools 4.
-- An Azure subscription where you can create the lab resources.
+- An Azure subscription where you can create resources and assign Azure RBAC roles (for example, Owner, or Contributor plus User Access Administrator/RBAC Administrator).
 - Permission to create or use two Microsoft Entra app registrations:
   - Logic App API registration: used as the token audience.
   - Caller Function App registration: used by Easy Auth on the caller endpoint.
