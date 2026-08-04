@@ -19,6 +19,37 @@ The primary learning scenario is:
 
 ---
 
+## Before You Deploy
+
+Work through these in order. Steps 1 and 2 are conceptual and take about 15 minutes.
+
+1. **Understand the scenario**: a Function App calls a Logic App Standard workflow, and the workflow only accepts the call when the caller proves its identity with a Microsoft Entra ID access token.
+2. **Understand the identity concepts**: read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md). It explains Easy Auth, Microsoft Entra ID, managed identity, access token, audience, resource, scope, authentication versus authorization, and why Easy Auth replaces SAS tokens.
+3. **Check identity prerequisites**:
+   - An Azure subscription and permission to create resources in a resource group.
+   - Permission to create a Microsoft Entra [app registration](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app) (at least the Application Developer role), and permission to set its [Application ID URI / exposed API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes).
+   - Your tenant ID and the app registration client ID; both are required by `scripts/deploy.ps1`.
+4. **Check networking prerequisites**: see the warning below.
+
+> [!WARNING]
+> **Private networking affects how you can deploy.**
+> When the Lab 3 caller demo is enabled, the infrastructure provisions a virtual network, VNet integration, a
+> private endpoint, and a private DNS zone for the Logic App, and public network access to the Logic App can be
+> disabled. Azure Resource Manager deployment of the Bicep templates still works from a hosted CI/CD runner,
+> but ZIP/Kudu app-content deployment and HTTP validation against a private-only endpoint generally do **not**
+> work from a GitHub-hosted runner or a Microsoft-hosted Azure DevOps agent, because they have no route or
+> private DNS resolution into the virtual network. Use a machine or self-hosted agent with network reachability,
+> or run the lab in an environment where public access is acceptable.
+> Background reading: [Private endpoints for App Service](https://learn.microsoft.com/azure/app-service/overview-private-endpoint),
+> [Private endpoint DNS configuration](https://learn.microsoft.com/azure/private-link/private-endpoint-dns),
+> [Azure Pipelines agents](https://learn.microsoft.com/azure/devops/pipelines/agents/agents).
+> A dedicated private networking and CI/CD guide is planned as a follow-up to this documentation phase.
+
+Whichever network posture you use, the identity flow stays the same: managed identity, Entra access token,
+Easy Auth validation, and `allowedPrincipals`. Only network reachability changes.
+
+---
+
 ## What You Will Achieve
 
 By the end of this lab, you will be able to:
@@ -77,21 +108,45 @@ Detailed IDs and expected outcomes: [docs/evidence/scenario-ids.md](docs/evidenc
 
 ## Learning Path
 
+Follow this order: **start here → concepts → deployment → validation → troubleshooting**.
+
+| # | Stage | Read this | Why |
+| --- | --- | --- | --- |
+| 1 | Start here | [START-HERE.md](START-HERE.md) | Linear navigation for the whole lab |
+| 2 | Concepts | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) | Easy Auth, Entra ID, managed identity, tokens, audience/resource/scope, authn vs authz, SAS comparison |
+| 3 | Walkthrough | [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) | Architecture, settings, deployment steps |
+| 4 | Validation | [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) | Prove the secure call works |
+| 5 | Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md) | Recover from 401, 403, and network failures |
+
+### Key terms before you start
+
+| Term | Short explanation | Microsoft Learn |
+| --- | --- | --- |
+| Easy Auth | Built-in App Service and Azure Functions authentication that validates callers in the platform before your app runs | [Authentication and authorization](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization) |
+| Microsoft Entra ID | The identity service that issues and signs the access token both apps trust | [What is Microsoft Entra?](https://learn.microsoft.com/entra/fundamentals/what-is-entra) |
+| Managed identity | An Azure-managed identity that lets the Function App request tokens without storing secrets | [Managed identities overview](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) |
+| Access token | Short-lived JWT sent in the `Authorization` header using the bearer scheme | [Access tokens](https://learn.microsoft.com/entra/identity-platform/access-tokens) |
+| Audience, resource, scope | The API the token is for (`api://<client-id>`), the `aud` claim the receiver checks, and the requested `{resource}/.default` value | [Scopes and permissions](https://learn.microsoft.com/entra/identity-platform/scopes-oidc) |
+| Authentication vs authorization | "Who are you" (401 on failure) versus "are you allowed" (403 on failure) | [Authentication and authorization](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization) |
+| Why not SAS | A signed callback URL is a secret in a link; an Entra token proves identity and is short-lived | [Secure access for Logic Apps workflows](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app) |
+
+Full explanations: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md).
+
 ### 1) Understand the active lab concepts (Lab 3)
 
 - Overview and navigation: [START-HERE.md](START-HERE.md)
+- Identity and Easy Auth concepts: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
 - Main Lab 3 walkthrough: [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
 
 Microsoft Learn references:
 
-- [Managed identities overview](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview)
+- [Managed identities overview](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview)
 - [App Service / Easy Auth overview](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization)
 - [Logic App Standard overview](https://learn.microsoft.com/azure/logic-apps/single-tenant-overview-compare)
 - [Configure Entra ID auth in App Service](https://learn.microsoft.com/azure/app-service/configure-authentication-provider-aad)
 
 ### 2) Deepen understanding within the active lab
 
-- Bearer token flow deep dive: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
 - Testing playbook: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Quick reference card: [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md)
 
