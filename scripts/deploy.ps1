@@ -56,6 +56,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$isWhatIf = [bool]$WhatIfPreference
 
 if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
     $SubscriptionId = [Environment]::GetEnvironmentVariable('AZURE_SUBSCRIPTION_ID')
@@ -94,7 +95,7 @@ Write-Host "  Easy Auth Mode: $EasyAuthMode"
 Write-Host "  Resource Group: $resourceGroupName"
 Write-Host "  Subscription  : $SubscriptionId"
 Write-Host "  Bicep Template: $bicepFile"
-Write-Host "  Mode          : $(if ($WhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
+Write-Host "  Mode          : $(if ($isWhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
 Write-Host "  Function App  : $(if ($DeployFunctionApp) { 'Yes' } else { 'No' })"
 Write-Host "  Caller Demo   : $(if ($DeployFuncCallerDemo) { 'Yes' } else { 'No' })"
 Write-Host ""
@@ -168,7 +169,7 @@ try {
     }
 
     # ── Step 2/3: What-If or Deploy ─────────────────────────────────────────
-    if ($WhatIf) {
+    if ($isWhatIf) {
         Write-Host "`n── Step 2: What-If Analysis ───────────────────────────────" -ForegroundColor DarkGray
 
         $whatIfArgs = @(
