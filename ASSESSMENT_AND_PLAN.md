@@ -264,13 +264,12 @@ This matrix should be added to the lab as a dedicated deployment caveat. It sepa
 
 2. **Community blog (azcloudsecurity, not official Microsoft documentation)**
    URL: https://azcloudsecurity.io/blog/logic-app-standard-easy-auth
-   - Source status: The requested URL currently returned only the azcloudsecurity site shell/home page in direct retrieval, and a search of the downloaded site bundle did not expose article text for "Easy Auth", `logic-app-standard-easy-auth`, `Return401`, `allowedPrincipals`, or `sasAuthenticationPolicy`. Do not treat earlier unsourced summaries of this article as reviewed content unless the owner provides an accessible copy or the URL is restored.
-   - Summary from accessible content: No direct article-body summary can be made from the currently retrievable page content. The assessment can only record that this is intended to be non-official community context about Logic App Standard Easy Auth.
-   - Why it matters to this lab: If an accessible copy confirms managed-identity caller, app-registration audience, principal allow-listing, or SAS-bypass guidance, those points may help explain the lab scenario. Until then, implementation recommendations must come from Microsoft Learn and repository evidence instead.
-   - Caveats to add: Label the community article as non-official and unverified until a readable copy is available. Do not rely on undocumented or community-only settings for beginner completion.
-   - CI/CD implication: No source-backed CI/CD recommendation can be attributed to this article from the currently accessible content.
-   - Monitoring/portal implication: No source-backed portal or run-history recommendation can be attributed to this article from the currently accessible content.
-   - Private networking implication: No source-backed private networking recommendation can be attributed to this article from the currently accessible content.
+   - Source status: A rendered-browser retrieval attempt at this exact URL was required because the initial HTML is a SPA shell. On 2026-08-04, Playwright was blocked before navigation with `ERR_BLOCKED_BY_CLIENT`; it therefore could not wait for the specified heading or extract `document.body.innerText`. The failed attempt is recorded in [`logicapp-standard-easyauth-notes.md`](logicapp-standard-easyauth-notes.md). Do not treat earlier unsourced summaries as reviewed content.
+   - Summary: No article-body summary can be made until rendered-browser access succeeds or the owner supplies the rendered text.
+   - Review status: The article-specific statements “Configuring AuthsettingsV2 with Bicep”, “Prevent bypassing with SAS key”, and `sasAuthenticationPolicy` could not be verified from the article body. They must remain unverified, non-official context; do not use them as implementation requirements.
+   - Why it matters to this lab: If a later browser extraction confirms the claims, they may provide useful context for the managed-identity caller and SAS-bypass discussion. Microsoft Learn and repository evidence remain the basis for lab guidance.
+   - Caveats to add: Clearly label this source as non-official. Do not rely on `sasAuthenticationPolicy` or any undocumented setting for beginner completion without documented product support and an explicit owner decision.
+   - CI/CD, monitoring, and private-networking implications: No article-specific implications can be attributed until the rendered article is available. Continue using the documented Microsoft guidance in this assessment for those recommendations.
 
 Microsoft Learn remains the authoritative source for App Service Easy Auth, Logic Apps trigger security, managed identities, private endpoints, and deployment guidance. Community content can be mentioned for context, but it must be clearly labeled as non-official and must not override documented Microsoft guidance.
 
