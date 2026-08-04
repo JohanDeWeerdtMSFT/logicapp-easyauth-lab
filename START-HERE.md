@@ -18,7 +18,7 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 | 3 | Review the walkthrough | Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) |
 | 4 | Deploy | Run `scripts/deploy.ps1` (Step 4 below) |
 | 5 | Validate | Follow [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
-| 6 | Troubleshoot | Use [docs/troubleshooting.md](docs/troubleshooting.md) |
+| 6 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Step 0 - If Using GitHub Codespaces
 
@@ -83,7 +83,7 @@ Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 
 ## Step 7 - Troubleshoot If Needed
 
-Use [docs/troubleshooting.md](docs/troubleshooting.md), then [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md).
+Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow) for 401, 403, invalid audience, and missing managed identity issues. Then use [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md).
 
 ## Common Questions
 

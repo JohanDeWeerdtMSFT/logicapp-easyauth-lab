@@ -24,6 +24,7 @@ This path proves *who the caller is* rather than relying on a SAS-signed callbac
 | Managed identity | An identity that Azure creates and manages for your Azure resource. The Function App can request tokens with it, and you never store or rotate a secret. Lab 3 uses a **system-assigned** managed identity, whose lifecycle is tied to the Function App. | [What are managed identities for Azure resources?](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) |
 | Access token | A short-lived JSON Web Token (JWT) issued by Entra ID. The caller sends it in the HTTP `Authorization` header using the bearer scheme, and the receiver validates it. | [Access tokens in the Microsoft identity platform](https://learn.microsoft.com/entra/identity-platform/access-tokens) |
 | Resource | The API that the caller wants to reach, named by its Application ID URI, for example `api://<logic-app-app-registration-client-id>`. | [Expose scopes in a protected web API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes) |
+| Application ID URI | The unique identifier of the protected API, in the form `api://<client-id>`. You set it on the Logic App's app registration under *Expose an API*. It is the value callers ask for a token for, and the value that appears in the token's `aud` claim. | [Expose scopes in a protected web API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes) |
 | Audience (`aud`) | The claim inside the token that names the intended receiver. The receiver must reject a token whose `aud` was minted for a different API, so a Microsoft Graph token cannot be replayed against the Logic App. | [Access token claims reference](https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference) |
 | Scope | The value the caller sends to the token endpoint to say which resource it wants a token for. For app-to-app (client credentials) calls the required form is `{resource}/.default`, for example `api://<logic-app-app-registration-client-id>/.default`. | [Scopes and permissions](https://learn.microsoft.com/entra/identity-platform/scopes-oidc) |
 | `allowedPrincipals` | The Easy Auth allow-list of identities that may call the app. In this lab it contains the Function App managed identity object ID. | [Configure Microsoft Entra sign-in for App Service](https://learn.microsoft.com/azure/app-service/configure-authentication-provider-aad) |
@@ -100,12 +101,28 @@ SAS-based runtime calls, which is why Easy Auth mode choices can affect portal m
 
 Reference: [Secure access and data for workflows in Azure Logic Apps](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app).
 
+## Troubleshooting the identity flow
+
+Use this table first; the repository-wide guide is [docs/troubleshooting.md](troubleshooting.md).
+
+| Symptom | Most likely cause | How to check | Fix |
+| --- | --- | --- | --- |
+| **401 Unauthorized** | Easy Auth could not validate the token: no `Authorization` header, wrong header format, expired token, or wrong issuer. | Confirm the `Authorization` header uses the bearer scheme followed by the token value. Check the Function App traces for a token-acquisition failure. | Send the token in the bearer scheme, and confirm the Easy Auth `openIdIssuer` matches your tenant ID in [infra/modules/easyauth.bicep](../infra/modules/easyauth.bicep). |
+| **401 with an audience error** | The token's `aud` claim is not in the Easy Auth `allowedAudiences` list. The caller requests `<logic-app-client-id>/.default`, while `allowedAudiences` defaults to the Azure management-plane audiences. | Decode the token and compare its `aud` claim with `properties.identityProviders.azureActiveDirectory.validation.allowedAudiences` on the `authsettingsV2` config. | Make the requested scope and the configured allowed audiences name the same resource, either the client ID or `api://<client-id>`. |
+| **403 Forbidden** | The token is valid, but the caller principal is not allow-listed. | Compare the Function App `identity.principalId` with the Logic App's `allowedPrincipals`. | Redeploy with `-DeployFuncCallerDemo` so the caller's principal ID is added to `allowedPrincipals`. |
+| **Token acquisition fails in the Function App** | The system-assigned managed identity is missing or disabled, so `DefaultAzureCredential` has no identity to use. | Check `identity.principalId` on the caller Function App; an empty value means no managed identity. | Redeploy [infra/modules/functionapp-caller.bicep](../infra/modules/functionapp-caller.bicep), which enables the system-assigned identity. |
+
+References: [Access tokens](https://learn.microsoft.com/entra/identity-platform/access-tokens),
+[Access token claims reference](https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference),
+[Configure Microsoft Entra sign-in for App Service](https://learn.microsoft.com/azure/app-service/configure-authentication-provider-aad),
+[Managed identity troubleshooting](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/managed-identities-faq).
+
 ## Check your understanding
 
 Before deploying, you should be able to answer:
 
 1. Which identity calls the Logic App? (The Function App system-assigned managed identity.)
-2. What is requested from Entra ID? (An access token for the scope `api://<logic-app-app-registration-client-id>/.default`.)
+2. What is requested from Entra ID? (An access token for the scope `<logic-app-client-id>/.default`, as requested in `CallLogicApp.cs`.)
 3. Which claim does Easy Auth check to make sure the token was meant for this workflow? (`aud`.)
 4. What is the difference between a 401 and a 403 in this lab? (Token validation failure versus principal not allow-listed.)
 5. Why is no SAS signature needed? (Access is proven by identity, not by a signed URL.)
