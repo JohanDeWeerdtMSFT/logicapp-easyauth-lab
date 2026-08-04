@@ -254,6 +254,7 @@ This matrix should be added to the lab as a dedicated deployment caveat. It sepa
 
 1. **Microsoft Tech Community blog (secondary Microsoft source, not Microsoft Learn)**
    URL: https://techcommunity.microsoft.com/blog/integrationsonazureblog/easy-auth-configuration-for-logic-app-standard-through-cicd/4520539
+   - Source status: Retrieved from the page metadata/structured article content during this assessment pass. Treat this as Microsoft secondary guidance; prefer Microsoft Learn when available.
    - Summary: The article explains why Logic App Standard run-history inputs/outputs can fail after enabling Easy Auth. Requests reach App Service Easy Auth before the Logic App runtime. Portal run-history details rely on runtime SAS access, so strict Easy Auth (`unauthenticatedClientAction: Return401`) can block those requests before the runtime validates them.
    - Why it matters to this lab: Learners might believe all 401 responses mean the Function caller token is wrong, while the failure can instead be portal/run-history traffic blocked by the App Service layer.
    - Caveats to add: Document two operational options: allow unauthenticated requests so the Logic App runtime arbitrates its own SAS/runtime calls, or keep Easy Auth strict and configure `excludedPaths`, such as `/runtime/*`, through ARM/Bicep/REST/CLI because the portal does not expose that setting.
@@ -263,12 +264,13 @@ This matrix should be added to the lab as a dedicated deployment caveat. It sepa
 
 2. **Community blog (azcloudsecurity, not official Microsoft documentation)**
    URL: https://azcloudsecurity.io/blog/logic-app-standard-easy-auth
-   - Summary: The article describes securing Logic App Standard with Easy Auth for machine-to-machine calls. It emphasizes a minimal app registration as the Logic App audience, managed identity as caller, tenant/audience/principal validation, and the risk that SAS keys can bypass the intended token-only model unless disabled or checked in the workflow.
-   - Why it matters to this lab: The lab’s Function App caller is analogous to the article’s managed-identity caller pattern, even though APIM is out of scope for the main learner track.
-   - Caveats to add: Treat this as non-official community context only and validate recommendations against Microsoft Learn before implementation. The article discusses an undocumented `logicAppsAccessControlConfiguration.triggers.sasAuthenticationPolicy.state: Disabled` setting; the lab should avoid relying on undocumented behavior for beginner completion unless the owner explicitly accepts the risk.
-   - CI/CD implication: Automate app registration/auth settings carefully with least-privilege Entra permissions; avoid broad application administrator permissions where possible.
-   - Monitoring/portal implication: The article reports the portal manageability tradeoff around `AllowAnonymous` and strict Easy Auth; document this as an advanced operational decision and validate implementation choices against Microsoft Learn or product documentation.
-   - Private networking implication: The article is primarily about identity and Easy Auth, not private endpoint deployment mechanics, so pair it with Microsoft Learn private endpoint and DNS documentation.
+   - Source status: The requested URL currently returned only the azcloudsecurity site shell/home page in direct retrieval, and a search of the downloaded site bundle did not expose article text for "Easy Auth", `logic-app-standard-easy-auth`, `Return401`, `allowedPrincipals`, or `sasAuthenticationPolicy`. Do not treat earlier unsourced summaries of this article as reviewed content unless the owner provides an accessible copy or the URL is restored.
+   - Summary from accessible content: No direct article-body summary can be made from the currently retrievable page content. The assessment can only record that this is intended to be non-official community context about Logic App Standard Easy Auth.
+   - Why it matters to this lab: If an accessible copy confirms managed-identity caller, app-registration audience, principal allow-listing, or SAS-bypass guidance, those points may help explain the lab scenario. Until then, implementation recommendations must come from Microsoft Learn and repository evidence instead.
+   - Caveats to add: Label the community article as non-official and unverified until a readable copy is available. Do not rely on undocumented or community-only settings for beginner completion.
+   - CI/CD implication: No source-backed CI/CD recommendation can be attributed to this article from the currently accessible content.
+   - Monitoring/portal implication: No source-backed portal or run-history recommendation can be attributed to this article from the currently accessible content.
+   - Private networking implication: No source-backed private networking recommendation can be attributed to this article from the currently accessible content.
 
 Microsoft Learn remains the authoritative source for App Service Easy Auth, Logic Apps trigger security, managed identities, private endpoints, and deployment guidance. Community content can be mentioned for context, but it must be clearly labeled as non-official and must not override documented Microsoft guidance.
 
