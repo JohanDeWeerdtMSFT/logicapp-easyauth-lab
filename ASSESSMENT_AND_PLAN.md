@@ -50,15 +50,15 @@ The implemented learning journey is:
 | Critical | Subscription and caller-demo inputs were not reproducible | Explicit parameters and `.env` fallback implemented | `scripts/deploy.ps1` |
 | High | Scenario body did not correlate with the workflow run | Caller propagates `scenario` in the query string | `CallLogicApp.cs`; B1 assertions |
 | High | Audience documentation did not match Easy Auth | `api://<logic-app-client-id>` aligned across Entra, caller, and Easy Auth | B1 token claim and live `authsettingsV2` |
-| High | B6 could not safely mutate and restore authorization | Restoration is safe, but runtime propagation remains open because the 2026-08-05 mutation returned HTTP 200 after ARM reported the temporary principal | Follow-up issue; original principal restoration confirmed |
+| High | B6 could not safely mutate and restore authorization | Restoration is safe, and B6 now waits for the observed HTTP 403 rather than ARM state, restarting the Logic App once when retries are not enough, then proves restoration with a `B6-restored` HTTP 200 | `scripts/validate.ps1`; `labs/lab3-bearer-token/tests` |
 | High | Public Function harness could proxy anonymous internet calls | HTTP trigger now requires a Function key; teardown and production-hardening warnings added | `CallLogicApp.cs`; canonical learner docs |
-| High | WS1 storage account disabled required key access | Bicep requests Shared Key capability, but inherited `StorageAccount_DisableLocalAuth_Modify` policy keeps the effective value disabled | Follow-up issue; live policy and storage state inspected |
+| High | WS1 storage account disabled required key access | Bicep keeps requesting Shared Key capability, and `deploy.ps1` now validates the effective storage settings and fails with actionable guidance when the inherited `StorageAccount_DisableLocalAuth_Modify` policy overrides it. Governance-owner approval for an exemption is still required | `scripts/deploy.ps1`; `docs/troubleshooting.md` |
 | High | Private ingress blocked normal workstation publishing | Public app ingress is the classroom default | `enablePrivateAppNetworking=false` |
 | Medium | Private networking and CI/CD caveats were fragmented | Dedicated guide added | `docs/07-private-networking-and-cicd.md` |
 | Medium | Duplicate Lab 3 procedures drifted | Duplicate files now point to canonical guides | `labs/lab3-bearer-token/docs/` |
 | High | Strict Easy Auth blocked portal run history | Added `/runtime/*` to `excludedPaths`; live run-history API succeeded while unsigned trigger calls remained HTTP 401 | `infra/modules/easyauth.bicep`; live validation on 2026-08-05 |
 
-PR 6 is complete and the presentation demo is not blocked. Two high-priority operational findings remain for a dedicated follow-up issue and Copilot PR.
+PR 6 is complete and the presentation demo is not blocked. The two remaining high-priority operational findings are now implemented in `scripts/deploy.ps1` and `scripts/validate.ps1`; only the governance decision on the storage policy exemption remains outside this repository.
 
 ## 5. Missing explanations for beginners
 
@@ -98,7 +98,9 @@ All PR 6 implementation changes are complete:
 | `README.md`, `START-HERE.md` | Done | Linear beginner-first path |
 | `scripts/deploy.ps1` | Done | Reproducible public/private mode, Entra preflight, safe What-If, cleanup |
 | `scripts/deploy-workflow.ps1` | Done | Supported ZIP publisher and live method check |
-| `scripts/validate.ps1` | Done | B1 assertions and B2/B3/B4/B6 matrix with restoration |
+| `scripts/validate.ps1` | Done | B1 assertions and B2/B3/B4/B6 matrix with runtime-aware B6 wait and guaranteed restoration |
+| `scripts/lib/EasyAuthLab.psm1` | Done | Shared storage-policy and runtime-wait helpers |
+| `labs/lab3-bearer-token/tests/EasyAuthLab.Tests.ps1` | Done | Focused Pester tests for the helpers |
 | `infra/main.bicep`, `infra/main.json` | Done | Synchronized source and tracked deployment artifact |
 | `docs/lab3-testing-and-verification.md` | Done | Canonical SAS-free validation procedure |
 | `docs/07-private-networking-and-cicd.md` | Done | Private-ingress and CI/CD extension |
@@ -126,6 +128,8 @@ All PR 6 implementation changes are complete:
 - [x] B1 asserts scenario, audience, issuer, managed-identity object ID, and authenticated workflow principal.
 - [x] B2/B3/B4 return `401` and B6 returns `403`.
 - [x] B6 restores the captured live Easy Auth policy and compares the original principal list.
+- [x] B6 observes HTTP 403 at runtime, not only the ARM policy value, and restoration is guaranteed after success, assertion failure, timeout, or request error.
+- [x] Deployment detects the effective WS1/Shared Key policy conflict and fails with actionable guidance without creating a policy exemption.
 - [x] Public classroom and optional private-ingress modes are distinct.
 - [x] Storage remains private in the classroom path.
 - [x] Canonical documentation is lint-clean and duplicate procedures are removed.
@@ -136,8 +140,8 @@ No open question blocks the Easy Auth presentation demo.
 
 Required follow-up work:
 
-- Make deployment detect and explain the inherited storage-policy conflict with WS1 hosting requirements.
-- Make B6 validate Easy Auth runtime enforcement and prove restoration with a successful B1 request.
+- A governance owner must decide between a time-limited, resource-scoped Azure Policy exemption, a compatible subscription, or ASE v3 hosting for the storage Shared Key requirement. This repository intentionally does not automate exemption creation.
+- Re-run the live deployment, presentation demo, and `-RunAuthorizationMutation` scenario matrix against the lab subscription to record the observed results in `docs/evidence/current-validation-and-drift.md`.
 
 Future work outside PR 6:
 

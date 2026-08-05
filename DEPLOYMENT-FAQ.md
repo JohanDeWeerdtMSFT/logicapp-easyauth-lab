@@ -31,6 +31,11 @@ Remove `-WhatIf` to deploy. Then use [the deployment and validation guide](docs/
 
 The deployment disables public access to the shared storage account and creates private endpoints plus VNet-linked DNS zones for Blob, Queue, Table, and File. Missing any of these storage paths can leave the Function or Logic Apps host unhealthy even when managed-identity RBAC is correct.
 
+> [!IMPORTANT]
+> Private network access and Shared Key authorization are two separate storage controls. The lab keeps `publicNetworkAccess: Disabled` **and** `allowSharedKeyAccess: true`, because Logic App Standard on a Workflow Service Plan (WS1) still requires storage account key access. Application access through `AzureWebJobsStorage` remains identity-based.
+>
+> After deploying the caller demo, `deploy.ps1` reads the effective storage account settings. If an inherited Azure Policy `Modify` assignment (for example `StorageAccount_DisableLocalAuth_Modify`) has rewritten `allowSharedKeyAccess` to `false`, the deployment fails with actionable guidance. The script never creates a policy exemption automatically: a time-limited, resource-scoped exemption, a compatible subscription, or App Service Environment v3 hosting all require governance-owner approval. See [Set up managed identity access to your storage account](https://learn.microsoft.com/azure/logic-apps/create-single-tenant-workflows-azure-portal#set-up-managed-identity-access-to-your-storage-account) and [Troubleshooting](docs/troubleshooting.md).
+
 ## Question 1: Does deploy.ps1 Handle Already-Created Resources?
 
 ### ✅ YES — Fully Idempotent

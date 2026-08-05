@@ -26,7 +26,7 @@ This file records the current live classroom baseline. When older evidence or as
 | B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator on 2026-08-05 |
 | B2 invalid token | HTTP 401 | Direct request with an invalid expired token |
 | B3 wrong audience | HTTP 401 | Direct request with an Azure Resource Manager token |
-| B6 unauthorized principal | Follow-up required: HTTP 200 observed after ARM showed the temporary principal | Runtime policy propagation issue on 2026-08-05; captured policy restoration confirmed |
+| B6 unauthorized principal | Follow-up mitigation implemented; not yet live re-validated. HTTP 200 was observed on 2026-08-05 after ARM showed the temporary principal | Runtime policy propagation issue on 2026-08-05; captured policy restoration confirmed. The validator now waits for the observed HTTP 403 and proves restoration with a `B6-restored` HTTP 200. |
 | B1 after restoration | HTTP 200 and authenticated workflow response | Canonical validator at 2026-08-04T20:42:07Z |
 | Public classroom resource cleanup | No Logic App private endpoint or App Service private DNS zone; four storage private endpoints retained | Azure inventory after cleanup |
 | Deployment history cleanup | No failed deployment records remain | Azure deployment inventory |
@@ -48,7 +48,7 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 | Incremental public-mode deployment retained an older Logic App private endpoint | `scripts/deploy.ps1` explicitly removes the retained endpoint when private app networking is disabled. |
 | B6 validator was coupled to `dev-westeurope.bicepparam` | B6 now changes only the captured live `authsettingsV2` policy, restores the complete captured properties directly, and compares the resulting principal list with the original. |
 | Public Function harness accepted anonymous internet calls | The HTTP trigger requires a Function key, which the canonical validator retrieves through the management plane and keeps in memory. |
-| WS1 storage account disabled Shared Key access | Open follow-up: merged Bicep requests `true`, but inherited `StorageAccount_DisableLocalAuth_Modify` policy keeps the live value `false`. Storage ingress remains private. |
+| WS1 storage account disabled Shared Key access | Deployment now detects the effective conflict and fails with actionable guidance instead of reporting success; the inherited `StorageAccount_DisableLocalAuth_Modify` policy still needs a governance-owner decision. Storage ingress remains private. |
 | B1 validator asserted only HTTP 200 | B1 now asserts scenario propagation, audience, managed-identity object ID, and authenticated workflow principal. |
 | Public classroom deployment retained dual app ingress | The retained Logic App private endpoint and App Service private DNS zone were removed; storage private endpoints remain. |
 | Tracked `infra/main.json` represented the old topology | Regenerated from the current Bicep source and verified to include `enablePrivateAppNetworking`. |
@@ -56,10 +56,13 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 
 ## Open non-blocking findings
 
-| Finding | Current impact | Required follow-up |
+| Finding | Current impact | Status |
 | --- | --- | --- |
-| Inherited storage Modify policy conflicts with WS1 hosting requirements | The live Easy Auth demo works, but the effective storage setting does not match the documented WS1 requirement. | Add policy-aware deployment preflight and document the exemption, compatible-subscription, or ASE v3 choices. |
-| B6 waits for ARM state but not Easy Auth runtime enforcement | B1/B2/B3/B4 and the presentation demo pass; only the optional authorization-mutation exercise is affected. | Wait for runtime HTTP outcomes, force a safe app refresh if required, and prove restoration with B1 HTTP 200. |
+| Inherited storage Modify policy conflicts with WS1 hosting requirements | The live Easy Auth demo works, but the effective storage setting does not match the documented WS1 requirement. | Detection implemented: `scripts/deploy.ps1` reads the effective storage settings, asserts `publicNetworkAccess == Disabled`, and fails with actionable guidance when `allowSharedKeyAccess` is `false`. No policy exemption is created automatically. Governance-owner approval for a time-limited, resource-scoped exemption (or a compatible subscription, or ASE v3) is still required. |
+| B6 waits for ARM state but not Easy Auth runtime enforcement | B1/B2/B3/B4 and the presentation demo pass; only the optional authorization-mutation exercise is affected. | Mitigation implemented: `scripts/validate.ps1` now waits for the observed HTTP 403, restarts the Logic App once if bounded retries are not enough, always restores the captured policy, and proves restoration with a `B6-restored` HTTP 200 that reports the original Function principal. |
+
+> [!IMPORTANT]
+> The changes above were validated with PowerShell parser checks and the focused Pester tests under `labs/lab3-bearer-token/tests`. They have **not** been re-run against the live subscription from this change; the agent environment has no Azure credentials. Re-run `scripts/deploy.ps1`, `scripts/demo-easyauth.ps1`, and `scripts/validate.ps1 -RunAuthorizationMutation` against the lab subscription and update this register with the observed results.
 
 ## Historical material
 

@@ -96,6 +96,8 @@ $deploymentName     = "easyauth-lab-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $azureCliPath       = Get-Command az -CommandType Application -ErrorAction Stop |
     Select-Object -First 1 -ExpandProperty Source
 
+Import-Module (Join-Path $PSScriptRoot 'lib' 'EasyAuthLab.psm1') -Force
+
 Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host   "║  Logic App Easy Auth Lab — Deployment Orchestrator          ║" -ForegroundColor Cyan
 Write-Host   "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
@@ -319,6 +321,39 @@ try {
             Write-Host "  Caller Function App: $($outputs.functionAppCallerName.value)"
             Write-Host "  Caller Hostname    : $($outputs.functionAppCallerHostname.value)"
             Write-Host "  Caller Principal ID: $($outputs.functionAppCallerPrincipalId.value)"
+        }
+
+        # ── Step 3b: Effective storage policy validation ─────────────────────
+        # The template requests the WS1-compatible combination of private ingress
+        # (publicNetworkAccess = Disabled) and Shared Key authorization
+        # (allowSharedKeyAccess = true). An inherited management-group Modify
+        # policy can silently override the second value, so validate what Azure
+        # actually stored instead of trusting deployment success.
+        if ($DeployFuncCallerDemo -and $outputs.PSObject.Properties['storageAccountName']) {
+            $storageAccountName = $outputs.storageAccountName.value
+
+            $storagePropertiesRaw = Invoke-AzCommand -Description "Reading effective storage account authorization settings" `
+                -Arguments @(
+                    'storage', 'account', 'show',
+                    '--subscription', $SubscriptionId,
+                    '--resource-group', $resourceGroupName,
+                    '--name', $storageAccountName,
+                    '--query', '{publicNetworkAccess:publicNetworkAccess,allowSharedKeyAccess:allowSharedKeyAccess}',
+                    '--output', 'json'
+                )
+            $storageProperties = ($storagePropertiesRaw -join '') | ConvertFrom-Json
+
+            $storagePolicy = Test-StorageAuthorizationPolicy `
+                -StorageAccountName $storageAccountName `
+                -PublicNetworkAccess $storageProperties.publicNetworkAccess `
+                -AllowSharedKeyAccess $storageProperties.allowSharedKeyAccess
+
+            if (-not $storagePolicy.compliant) {
+                throw $storagePolicy.message
+            }
+
+            Write-Host "  Storage public access: Disabled" -ForegroundColor Green
+            Write-Host "  Storage Shared Key   : Allowed (WS1 requirement)" -ForegroundColor Green
         }
 
         # Incremental ARM deployments do not remove resources that disappear from
