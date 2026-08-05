@@ -8,7 +8,7 @@ In this lab, you build a secure service-to-service flow where:
 2. The Function App calls a Logic App HTTP trigger with that bearer token.
 3. Easy Auth on the Logic App validates token and caller identity.
 
-No secrets or SAS signatures are required for this call pattern.
+The Function-to-Logic-App call requires no client secret or SAS signature. The public lab harness uses a Function key for its separate inbound guard.
 
 > New to Microsoft Entra ID, Easy Auth, or OAuth?
 > Read [Identity and Easy Auth concepts for Lab 3](lab3-managed-identity-bearer-token-flow.md) first.
@@ -276,10 +276,12 @@ $functionAppName = "<function-app-name>"
 $resourceGroup = "<resource-group-name>"
 
 $funcHost = az functionapp show --name $functionAppName --resource-group $resourceGroup --query defaultHostName -o tsv
-Invoke-RestMethod -Method Post -Uri "https://$funcHost/api/CallLogicApp"
+$functionKey = az functionapp keys list --name $functionAppName --resource-group $resourceGroup --query functionKeys.default -o tsv
+Invoke-RestMethod -Method Post -Uri "https://$funcHost/api/CallLogicApp" -Headers @{ 'x-functions-key' = $functionKey }
+Remove-Variable functionKey
 ```
 
-Expected result: HTTP 200 and success payload.
+Expected result: HTTP 200 and success payload. Keep the Function key in memory and do not record it in lab evidence.
 
 ### Test 2: Query Application Insights
 

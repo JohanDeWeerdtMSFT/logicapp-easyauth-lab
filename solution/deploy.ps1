@@ -117,8 +117,8 @@ $hostname = az functionapp show `
     --query "defaultHostName" -o tsv
 Write-Host "  https://$hostname/api/CallLogicApp" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Test with:"
-Write-Host "  curl -X POST https://$hostname/api/CallLogicApp" -ForegroundColor DarkYellow
+Write-Host "The HTTP trigger requires a Function key." -ForegroundColor Yellow
+Write-Host "Retrieve it with 'az functionapp keys list', keep it in memory, and send it in the x-functions-key header." -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "Monitor in Application Insights:"
 Write-Host "  Azure Portal → Application Insights → Logs → traces | where message contains 'Bearer token'" -ForegroundColor DarkYellow

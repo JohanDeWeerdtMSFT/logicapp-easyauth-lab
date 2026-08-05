@@ -13,7 +13,8 @@ Before you start testing, verify these infrastructure components are in place:
 - [ ] Plan: Standard (S1) or higher
 - [ ] System-assigned managed identity: Enabled
 - [ ] VNet integration: Enabled (routed through app integration subnet)
-- [ ] Easy Auth enabled with AllowAnonymous mode (lab harness only)
+- [ ] HTTP trigger authorization level: Function
+- [ ] Easy Auth enabled with AllowAnonymous mode behind the Function-key guard
 
 **Logic App Configuration:**
 
@@ -99,10 +100,18 @@ FUNC_URL=$(az functionapp function show \
   --function-name CallLogicApp \
   --query invokeUrlTemplate -o tsv)
 
+FUNCTION_KEY=$(az functionapp keys list \
+  --resource-group rg-la-easyauth-lab-dev \
+  --name easyauth-func-<suffix> \
+  --query functionKeys.default -o tsv)
+
 # Call function
 curl -X POST "$FUNC_URL" \
+  -H "x-functions-key: $FUNCTION_KEY" \
   -H "Content-Type: application/json" \
   -d '{"scenario":"B1"}'
+
+unset FUNCTION_KEY
 ```
 
 ### 3. Monitor Logs

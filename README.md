@@ -35,16 +35,21 @@ Work through these in order. Steps 1 and 2 are conceptual and take about 15 minu
 
 > [!WARNING]
 > **The active classroom path uses public app endpoints and private storage.**
-> The Function uses Easy Auth in `AllowAnonymous` mode as a lab-only test harness. The Logic App uses strict
+> The Function test harness requires a Function key, while its Easy Auth layer remains in `AllowAnonymous` mode. The Logic App uses strict
 > `Return401`, audience validation, and `allowedPrincipals`. The Function then uses its managed identity for the
 > protected Logic App call. The VNet and
 > storage private endpoints remain required because both hosts use the shared storage account with public storage
-> access disabled. Add `-EnablePrivateAppNetworking` only for the advanced private-ingress exercise. That mode
+> access disabled. The WS1 Workflow Service Plan requires storage account key access to remain enabled, even though
+> the configured `AzureWebJobsStorage` data path uses managed identity. Add `-EnablePrivateAppNetworking` only for the advanced private-ingress exercise. That mode
 > requires a VNet-connected deployment executor for ZIP/Kudu publishing and direct HTTP validation.
 > Background reading: [Private endpoints for App Service](https://learn.microsoft.com/azure/app-service/overview-private-endpoint),
 > [Private endpoint DNS configuration](https://learn.microsoft.com/azure/private-link/private-endpoint-dns),
 > [Azure Pipelines agents](https://learn.microsoft.com/azure/devops/pipelines/agents/agents).
 > See [Private networking and CI/CD](docs/07-private-networking-and-cicd.md) for the optional private-ingress path.
+
+The Function key is a lab access guard, not end-user identity or production authorization. Delete the lab resource
+group when finished. Before adding workflow side effects, replace the public harness with authenticated callers,
+access restrictions, APIM, or private ingress appropriate to the workload.
 
 Whichever network posture you use, the identity flow stays the same: managed identity, Entra access token,
 Easy Auth validation, and `allowedPrincipals`. Only network reachability changes.
@@ -67,8 +72,8 @@ By the end of this lab, you will be able to:
 ```mermaid
 flowchart LR
     subgraph Azure[Azure Resource Group]
-        FA[Function App\nEasy Auth + system-assigned MI]
-        LA[Logic App Standard\nEasy Auth Return401]
+        FA["Function App: Function key + managed identity"]
+        LA["Logic App Standard: Easy Auth Return401"]
         AI[Application Insights]
         subgraph Network[Virtual Network]
             SA[Private Storage Endpoints]
@@ -77,7 +82,7 @@ flowchart LR
 
     Entra[Microsoft Entra ID]
 
-    User[Learner] -->|1. Invoke lab test harness| FA
+    User[Learner] -->|1. Invoke with Function key| FA
     FA -->|2. Request managed-identity token| Entra
     Entra -->|3. Return JWT for Logic App audience| FA
     FA -->|4. Public HTTPS call + Authorization Bearer token| LA

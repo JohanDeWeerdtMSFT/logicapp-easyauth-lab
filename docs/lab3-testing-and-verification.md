@@ -226,16 +226,24 @@ Expected: approved storage private endpoints and linked private DNS zones for `b
 ## 6. Run the successful managed-identity test
 
 ```powershell
+$functionKey = az functionapp keys list `
+  --resource-group $resourceGroup `
+  --name $functionAppName `
+  --query functionKeys.default `
+  --output tsv
+
 $response = Invoke-RestMethod `
   -Method Post `
   -Uri "https://$functionAppHost/api/CallLogicApp" `
+  -Headers @{ 'x-functions-key' = $functionKey } `
   -ContentType 'application/json' `
   -Body '{"scenario":"B1"}'
 
 $response | ConvertTo-Json -Depth 10
+Remove-Variable functionKey
 ```
 
-Expected: HTTP 200 with `status` equal to `success` and a `tokenClaims` object. The Function endpoint is an `AllowAnonymous` lab harness; the protected assertion is its managed-identity call to the strict Logic App.
+Expected: HTTP 200 with `status` equal to `success` and a `tokenClaims` object. The Function key limits access to the public lab harness; the protected downstream assertion is its managed-identity call to the strict Logic App. Keep the key in memory and never include it in evidence.
 
 ## 7. Validate the access-token claims
 
@@ -330,48 +338,20 @@ HTTP 403 means Easy Auth accepted the token as authenticated but the caller fail
 
 ### Reproduce unauthorized principal safely
 
-Run this exercise only in an isolated lab resource group. Get the Logic App's own managed identity object ID, which is valid but different from the caller identity:
+Run this exercise only in an isolated lab resource group. The canonical validator gets the Logic App's own managed identity object ID, captures the complete live `authsettingsV2` policy, changes only `allowedPrincipals`, verifies HTTP 403, and restores the captured policy in a `finally` block:
 
 ```powershell
-$nonCallerPrincipalId = az webapp identity show `
-  --name $logicAppName `
-  --resource-group $resourceGroup `
-  --query principalId `
-  --output tsv
+./scripts/validate.ps1 `
+  -SubscriptionId $subscriptionId `
+  -ResourceGroupName $resourceGroup `
+  -LogicAppName $logicAppName `
+  -FunctionAppName $functionAppName `
+  -LogicAppClientId $logicAppClientId `
+  -TenantId $tenantId `
+  -RunAuthorizationMutation
 ```
 
-Preview and deploy the authorization-test override:
-
-```powershell
-./scripts/deploy.ps1 `
-  -EntraAppClientId $logicAppClientId `
-  -EntraAppTenantId $tenantId `
-  -DeployFuncCallerDemo `
-  -FuncCallerEntraClientId $callerClientId `
-  -EasyAuthAllowedPrincipalOverride $nonCallerPrincipalId `
-  -WhatIf
-
-./scripts/deploy.ps1 `
-  -EntraAppClientId $logicAppClientId `
-  -EntraAppTenantId $tenantId `
-  -DeployFuncCallerDemo `
-  -FuncCallerEntraClientId $callerClientId `
-  -EasyAuthAllowedPrincipalOverride $nonCallerPrincipalId
-```
-
-Invoke the caller with `{"scenario":"B6"}`. Expected: downstream HTTP 403 because the managed-identity token is valid but its `oid` is not the allow-listed object ID.
-
-Restore immediately by redeploying the original parameters without `-EasyAuthAllowedPrincipalOverride`:
-
-```powershell
-./scripts/deploy.ps1 `
-  -EntraAppClientId $logicAppClientId `
-  -EntraAppTenantId $tenantId `
-  -DeployFuncCallerDemo `
-  -FuncCallerEntraClientId $callerClientId
-```
-
-After restoration, verify:
+Expected: B6 returns HTTP 403 because the managed-identity token is valid but its `oid` is not the temporary allow-listed object ID. The validator then restores the captured policy and verifies the original principal list. You can independently confirm the restored value:
 
 ```powershell
 az rest --method get --uri $authUri `
@@ -386,7 +366,7 @@ Expected: the Function App principal ID is present and the next caller invocatio
 | Symptom | Layer | First check | Typical fix |
 | --- | --- | --- | --- |
 | 401 | Authentication | `aud`, issuer/tenant, expiry, and bearer header | Restore `LOGIC_APP_AUDIENCE`, tenant ID, and Easy Auth allowed audiences. |
-| 403 | Authorization | Token `oid` versus `allowedPrincipals` | Redeploy the original Bicep parameters so the caller principal is allow-listed. |
+| 403 | Authorization | Token `oid` versus `allowedPrincipals` | Restore the captured Easy Auth policy or redeploy the original Bicep parameters. |
 | 404 or 405 | Route/method | Workflow and trigger names plus `POST` method | Use `/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01`. |
 | Timeout or DNS error | Network | Resolve the Logic App hostname from the caller's reachable network | Check VNet integration, private endpoint, private DNS link, and route controls. |
 | Credential unavailable | Caller identity | Function App system-assigned identity | Enable or redeploy the managed identity. |
@@ -411,7 +391,7 @@ Never include a complete access token, SAS signature, client secret, storage key
 
 ## 13. Run the automated scenario matrix
 
-After the manual learning steps, run the canonical validator. Supply the parameter file for the environment being tested; B6 captures the live Easy Auth policy, deploys the temporary override from that parameter file, restores the captured policy directly, and compares the restored principal list with the captured original.
+After the manual learning steps, run the canonical validator. It retrieves the Function key through the Azure management plane and keeps it in memory. B6 captures the live Easy Auth policy, changes only the captured `allowedPrincipals` value, restores the complete captured policy, and compares the restored principal list with the original.
 
 ```powershell
 ./scripts/validate.ps1 `
@@ -421,7 +401,6 @@ After the manual learning steps, run the canonical validator. Supply the paramet
   -FunctionAppName $functionAppName `
   -LogicAppClientId $logicAppClientId `
   -TenantId $tenantId `
-  -ParameterFile './infra/params/dev-westeurope.bicepparam' `
   -RunAuthorizationMutation
 ```
 

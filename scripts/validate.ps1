@@ -4,13 +4,13 @@
 
 .DESCRIPTION
     Runs the SAS-free Lab 3 scenario matrix:
-    - B1: Function test harness -> managed identity -> Logic App (200)
+    - B1: Function-key-protected test harness -> managed identity -> Logic App (200)
     - B2: invalid token -> Logic App (401)
     - B3: wrong-audience token -> Logic App (401)
     - B4: no token -> Logic App (401)
     - B6: optional reversible allowedPrincipals override -> Function (403)
 
-    Tokens remain in memory and are never written to output or evidence files.
+    Tokens and the Function key remain in memory and are never written to output or evidence files.
 #>
 
 [CmdletBinding()]
@@ -32,8 +32,6 @@ param(
 
     [Parameter(Mandatory)]
     [string]$TenantId,
-
-    [string]$ParameterFile = '',
 
     [switch]$RunAuthorizationMutation
 )
@@ -108,16 +106,45 @@ function Get-AzureToken {
     return $token
 }
 
+function Wait-AllowedPrincipals {
+    param(
+        [Parameter(Mandatory)]
+        [string]$AuthUri,
+
+        [Parameter(Mandatory)]
+        [string[]]$ExpectedPrincipals,
+
+        [int]$MaximumAttempts = 12
+    )
+
+    for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
+        $actualPrincipals = @(
+            az rest `
+                --subscription $SubscriptionId `
+                --method get `
+                --uri $AuthUri `
+                --query 'properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities' `
+                --output json | ConvertFrom-Json
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not read the Logic App Easy Auth allowedPrincipals policy.'
+        }
+
+        if (-not (Compare-Object $ExpectedPrincipals $actualPrincipals)) {
+            return
+        }
+
+        if ($attempt -lt $MaximumAttempts) {
+            Start-Sleep -Seconds 5
+        }
+    }
+
+    throw 'Timed out waiting for the Logic App Easy Auth allowedPrincipals policy to update.'
+}
+
 az account set --subscription $SubscriptionId
 if ($LASTEXITCODE -ne 0) {
     throw "Could not select subscription '$SubscriptionId'."
-}
-
-if ($RunAuthorizationMutation) {
-    if ([string]::IsNullOrWhiteSpace($ParameterFile)) {
-        throw '-ParameterFile is required when -RunAuthorizationMutation is specified.'
-    }
-    $ParameterFile = (Resolve-Path $ParameterFile -ErrorAction Stop).Path
 }
 
 $logicAppHost = az webapp show `
@@ -148,13 +175,24 @@ $functionPrincipalId = az functionapp identity show `
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($functionPrincipalId)) {
     throw 'Could not resolve the Function App managed identity principal ID.'
 }
+$functionKey = az functionapp keys list `
+    --subscription $SubscriptionId `
+    --resource-group $ResourceGroupName `
+    --name $FunctionAppName `
+    --query 'functionKeys.default' `
+    --output tsv
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($functionKey)) {
+    throw 'Could not retrieve the CallLogicApp Function key.'
+}
+$functionHeaders = @{ 'x-functions-key' = $functionKey }
 
 $wrongAudienceToken = $null
 try {
     $b1 = Invoke-LabRequest `
         -Scenario 'B1' `
         -Uri $functionAppUrl `
-        -ExpectedStatus 200
+        -ExpectedStatus 200 `
+        -Headers $functionHeaders
 
     $logicAppResponse = $null
     if ($b1.body -and $b1.body.logicAppResponse) {
@@ -222,44 +260,58 @@ try {
             $originalAuth.properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities
         )
         $originalPayloadPath = Join-Path ([System.IO.Path]::GetTempPath()) "easyauth-original-$([guid]::NewGuid()).json"
+        $mutationPayloadPath = Join-Path ([System.IO.Path]::GetTempPath()) "easyauth-b6-$([guid]::NewGuid()).json"
         [ordered]@{ properties = $originalAuth.properties } |
             ConvertTo-Json -Depth 100 |
             Set-Content $originalPayloadPath -Encoding utf8NoBOM
 
+        $mutationProperties = $originalAuth.properties |
+            ConvertTo-Json -Depth 100 |
+            ConvertFrom-Json
+        $mutationProperties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities = @($nonCallerPrincipalId)
+        [ordered]@{ properties = $mutationProperties } |
+            ConvertTo-Json -Depth 100 |
+            Set-Content $mutationPayloadPath -Encoding utf8NoBOM
+
         try {
-            az deployment group create `
+            az rest `
                 --subscription $SubscriptionId `
-                --resource-group $ResourceGroupName `
-                --name "b6-validation-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
-                --parameters $ParameterFile "easyAuthAllowedPrincipalOverride=$nonCallerPrincipalId" `
-                --mode Incremental `
-                --only-show-errors `
+                --method put `
+                --uri $authUri `
+                --body "@$mutationPayloadPath" `
                 --output none
             if ($LASTEXITCODE -ne 0) {
-                throw 'Could not deploy the B6 principal override.'
+                throw 'Could not apply the B6 principal override.'
             }
+            Wait-AllowedPrincipals -AuthUri $authUri -ExpectedPrincipals @($nonCallerPrincipalId)
 
             $b6 = Invoke-LabRequest `
                 -Scenario 'B6' `
                 -Uri $functionAppUrl `
-                -ExpectedStatus 403
+                -ExpectedStatus 403 `
+                -Headers $functionHeaders
             $b6.assertions = [ordered]@{
                 errorType = ($b6.body.error -eq 'Forbidden')
             }
             $b6.passed = $b6.passed -and -not ($b6.assertions.Values -contains $false)
         }
         finally {
-            az rest `
-                --subscription $SubscriptionId `
-                --method put `
-                --uri $authUri `
-                --body "@$originalPayloadPath" `
-                --output none
-            if ($LASTEXITCODE -ne 0) {
-                throw 'B6 restoration failed.'
-            }
+            try {
+                az rest `
+                    --subscription $SubscriptionId `
+                    --method put `
+                    --uri $authUri `
+                    --body "@$originalPayloadPath" `
+                    --output none
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'B6 restoration failed.'
+                }
 
-            Remove-Item $originalPayloadPath -Force -ErrorAction SilentlyContinue
+                Wait-AllowedPrincipals -AuthUri $authUri -ExpectedPrincipals $originalPrincipals
+            }
+            finally {
+                Remove-Item $originalPayloadPath, $mutationPayloadPath -Force -ErrorAction SilentlyContinue
+            }
         }
 
         $restoredPrincipals = @(
@@ -279,6 +331,7 @@ try {
 }
 finally {
     Remove-Variable wrongAudienceToken -ErrorAction SilentlyContinue
+    Remove-Variable functionKey, functionHeaders -ErrorAction SilentlyContinue
 }
 
 $summary = [pscustomobject]@{

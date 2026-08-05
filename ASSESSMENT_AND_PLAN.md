@@ -8,7 +8,7 @@ The active Lab 3 path is implemented and live-validated. It teaches a Function A
 
 Current classroom baseline:
 
-- Function App endpoint: public, with Easy Auth `AllowAnonymous` as an explicitly lab-only test harness.
+- Function App endpoint: public, with a Function-key-protected HTTP trigger and Easy Auth `AllowAnonymous` behind that lab guard.
 - Logic App endpoint: public, with Easy Auth `Return401`, audience validation, and `allowedPrincipals`.
 - Shared storage: private, with Blob, Queue, Table, and File private endpoints and managed-identity RBAC.
 - Optional private Logic App ingress: enabled only with `-EnablePrivateAppNetworking`.
@@ -49,7 +49,9 @@ The implemented learning journey is:
 | Critical | Subscription and caller-demo inputs were not reproducible | Explicit parameters and `.env` fallback implemented | `scripts/deploy.ps1` |
 | High | Scenario body did not correlate with the workflow run | Caller propagates `scenario` in the query string | `CallLogicApp.cs`; B1 assertions |
 | High | Audience documentation did not match Easy Auth | `api://<logic-app-client-id>` aligned across Entra, caller, and Easy Auth | B1 token claim and live `authsettingsV2` |
-| High | B6 could not safely mutate and restore authorization | Explicit parameter-file mutation, captured-policy restoration, and exact principal comparison implemented | `scripts/validate.ps1`; live B6 `403` |
+| High | B6 could not safely mutate and restore authorization | Direct captured-policy mutation, complete restoration, and exact principal comparison implemented | `scripts/validate.ps1`; live B6 `403` |
+| High | Public Function harness could proxy anonymous internet calls | HTTP trigger now requires a Function key; teardown and production-hardening warnings added | `CallLogicApp.cs`; canonical learner docs |
+| High | WS1 storage account disabled required key access | Shared Key capability remains enabled for Workflow Service Plan compatibility while application storage settings use managed identity | `infra/modules/foundation.bicep`; Microsoft Learn hosting limitation |
 | High | Private ingress blocked normal workstation publishing | Public app ingress is the classroom default | `enablePrivateAppNetworking=false` |
 | Medium | Private networking and CI/CD caveats were fragmented | Dedicated guide added | `docs/07-private-networking-and-cicd.md` |
 | Medium | Duplicate Lab 3 procedures drifted | Duplicate files now point to canonical guides | `labs/lab3-bearer-token/docs/` |

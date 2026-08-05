@@ -32,7 +32,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
-    allowSharedKeyAccess: false
+    // Workflow Service Plan hosting still requires storage account key access.
+    allowSharedKeyAccess: true
     publicNetworkAccess: disableStoragePublicAccess ? 'Disabled' : 'Enabled'
   }
 }

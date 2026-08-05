@@ -7,7 +7,7 @@ The active classroom path keeps the Function App and Logic App public while Easy
 | Surface | Classroom setting | Security control |
 | --- | --- | --- |
 | Logic App endpoint | Public | Easy Auth `Return401`, allowed audience, and `allowedPrincipals` |
-| Function App endpoint | Public | Easy Auth `AllowAnonymous`; lab-only test harness |
+| Function App endpoint | Public | Function-key-protected trigger; Easy Auth `AllowAnonymous` behind the lab guard |
 | Storage account | Private | Blob, Queue, Table, and File private endpoints plus managed-identity RBAC |
 | Function-to-Logic-App call | Public HTTPS | Entra bearer token issued to the Function managed identity |
 

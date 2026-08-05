@@ -2,7 +2,8 @@ targetScope = 'resourceGroup'
 
 // ──────────────────────────────────────────────
 // Logic App Standard module
-// Uses managed-identity storage (no shared keys)
+// Runtime storage data access uses managed identity. Workflow Service Plan
+// hosting still requires storage account key access to remain enabled.
 // ──────────────────────────────────────────────
 
 @description('Environment name used in resource naming.')
@@ -48,7 +49,7 @@ resource storageIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
 }
 
 var baseAppSettings = [
-  // Identity-based storage (no shared keys required)
+  // Identity-based AzureWebJobsStorage application settings
   {
     name: 'AzureWebJobsStorage__accountName'
     value: storageAccountName

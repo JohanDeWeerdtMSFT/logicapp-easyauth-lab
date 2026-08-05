@@ -13,9 +13,9 @@ namespace CallerFunctionApp;
 /// <summary>
 /// HTTP-triggered Azure Function that demonstrates PASSWORDLESS authentication via Managed Identity + Easy Auth.
 ///
-/// Secure Flow (No Secrets Required):
+/// Downstream Flow (No Client Secret Required):
 ///   1. Acquire a bearer token from Entra ID using this Function App's system-assigned managed identity.
-///      Token resource = Logic App's hostname (extracted from LOGIC_APP_URL).
+///      Token scope = LOGIC_APP_AUDIENCE + "/.default".
 ///   2. POST to the Logic App HTTP trigger URL, passing the token in the Authorization header.
 ///   3. Easy Auth middleware on the Logic App:
 ///      • Validates the Bearer token signature (issued by Entra ID)
@@ -23,13 +23,13 @@ namespace CallerFunctionApp;
 ///      • Sets X-MS-CLIENT-PRINCIPAL-* headers for the workflow to inspect
 ///   4. Logic App accepts or rejects the request based on token validation.
 ///
-/// No Callback URLs, Signatures, or Secrets Required!
-/// The bearer token IS the authentication mechanism.
+/// The downstream call needs no callback signature, client secret, or stored token.
+/// The managed-identity bearer token is its authentication mechanism.
 ///
 /// Required application settings (configure in Azure Portal or local.settings.json):
 ///   LOGIC_APP_URL                      — Full invoke URL for the Logic App workflow
 ///                                         Format: https://<logicapp>.azurewebsites.net/api/<name>/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01
-///                                         (Hostname is automatically extracted for token acquisition)
+///   LOGIC_APP_AUDIENCE                 — Application ID URI exposed by the Logic App registration
 ///   WEBSITE_AUTH_AAD_ALLOWED_TENANTS   — Entra ID tenant ID for token acquisition (optional, defaults to current tenant)
 /// </summary>
 public class CallLogicApp
@@ -45,7 +45,7 @@ public class CallLogicApp
 
     [Function("CallLogicApp")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequestData req,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("CallLogicApp function triggered.");

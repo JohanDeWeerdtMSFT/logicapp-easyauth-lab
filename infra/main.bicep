@@ -98,7 +98,7 @@ module functionApp 'modules/functionapp.bicep' = if (deployFunctionApp) {
 // Deploys a dedicated Function App with:
 //   - Outbound VNet integration → routes HTTP calls through the VNet
 //   - System-assigned managed identity → used to acquire Entra tokens for the Logic App
-//   - Easy Auth configured in AllowAnonymous mode for the classroom test harness
+//   - Function-key-protected test harness with Easy Auth AllowAnonymous behind the key guard
 // The Logic App Easy Auth is updated (module easyauth above) to only allow this
 // Function App’s managed identity principal ID.
 module funcCallerApp 'modules/functionapp-caller.bicep' = if (deployFuncCallerDemo) {

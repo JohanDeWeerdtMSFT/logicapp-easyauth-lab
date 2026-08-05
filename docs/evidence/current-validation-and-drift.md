@@ -4,13 +4,16 @@ Last validated: 2026-08-04
 
 This file records the current live classroom baseline. When older evidence or assessment text conflicts with this file, revalidate the live deployment and update both the implementation and canonical learner docs.
 
+> [!NOTE]
+> The 2026-08-05 PR review fixes are build- and source-validated, including the Function-key trigger and WS1 Shared Key compatibility setting. Live redeployment and the post-change scenario matrix remain pending because Azure CLI reauthentication was cancelled. The validated HTTP results below describe the preceding live deployment.
+
 ## Validated baseline
 
 | Item | Validated value | Evidence |
 | --- | --- | --- |
 | Logic App state | Running, workflow Enabled and Healthy | Azure resource and workflow management queries |
 | Logic App ingress | Public | `publicNetworkAccess: Enabled` |
-| Function App ingress | Public with Easy Auth `AllowAnonymous` | Lab-only test harness; live `authsettingsV2` |
+| Function App ingress | Public; Function-key-protected trigger in current source with Easy Auth `AllowAnonymous` | Lab-only test harness; source trigger and live `authsettingsV2` |
 | Storage ingress | Private | `publicNetworkAccess: Disabled` |
 | Workflow method | `POST` | ZIP publisher live verification |
 | Workflow trigger | `When_a_HTTP_request_is_received` | Live workflow definition |
@@ -21,7 +24,7 @@ This file records the current live classroom baseline. When older evidence or as
 | B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator at 2026-08-04T20:42:07Z |
 | B2 invalid token | HTTP 401 | Direct request with an invalid expired token |
 | B3 wrong audience | HTTP 401 | Direct request with an Azure Resource Manager token |
-| B6 unauthorized principal | HTTP 403 | Explicit parameter-file override at 2026-08-04T20:36:24Z; captured live policy restored afterward |
+| B6 unauthorized principal | HTTP 403 | Historical parameter-file override at 2026-08-04T20:36:24Z; captured live policy restored afterward |
 | B1 after restoration | HTTP 200 and authenticated workflow response | Canonical validator at 2026-08-04T20:42:07Z |
 | Public classroom resource cleanup | No Logic App private endpoint or App Service private DNS zone; four storage private endpoints retained | Azure inventory after cleanup |
 | Deployment history cleanup | No failed deployment records remain | Azure deployment inventory |
@@ -39,9 +42,11 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 | Logic App Entra registration lacked API identity | Deployment verifies `api://<client-id>` and creates the tenant service principal when missing. |
 | B1 scenario was not propagated | Caller reads `{"scenario":"B1"}` and adds `scenario=B1` to the Logic App request. |
 | Function error bodies reset 401/403 to HTTP 200 | Error responses now use the isolated-worker `WriteAsJsonAsync` overload with an explicit status code. |
-| Function-inbound `Return401` required unprovisioned delegated consent | Function Easy Auth uses `AllowAnonymous` as a lab-only harness; the Logic App remains the strict security boundary under test. |
+| Function-inbound `Return401` required unprovisioned delegated consent | Function Easy Auth uses `AllowAnonymous` behind a Function-key-protected trigger; the Logic App remains the strict downstream boundary under test. |
 | Incremental public-mode deployment retained an older Logic App private endpoint | `scripts/deploy.ps1` explicitly removes the retained endpoint when private app networking is disabled. |
-| B6 validator was coupled to `dev-westeurope.bicepparam` | B6 accepts an explicit environment parameter file for mutation, restores the captured live `authsettingsV2` properties directly, and compares the resulting principal list with the captured original. |
+| B6 validator was coupled to `dev-westeurope.bicepparam` | B6 now changes only the captured live `authsettingsV2` policy, restores the complete captured properties directly, and compares the resulting principal list with the original. |
+| Public Function harness accepted anonymous internet calls | The HTTP trigger requires a Function key, which the canonical validator retrieves through the management plane and keeps in memory. |
+| WS1 storage account disabled Shared Key access | Shared Key capability remains enabled because Workflow Service Plan hosting requires it; `AzureWebJobsStorage` application access remains identity-based and storage ingress remains private. |
 | B1 validator asserted only HTTP 200 | B1 now asserts scenario propagation, audience, managed-identity object ID, and authenticated workflow principal. |
 | Public classroom deployment retained dual app ingress | The retained Logic App private endpoint and App Service private DNS zone were removed; storage private endpoints remain. |
 | Tracked `infra/main.json` represented the old topology | Regenerated from the current Bicep source and verified to include `enablePrivateAppNetworking`. |
