@@ -10,9 +10,9 @@ targetScope = 'resourceGroup'
 // - https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization#considerations-for-using-built-in-authentication
 //
 // Key design decisions:
-// - Uses AllowAnonymous (NOT Return401) — Microsoft explicitly warns that Return401
-//   breaks the portal experience because requests never reach the Logic Apps runtime.
-// - Requests WITH an Authorization header are still validated by Easy Auth.
+// - Supports Return401 for the public classroom path so missing tokens are rejected.
+// - AllowAnonymous remains available for portal-manageability investigations.
+// - Requests with an Authorization header are validated by Easy Auth in either mode.
 // - platform.enabled + runtimeVersion ~1 are required for Easy Auth to function.
 // - MICROSOFT_PROVIDER_AUTHENTICATION_SECRET must be set as an app setting (Key Vault ref).
 // - allowedPrincipals restricts access to specific identities (e.g., APIM managed identity).
@@ -20,7 +20,7 @@ targetScope = 'resourceGroup'
 @description('Name of the Logic App to configure Easy Auth on.')
 param logicAppName string
 
-@description('Unauthenticated client action – AllowAnonymous is required for Logic Apps Standard portal manageability.')
+@description('Unauthenticated client action. Use Return401 for strict trigger enforcement or AllowAnonymous for portal-manageability investigations.')
 @allowed([
   'AllowAnonymous'
   'Return401'

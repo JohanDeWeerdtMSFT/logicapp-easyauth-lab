@@ -18,7 +18,7 @@
 
 .PARAMETER LogicAppUrl
     Base invoke URL of the Logic App HTTP trigger (no SAS signature needed!).
-    Format: https://<logicapp-name>.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
+    Format: https://<logicapp-name>.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01
     Why no signature? Managed Identity bearer token provides authentication instead.
 
 .PARAMETER LogicAppAudience
@@ -34,7 +34,7 @@
     .\deploy.ps1 `
       -FunctionAppName "la-easyauth-lab-dev-caller-xyz123" `
       -ResourceGroupName "rg-la-easyauth-lab-dev" `
-      -LogicAppUrl "https://la-easyauth-lab-dev-la-xyz123.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+    -LogicAppUrl "https://la-easyauth-lab-dev-la-xyz123.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
       -LogicAppAudience "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
       -TenantId "00922812-791e-41c8-a99e-45c3ed784cf5"
     
@@ -117,8 +117,8 @@ $hostname = az functionapp show `
     --query "defaultHostName" -o tsv
 Write-Host "  https://$hostname/api/CallLogicApp" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Test with:"
-Write-Host "  curl -X POST https://$hostname/api/CallLogicApp" -ForegroundColor DarkYellow
+Write-Host "The HTTP trigger requires a Function key." -ForegroundColor Yellow
+Write-Host "Retrieve it with 'az functionapp keys list', keep it in memory, and send it in the x-functions-key header." -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "Monitor in Application Insights:"
 Write-Host "  Azure Portal → Application Insights → Logs → traces | where message contains 'Bearer token'" -ForegroundColor DarkYellow

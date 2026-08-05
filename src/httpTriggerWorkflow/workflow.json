@@ -34,7 +34,7 @@
                 "type": "Request",
                 "kind": "Http",
                 "inputs": {
-                    "method": "GET"
+                    "method": "POST"
                 }
             }
         },

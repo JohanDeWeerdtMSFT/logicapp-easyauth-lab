@@ -13,9 +13,9 @@ namespace CallerFunctionApp;
 /// <summary>
 /// HTTP-triggered Azure Function that demonstrates PASSWORDLESS authentication via Managed Identity + Easy Auth.
 ///
-/// Secure Flow (No Secrets Required):
+/// Downstream Flow (No Client Secret Required):
 ///   1. Acquire a bearer token from Entra ID using this Function App's system-assigned managed identity.
-///      Token resource = Logic App's hostname (extracted from LOGIC_APP_URL).
+///      Token scope = LOGIC_APP_AUDIENCE + "/.default".
 ///   2. POST to the Logic App HTTP trigger URL, passing the token in the Authorization header.
 ///   3. Easy Auth middleware on the Logic App:
 ///      • Validates the Bearer token signature (issued by Entra ID)
@@ -23,13 +23,13 @@ namespace CallerFunctionApp;
 ///      • Sets X-MS-CLIENT-PRINCIPAL-* headers for the workflow to inspect
 ///   4. Logic App accepts or rejects the request based on token validation.
 ///
-/// No Callback URLs, Signatures, or Secrets Required!
-/// The bearer token IS the authentication mechanism.
+/// The downstream call needs no callback signature, client secret, or stored token.
+/// The managed-identity bearer token is its authentication mechanism.
 ///
 /// Required application settings (configure in Azure Portal or local.settings.json):
 ///   LOGIC_APP_URL                      — Full invoke URL for the Logic App workflow
-///                                         Format: https://<logicapp>.azurewebsites.net/api/workflows/<name>/triggers/manual/invoke?api-version=2022-05-01
-///                                         (Hostname is automatically extracted for token acquisition)
+///                                         Format: https://<logicapp>.azurewebsites.net/api/<name>/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01
+///   LOGIC_APP_AUDIENCE                 — Application ID URI exposed by the Logic App registration
 ///   WEBSITE_AUTH_AAD_ALLOWED_TENANTS   — Entra ID tenant ID for token acquisition (optional, defaults to current tenant)
 /// </summary>
 public class CallLogicApp
@@ -45,7 +45,7 @@ public class CallLogicApp
 
     [Function("CallLogicApp")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequestData req,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("CallLogicApp function triggered.");
@@ -64,15 +64,46 @@ public class CallLogicApp
                     error  = "MissingConfiguration",
                     detail = "LOGIC_APP_URL must be configured as an application setting.",
                     fix    = "In Azure Portal: Function App → Configuration → Application settings"
-                }, cancellationToken);
+                }, HttpStatusCode.BadRequest, cancellationToken);
                 return badRequest;
             }
 
+            ScenarioRequest? scenarioRequest;
+            try
+            {
+                scenarioRequest = await ReadScenarioRequestAsync(req, cancellationToken);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Caller request body is not valid JSON.");
+                var invalidRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await invalidRequest.WriteAsJsonAsync(new
+                {
+                    error = "InvalidRequest",
+                    detail = "Request body must be valid JSON, for example: {\"scenario\":\"B1\"}."
+                }, HttpStatusCode.BadRequest, cancellationToken);
+                return invalidRequest;
+            }
+
+            var scenario = string.IsNullOrWhiteSpace(scenarioRequest?.Scenario)
+                ? "default"
+                : scenarioRequest.Scenario.Trim();
+            var logicAppRequestUrl = AddQueryParameter(logicAppUrl, "scenario", scenario);
+
             // ── Step 2: Acquire bearer token from this Function App's managed identity ──────────
             var accessToken = await GetAccessTokenAsync(cancellationToken);
+            var tokenClaims = ReadTokenClaims(accessToken.Token);
             _logger.LogInformation(
                 "Bearer token acquired. Expiry: {Expiry}",
                 accessToken.ExpiresOn.ToString("o"));
+            _logger.LogInformation(
+                "Token claims inspected locally. Audience: {Audience}; Issuer: {Issuer}; " +
+                "Object ID: {ObjectId}; Caller app claim: {CallerAppId}; Expires: {ExpiresOn}",
+                tokenClaims.Audience,
+                tokenClaims.Issuer,
+                tokenClaims.ObjectId,
+                tokenClaims.CallerAppId,
+                tokenClaims.ExpiresOn);
 
             // ── Step 3: POST to Logic App with bearer token in Authorization header ───────────
             // NOTE: No SAS signature or callback URL is needed.
@@ -82,11 +113,12 @@ public class CallLogicApp
             {
                 message   = "Test from CallerFunctionApp",
                 source    = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") ?? "local-dev",
+                scenario,
                 timestamp = DateTime.UtcNow
             };
 
             var logicAppResponse = await CallLogicAppWithTokenAsync(
-                logicAppUrl,
+                logicAppRequestUrl,
                 accessToken.Token,
                 payload,
                 cancellationToken);
@@ -98,7 +130,9 @@ public class CallLogicApp
             {
                 status          = "success",
                 message         = "Bearer token flow verified — Easy Auth accepted the request.",
+                scenario,
                 logicAppResponse,
+                tokenClaims,
                 tokenExpiry     = accessToken.ExpiresOn,
                 timestamp       = DateTime.UtcNow
             }, cancellationToken);
@@ -123,7 +157,7 @@ public class CallLogicApp
                     "Verify WEBSITE_AUTH_AAD_ALLOWED_TENANTS matches the tenant where the Logic App is registered",
                     "Confirm the Logic App Easy Auth is enabled with platform.enabled = true"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.Unauthorized, cancellationToken);
             return res;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
@@ -143,7 +177,7 @@ public class CallLogicApp
                     "Get Function App Object ID: az webapp identity show --name <func-app-name> --resource-group <rg>",
                     "Add to Logic App Easy Auth: authsettingsV2 → identityProviders → azureActiveDirectory → validation → allowedPrincipals → identities"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.Forbidden, cancellationToken);
             return res;
         }
         catch (CredentialUnavailableException ex)
@@ -163,7 +197,7 @@ public class CallLogicApp
                     "Enable system-assigned managed identity: Function App → Identity → System assigned → On",
                     "When running locally, sign in with: az login --tenant <tenant-id>"
                 }
-            }, cancellationToken);
+            }, HttpStatusCode.InternalServerError, cancellationToken);
             return res;
         }
         catch (Exception ex)
@@ -174,12 +208,83 @@ public class CallLogicApp
             {
                 error  = "InternalError",
                 detail = ex.Message
-            }, cancellationToken);
+            }, HttpStatusCode.InternalServerError, cancellationToken);
             return res;
         }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────────────────────────
+
+    private static async Task<ScenarioRequest?> ReadScenarioRequestAsync(
+        HttpRequestData request,
+        CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(
+            request.Body,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 1024,
+            leaveOpen: true);
+        var json = await reader.ReadToEndAsync(cancellationToken);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<ScenarioRequest>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+    }
+
+    private static string AddQueryParameter(string url, string name, string value)
+    {
+        var separator = url.Contains('?', StringComparison.Ordinal) ? '&' : '?';
+        return $"{url}{separator}{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}";
+    }
+
+    private static TokenClaims ReadTokenClaims(string token)
+    {
+        var segments = token.Split('.');
+        if (segments.Length != 3)
+        {
+            throw new InvalidOperationException("The acquired access token is not a three-segment JWT.");
+        }
+
+        var payload = segments[1].Replace('-', '+').Replace('_', '/');
+        payload += (payload.Length % 4) switch
+        {
+            2 => "==",
+            3 => "=",
+            0 => string.Empty,
+            _ => throw new InvalidOperationException("The acquired access token has invalid Base64Url encoding.")
+        };
+
+        using var document = JsonDocument.Parse(Convert.FromBase64String(payload));
+        var claims = document.RootElement;
+        var expiresOn = claims.TryGetProperty("exp", out var expiryClaim) && expiryClaim.TryGetInt64(out var expiry)
+            ? DateTimeOffset.FromUnixTimeSeconds(expiry)
+            : (DateTimeOffset?)null;
+
+        return new TokenClaims(
+            GetStringClaim(claims, "aud"),
+            GetStringClaim(claims, "iss"),
+            GetStringClaim(claims, "oid"),
+            GetStringClaim(claims, "azp") ?? GetStringClaim(claims, "appid"),
+            expiresOn);
+    }
+
+    private static string? GetStringClaim(JsonElement claims, string claimName)
+    {
+        if (!claims.TryGetProperty(claimName, out var claim))
+        {
+            return null;
+        }
+
+        return claim.ValueKind switch
+        {
+            JsonValueKind.String => claim.GetString(),
+            JsonValueKind.Array => string.Join(",", claim.EnumerateArray().Select(value => value.GetString())),
+            _ => claim.ToString()
+        };
+    }
 
     /// <summary>
     /// Acquires a bearer token for the Logic App resource using DefaultAzureCredential.
@@ -253,4 +358,13 @@ public class CallLogicApp
 
         return await response.Content.ReadAsStringAsync(cancellationToken);
     }
+
+    private sealed record TokenClaims(
+        string? Audience,
+        string? Issuer,
+        string? ObjectId,
+        string? CallerAppId,
+        DateTimeOffset? ExpiresOn);
+
+    private sealed record ScenarioRequest(string? Scenario);
 }

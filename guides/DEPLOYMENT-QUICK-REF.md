@@ -15,7 +15,7 @@ Function App Name:              {functionAppName}
 Function App Location:          https://{functionAppName}.azurewebsites.net
 
 Workflow:                       httpTriggerWorkflow
-Invoke URL (NO SIG!):           https://{logicAppName}.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01
+Invoke URL (NO SIG!):           https://{logicAppName}.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01
 
 Audience (for bearer token):    {logicAppClientId}
 
@@ -33,7 +33,7 @@ cd c:\Code\CSU\Ores\EasyAuth\solution
 .\deploy.ps1 `
   -FunctionAppName "{functionAppName}" `
   -ResourceGroupName "{resourceGroupName}" `
-  -LogicAppUrl "https://{logicAppName}.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -LogicAppUrl "https://{logicAppName}.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -LogicAppAudience "{logicAppClientId}" `
   -TenantId "{tenantId}"
 ```
@@ -64,31 +64,14 @@ az functionapp deployment slot list `
 
 ## Deploy Workflow to Logic App
 
-### Option 1: Azure Portal (Recommended)
-1. Go to https://portal.azure.com
-2. Search: `la-easyauth-lab-dev-la-daaq6t5xzrpaw`
-3. Click **Workflows** tab
-4. Click **Add** button
-5. Name: `httpTriggerWorkflow`
-6. Select HTTP trigger
-7. Save
-
-### Option 2: VS Code Extension
-1. Install: [Azure Logic Apps (Standard)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-logic-apps)
-2. Sign in to Azure
-3. Right-click resource → Create new workflow
-
-### Option 3: PowerShell (if needed)
 ```powershell
-# Read the workflow definition
-$workflow = Get-Content -Path "src/httpTriggerWorkflow/workflow.json" -Raw
-
-# Deploy via ARM template
-az deployment group create `
-  --name "workflow-deployment" `
-  --resource-group "rg-la-easyauth-lab-dev" `
-  --template-file "infra/main.json"
+./scripts/deploy-workflow.ps1 `
+  -SubscriptionId "{subscriptionId}" `
+  -ResourceGroupName "{resourceGroupName}" `
+  -LogicAppName "{logicAppName}"
 ```
+
+This ZIP deployment publishes `src/host.json` and the workflow directory separately from the Bicep infrastructure deployment. For a private Logic App, run it from a machine with network and DNS access to the SCM endpoint.
 
 ## Verify Workflow Deployment
 
@@ -177,7 +160,7 @@ $headers = @{
 }
 
 $response = Invoke-WebRequest `
-  -Uri "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -Uri "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -Method Post `
   -Headers $headers `
   -Body '{"test":"message"}'
@@ -256,7 +239,7 @@ traces
 cd solution; .\deploy.ps1 `
   -FunctionAppName "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" `
   -ResourceGroupName "rg-la-easyauth-lab-dev" `
-  -LogicAppUrl "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -LogicAppUrl "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -LogicAppAudience "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
   -TenantId "00922812-791e-41c8-a99e-45c3ed784cf5"; `
 

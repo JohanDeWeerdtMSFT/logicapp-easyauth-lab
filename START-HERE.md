@@ -17,7 +17,7 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 | 2 | Learn the concepts | Read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
 | 3 | Review the walkthrough | Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) |
 | 4 | Deploy | Run `scripts/deploy.ps1` (Step 4 below) |
-| 5 | Validate | Follow [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
+| 5 | Validate | Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
 | 6 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Step 0 - If Using GitHub Codespaces
@@ -29,7 +29,7 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 
 ## Step 1 - Understand the Goal
 
-1. Read [README.md](README.md), especially the **Before you deploy** prerequisites and the private networking warning.
+1. Read [README.md](README.md), especially the **Before you deploy** prerequisites and classroom networking choice.
 2. Skim [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md).
 
 ## Step 2 - Learn the Identity Concepts
@@ -47,7 +47,7 @@ After reading it you should be able to explain, in your own words:
 ## Step 3 - Review What Gets Deployed
 
 1. Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md).
-2. Read [docs/lab3-testing-evidence-summary.md](docs/lab3-testing-evidence-summary.md).
+2. Read [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
 ## Step 4 - Deploy Infrastructure
 
@@ -58,23 +58,22 @@ Run:
   -DeployFuncCallerDemo -FuncCallerEntraClientId "{callerClientId}"
 ```
 
-`-DeployFuncCallerDemo` is what creates the caller Function App, the virtual network, the
-private endpoint, and the caller principal allow-list. Without it the deployment only creates the
+`-DeployFuncCallerDemo` creates the caller Function App, the virtual network and private storage
+connectivity, and the caller principal allow-list. App endpoints remain public in the classroom default. Without it the deployment only creates the
 Logic App and its Easy Auth configuration, and Steps 5 and 6 below cannot be completed.
 `{callerClientId}` is the client ID of the **second** Entra app registration, the one that represents
 the caller Function App.
+
+For the optional private-ingress exercise, add `-EnablePrivateAppNetworking` and use a VNet-connected
+deployment executor. See [Private networking and CI/CD](docs/07-private-networking-and-cicd.md).
 
 Then confirm resource group `rg-la-easyauth-lab-dev` is created.
 
 ## Step 5 - Deploy and Validate App Flow
 
-1. Follow [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md).
-   > **Note:** Some steps in that guide still reference a SAS-signed callback URL
-   > (`sp`, `sv`, `sig` parameters) as an example `LOGIC_APP_URL` value. The active
-   > learner path in this lab authenticates with an Entra access token, not a SAS
-   > signature; treat the callback URL in that guide as an illustrative endpoint
-   > format only, not as a required SAS-based authentication step.
+1. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md). It deploys the workflow and caller code, validates selected access-token claims without exposing the token, and proves Easy Auth behavior.
 2. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
+3. Compare the deployment with [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
 ## Step 6 - Confirm Success
 
@@ -93,7 +92,7 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 | Where are expected scenarios? | [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
 | Where is troubleshooting? | [docs/troubleshooting.md](docs/troubleshooting.md) |
 | Where are the identity concepts explained? | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
-| How do I clean up resources? | [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md#clean-up--undeploy) |
+| How do I clean up resources? | [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md#question-2-is-there-an-undeploy-option) |
 | Is Codespaces supported? | Yes, via `.devcontainer/devcontainer.json`. |
 
 ## Recommended Reading Order
@@ -101,7 +100,7 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 1. [README.md](README.md)
 2. [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
 3. [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
-4. [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md)
+4. [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 5. [docs/evidence/findings.md](docs/evidence/findings.md)
 
 ## Optional Background Reading

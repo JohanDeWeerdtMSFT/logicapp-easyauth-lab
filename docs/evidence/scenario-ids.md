@@ -14,8 +14,9 @@ This file is the source of truth for scenario IDs used in the current Lab 3-focu
 - **B1**: Valid caller identity token -> expected success
 - **B2**: Invalid or expired token -> expected failure (401)
 - **B3**: Wrong audience token -> expected failure (401)
-- **B4**: No token and no authorized trigger context -> expected failure
+- **B4**: No token in strict `Return401` mode -> expected failure (401)
 - **B5**: Authorized request path for configured trigger flow -> expected success
+- **B6**: Valid token from a principal not in `allowedPrincipals` -> expected failure (403)
 
 ## How To Use This Matrix
 
@@ -23,3 +24,5 @@ This file is the source of truth for scenario IDs used in the current Lab 3-focu
 2. Execute the matching test from the lab guide.
 3. Compare actual status/log behavior to expected behavior.
 4. Save evidence (status code, log query output, and run-history proof).
+
+Do not save a complete access token, SAS signature, client secret, storage key, or connection string as evidence.

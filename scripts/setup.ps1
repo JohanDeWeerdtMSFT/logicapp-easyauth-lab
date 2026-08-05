@@ -279,7 +279,7 @@ if (-not $WhatIf) {
     Write-Host "     docs/lab3-passwordless-managed-identity-easy-auth.md" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  3. Test the bearer token flow:" -ForegroundColor Gray
-    Write-Host "     curl https://<func-app-name>.azurewebsites.net/api/CallLogicApp" -ForegroundColor Gray
+    Write-Host "     Retrieve the Function key and follow docs/lab3-testing-and-verification.md" -ForegroundColor Gray
     Write-Host ""
 }
 

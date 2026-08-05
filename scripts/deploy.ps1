@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Orchestrates the complete infrastructure deployment for the Logic App Standard
-    Easy Auth validation lab, including resource group creation, Bicep template
+    Easy Auth validation lab, including resource group creation, ARM template
     deployment, and infrastructure configuration. This script automates the setup
     of Azure resources needed for testing Easy Auth authentication patterns with
     Logic App Standard workloads.
@@ -18,13 +18,17 @@
     
     Prerequisites:
     - Azure CLI must be installed and authenticated
-    - Bicep template must exist at infra\main.bicep
+    - Generated ARM template must exist at infra\main.json
     - Required Entra app client ID and tenant ID for Easy Auth configuration
-    - Appropriate Azure subscription permissions (Contributor or higher)
+        - Permission to create resources and role assignments (Owner, or Contributor
+            plus User Access Administrator/RBAC Administrator)
 
 .EXAMPLE
-    .\deploy.ps1 -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..."
+    .\deploy.ps1 -SubscriptionId "00000000-..." -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..."
     .\deploy.ps1 -EntraAppClientId "00000000-..." -EntraAppTenantId "00000000-..." -WhatIf
+
+    When -SubscriptionId is omitted, the script reads AZURE_SUBSCRIPTION_ID from
+    the process environment or the repository .env file.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -37,6 +41,8 @@ param(
     [ValidateSet('Return401', 'AllowAnonymous')]
     [string]$EasyAuthMode = 'Return401',
 
+    [string]$SubscriptionId = '',
+
     [Parameter(Mandatory)]
     [string]$EntraAppClientId,
 
@@ -47,17 +53,48 @@ param(
 
     [switch]$DeployFuncCallerDemo,
 
-    [string]$FuncCallerEntraClientId = ''
+    [switch]$EnablePrivateAppNetworking,
+
+    [string]$FuncCallerEntraClientId = '',
+
+    [string]$EasyAuthAllowedPrincipalOverride = ''
 )
 
 $ErrorActionPreference = 'Stop'
+$isWhatIf = [bool]$WhatIfPreference
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $SubscriptionId = [Environment]::GetEnvironmentVariable('AZURE_SUBSCRIPTION_ID')
+}
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $envFile = Join-Path $PSScriptRoot '..\.env'
+    if (Test-Path $envFile) {
+        $subscriptionLine = Get-Content $envFile | Where-Object {
+            $_ -match '^\s*AZURE_SUBSCRIPTION_ID\s*='
+        } | Select-Object -First 1
+
+        if ($subscriptionLine) {
+            $SubscriptionId = ($subscriptionLine -split '=', 2)[1].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or $SubscriptionId -eq 'your-subscription-id-here') {
+    throw 'Provide -SubscriptionId, set AZURE_SUBSCRIPTION_ID, or configure AZURE_SUBSCRIPTION_ID in .env.'
+}
+
+if ($EnablePrivateAppNetworking -and -not $DeployFuncCallerDemo) {
+    throw '-EnablePrivateAppNetworking requires -DeployFuncCallerDemo because the caller demo provisions the required VNet and subnets.'
+}
 
 # ── Variables ────────────────────────────────────────────────────────────────
 $namingPrefix       = 'la-easyauth-lab'
 $resourceGroupName  = "rg-${namingPrefix}-${EnvironmentName}"
-$subscriptionId     = '6851693c-0b74-4462-8da8-cd498b088827'
-$bicepFile          = Join-Path $PSScriptRoot '..\infra\main.bicep'
+$templateFile       = Join-Path $PSScriptRoot '..\infra\main.json'
 $deploymentName     = "easyauth-lab-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$azureCliPath       = Get-Command az -CommandType Application -ErrorAction Stop |
+    Select-Object -First 1 -ExpandProperty Source
 
 Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host   "║  Logic App Easy Auth Lab — Deployment Orchestrator          ║" -ForegroundColor Cyan
@@ -67,20 +104,32 @@ Write-Host "  Environment   : $EnvironmentName"
 Write-Host "  Location      : $Location"
 Write-Host "  Easy Auth Mode: $EasyAuthMode"
 Write-Host "  Resource Group: $resourceGroupName"
-Write-Host "  Subscription  : $subscriptionId"
-Write-Host "  Bicep Template: $bicepFile"
-Write-Host "  Mode          : $(if ($WhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
+Write-Host "  Subscription  : $SubscriptionId"
+Write-Host "  ARM Template  : $templateFile"
+Write-Host "  Mode          : $(if ($isWhatIf) { 'WHAT-IF (dry run)' } else { 'DEPLOY' })"
 Write-Host "  Function App  : $(if ($DeployFunctionApp) { 'Yes' } else { 'No' })"
 Write-Host "  Caller Demo   : $(if ($DeployFuncCallerDemo) { 'Yes' } else { 'No' })"
+Write-Host "  Private Ingress: $(if ($EnablePrivateAppNetworking) { 'Yes' } else { 'No (classroom default)' })"
 Write-Host ""
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 function Invoke-AzCommand {
     param([string]$Description, [string[]]$Arguments)
     Write-Host "→ $Description" -ForegroundColor Yellow
-    $output = & az @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "az command failed (exit $LASTEXITCODE): $output"
+    $previousErrorActionPreference = $ErrorActionPreference
+    $previousNativeErrorPreference = $PSNativeCommandUseErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $PSNativeCommandUseErrorActionPreference = $false
+        $output = & $azureCliPath @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+        $PSNativeCommandUseErrorActionPreference = $previousNativeErrorPreference
+    }
+    if ($exitCode -ne 0) {
+        throw "az command failed (exit $exitCode): $output"
     }
     return $output
 }
@@ -89,14 +138,15 @@ function Invoke-AzCommand {
 try {
     Write-Host "── Pre-flight checks ──────────────────────────────────────" -ForegroundColor DarkGray
 
-    # Verify Bicep file exists
-    if (-not (Test-Path $bicepFile)) {
-        throw "Bicep template not found at '$bicepFile'. Run Lane A first."
+    # main.json is generated from main.bicep and committed so deployment does
+    # not depend on Azure CLI's on-the-fly Bicep compilation path.
+    if (-not (Test-Path $templateFile)) {
+        throw "Generated ARM template not found at '$templateFile'. Build infra/main.bicep before deploying."
     }
 
     # Set subscription context
     Invoke-AzCommand -Description "Setting subscription context" `
-        -Arguments @('account', 'set', '--subscription', $subscriptionId)
+        -Arguments @('account', 'set', '--subscription', $SubscriptionId)
 
     # Verify logged-in identity
     $accountJson = Invoke-AzCommand -Description "Verifying Azure CLI login" `
@@ -104,12 +154,60 @@ try {
     $account = $accountJson | ConvertFrom-Json
     Write-Host "  Logged in as: $($account.user.name) ($($account.user.type))" -ForegroundColor Green
 
+    # Ensure Entra can issue managed-identity tokens for the Logic App API audience.
+    $logicAppAudience = "api://$EntraAppClientId"
+    $logicAppRegistrationJson = Invoke-AzCommand -Description "Verifying Logic App Entra app registration" `
+        -Arguments @('ad', 'app', 'show', '--id', $EntraAppClientId, '--output', 'json')
+    $logicAppRegistration = $logicAppRegistrationJson | ConvertFrom-Json
+
+    if ($logicAppRegistration.identifierUris -notcontains $logicAppAudience) {
+        if ($isWhatIf) {
+            Write-Warning "Logic App Application ID URI is missing. Deployment will set '$logicAppAudience'."
+        }
+        else {
+            $logicAppIdentifierUris = @($logicAppRegistration.identifierUris) + $logicAppAudience |
+                Select-Object -Unique
+            Invoke-AzCommand -Description "Setting Logic App Application ID URI" `
+                -Arguments (@('ad', 'app', 'update', '--id', $EntraAppClientId, '--identifier-uris') + $logicAppIdentifierUris)
+        }
+    }
+
+    $logicAppServicePrincipalId = az ad sp list `
+        --filter "appId eq '$EntraAppClientId'" `
+        --query '[0].id' `
+        --output tsv
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not check the Logic App service principal for app ID '$EntraAppClientId'."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($logicAppServicePrincipalId)) {
+        if ($isWhatIf) {
+            Write-Warning 'Logic App service principal is missing. Deployment will create it.'
+        }
+        else {
+            Invoke-AzCommand -Description "Creating Logic App service principal" `
+                -Arguments @('ad', 'sp', 'create', '--id', $EntraAppClientId, '--output', 'none')
+        }
+    }
+
+    if ($DeployFuncCallerDemo) {
+        if ([string]::IsNullOrWhiteSpace($FuncCallerEntraClientId)) {
+            throw '-FuncCallerEntraClientId is required when -DeployFuncCallerDemo is specified.'
+        }
+
+        Invoke-AzCommand -Description "Verifying caller Function Entra app registration" `
+            -Arguments @('ad', 'app', 'show', '--id', $FuncCallerEntraClientId, '--output', 'none') | Out-Null
+    }
+
     # ── Step 1: Resource Group ───────────────────────────────────────────────
     Write-Host "`n── Step 1: Resource Group ─────────────────────────────────" -ForegroundColor DarkGray
 
     $rgExists = az group exists --name $resourceGroupName 2>$null
     if ($rgExists -eq 'true') {
         Write-Host "  Resource group '$resourceGroupName' already exists." -ForegroundColor Green
+    }
+    elseif ($isWhatIf) {
+        throw "Resource group '$resourceGroupName' does not exist. Create it explicitly before running -WhatIf; preview mode does not create resources."
     }
     else {
         Write-Host "  Creating resource group '$resourceGroupName' in '$Location'..." -ForegroundColor Yellow
@@ -132,7 +230,8 @@ try {
         'entraAppTenantId=' + $EntraAppTenantId,
         'easyAuthMode=' + $unauthAction,
         'deployFunctionApp=' + $DeployFunctionApp.ToString().ToLower(),
-        'deployFuncCallerDemo=' + $DeployFuncCallerDemo.ToString().ToLower()
+        'deployFuncCallerDemo=' + $DeployFuncCallerDemo.ToString().ToLower(),
+        'enablePrivateAppNetworking=' + $EnablePrivateAppNetworking.ToString().ToLower()
     )
 
     if ($DeployFuncCallerDemo) {
@@ -142,14 +241,18 @@ try {
         $deployParams += 'funcCallerEntraClientId=' + $FuncCallerEntraClientId
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($EasyAuthAllowedPrincipalOverride)) {
+        $deployParams += 'easyAuthAllowedPrincipalOverride=' + $EasyAuthAllowedPrincipalOverride
+    }
+
     # ── Step 2/3: What-If or Deploy ─────────────────────────────────────────
-    if ($WhatIf) {
+    if ($isWhatIf) {
         Write-Host "`n── Step 2: What-If Analysis ───────────────────────────────" -ForegroundColor DarkGray
 
         $whatIfArgs = @(
             'deployment', 'group', 'what-if',
             '--resource-group', $resourceGroupName,
-            '--template-file', $bicepFile,
+            '--template-file', $templateFile,
             '--name', $deploymentName,
             '--mode', 'Incremental'
         )
@@ -164,15 +267,24 @@ try {
         $deployArgs = @(
             'deployment', 'group', 'create',
             '--resource-group', $resourceGroupName,
-            '--template-file', $bicepFile,
+            '--template-file', $templateFile,
             '--name', $deploymentName,
             '--mode', 'Incremental',
-            '--output', 'json'
+            '--only-show-errors',
+            '--output', 'none'
         )
         foreach ($p in $deployParams) { $deployArgs += '--parameters'; $deployArgs += $p }
 
-        $deployOutputRaw = Invoke-AzCommand -Description "Creating deployment '$deploymentName'" -Arguments $deployArgs
-        $deployment = ($deployOutputRaw -join '') | ConvertFrom-Json
+        Invoke-AzCommand -Description "Creating deployment '$deploymentName'" -Arguments $deployArgs | Out-Null
+        $deploymentOutputRaw = Invoke-AzCommand -Description "Reading deployment '$deploymentName' outputs" `
+            -Arguments @(
+                'deployment', 'group', 'show',
+                '--resource-group', $resourceGroupName,
+                '--name', $deploymentName,
+                '--only-show-errors',
+                '--output', 'json'
+            )
+        $deployment = ($deploymentOutputRaw -join '') | ConvertFrom-Json
 
         # ── Step 3: Capture Outputs ──────────────────────────────────────────
         Write-Host "`n── Step 3: Deployment Outputs ─────────────────────────────" -ForegroundColor DarkGray
@@ -191,6 +303,87 @@ try {
             Write-Host "  Function App Name  : $($outputs.functionAppName.value)"
         }
 
+        if ($DeployFuncCallerDemo) {
+            $requiredCallerOutputs = @(
+                'functionAppCallerName',
+                'functionAppCallerHostname',
+                'functionAppCallerPrincipalId'
+            )
+            foreach ($outputName in $requiredCallerOutputs) {
+                if (-not $outputs.PSObject.Properties[$outputName] -or
+                    [string]::IsNullOrWhiteSpace($outputs.$outputName.value)) {
+                    throw "Deployment did not return required caller output '$outputName'."
+                }
+            }
+
+            Write-Host "  Caller Function App: $($outputs.functionAppCallerName.value)"
+            Write-Host "  Caller Hostname    : $($outputs.functionAppCallerHostname.value)"
+            Write-Host "  Caller Principal ID: $($outputs.functionAppCallerPrincipalId.value)"
+        }
+
+        # Incremental ARM deployments do not remove resources that disappear from
+        # the template. Explicitly remove retained private ingress when the public
+        # classroom mode is selected.
+        if (-not $EnablePrivateAppNetworking) {
+            $privateEndpointName = "pe-$logicAppName"
+            $privateEndpointId = az network private-endpoint show `
+                --subscription $SubscriptionId `
+                --resource-group $resourceGroupName `
+                --name $privateEndpointName `
+                --query id `
+                --output tsv 2>$null
+
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($privateEndpointId)) {
+                Invoke-AzCommand -Description "Removing retained Logic App private endpoint for public classroom mode" `
+                    -Arguments @(
+                        'network', 'private-endpoint', 'delete',
+                        '--subscription', $SubscriptionId,
+                        '--resource-group', $resourceGroupName,
+                        '--name', $privateEndpointName
+                    ) | Out-Null
+            }
+
+            $privateDnsZoneName = 'privatelink.azurewebsites.net'
+            $privateDnsZoneId = az network private-dns zone show `
+                --subscription $SubscriptionId `
+                --resource-group $resourceGroupName `
+                --name $privateDnsZoneName `
+                --query id `
+                --output tsv 2>$null
+
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($privateDnsZoneId)) {
+                $privateDnsLinkName = "${namingPrefix}-${EnvironmentName}-vnet-link"
+                $privateDnsLinkId = az network private-dns link vnet show `
+                    --subscription $SubscriptionId `
+                    --resource-group $resourceGroupName `
+                    --zone-name $privateDnsZoneName `
+                    --name $privateDnsLinkName `
+                    --query id `
+                    --output tsv 2>$null
+
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($privateDnsLinkId)) {
+                    Invoke-AzCommand -Description "Removing retained App Service private DNS VNet link" `
+                        -Arguments @(
+                            'network', 'private-dns', 'link', 'vnet', 'delete',
+                            '--subscription', $SubscriptionId,
+                            '--resource-group', $resourceGroupName,
+                            '--zone-name', $privateDnsZoneName,
+                            '--name', $privateDnsLinkName,
+                            '--yes'
+                        ) | Out-Null
+                }
+
+                Invoke-AzCommand -Description "Removing retained App Service private DNS zone for public classroom mode" `
+                    -Arguments @(
+                        'network', 'private-dns', 'zone', 'delete',
+                        '--subscription', $SubscriptionId,
+                        '--resource-group', $resourceGroupName,
+                        '--name', $privateDnsZoneName,
+                        '--yes'
+                    ) | Out-Null
+            }
+        }
+
         # ── Step 4: Summary ──────────────────────────────────────────────────
         Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
         Write-Host   "║  Deployment Succeeded                                        ║" -ForegroundColor Green
@@ -202,18 +395,13 @@ try {
         Write-Host "  Endpoint         : https://$logicAppHostname"
         Write-Host ""
         Write-Host "  ── Next Steps ──" -ForegroundColor Cyan
-        Write-Host "  1. Deploy workflow code:"
-        Write-Host "       az logicapp deployment source config-zip --name $logicAppName --resource-group $resourceGroupName --src <zip-path>"
+        Write-Host "  1. Publish the workflow artifact (requires access to the Logic App SCM endpoint):"
+        Write-Host "       ./scripts/deploy-workflow.ps1 -SubscriptionId '$SubscriptionId' -ResourceGroupName '$resourceGroupName' -LogicAppName '$logicAppName'"
         Write-Host ""
-        Write-Host "  2. Run validation (Track B — trigger security):"
-        Write-Host "       .\validate.ps1 -LogicAppName $logicAppName -ResourceGroupName $resourceGroupName ``"
-        Write-Host "           -EntraAppClientId $EntraAppClientId -EntraAppTenantId $EntraAppTenantId ``"
-        Write-Host "           -ClientSecret (Read-Host -AsSecureString 'Client secret')"
+        Write-Host "  2. Verify workflow health, deploy the caller code, and run the managed-identity tests:"
+        Write-Host "       docs/lab3-testing-and-verification.md"
         Write-Host ""
-        Write-Host "  3. Run validation (Track A — portal manageability):"
-        Write-Host "       .\validate.ps1 ... -TestMode TrackA"
-        Write-Host ""
-        Write-Host "  4. Portal verification (manual):"
+        Write-Host "  3. Portal verification (manual):"
         Write-Host "       https://portal.azure.com/#@/resource$logicAppId/logicApp"
         Write-Host ""
     }

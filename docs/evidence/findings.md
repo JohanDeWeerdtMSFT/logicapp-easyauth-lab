@@ -16,7 +16,11 @@ Use this page to quickly understand:
 
 ---
 
-## Key Findings
+## Current finding
+
+The public classroom path was validated end to end on 2026-08-04 with Logic App `Return401`, workflow method `POST`, and the Function App system-assigned managed identity in `allowedPrincipals`. See [current validation and drift](current-validation-and-drift.md).
+
+## Historical manageability findings
 
 ### 1) `Return401` breaks portal manageability for Logic App Standard hostruntime paths
 
@@ -27,9 +31,9 @@ What this means for trainees:
 - You may deploy successfully but still lose important run-management capabilities.
 - Debugging becomes harder because run details and replay-related actions can fail.
 
-### 2) `AllowAnonymous + allowedPrincipals` is the working lab pattern
+### 2) `AllowAnonymous + allowedPrincipals` was a manageability experiment
 
-Using `AllowAnonymous` with strict `allowedPrincipals` and token validation preserves manageability while still enforcing identity checks on bearer-token calls.
+Using `AllowAnonymous` can preserve some portal/runtime operations, but an anonymous request is not rejected at the Easy Auth edge. It is not the current secured classroom baseline.
 
 What this means for trainees:
 
@@ -37,9 +41,9 @@ What this means for trainees:
 - Bearer-token requests are still validated by Easy Auth.
 - You can complete both learning goals: secure call path + operational visibility.
 
-### 3) Network isolation and identity controls work together
+### 3) Private storage and identity controls work together
 
-The lab uses private endpoints, VNet integration, and managed identity.
+The classroom lab uses private storage endpoints, VNet integration, and managed identity while app endpoints remain public.
 
 What this means for trainees:
 
@@ -53,8 +57,9 @@ What this means for trainees:
 For this lab implementation, use this default direction:
 
 1. Keep Easy Auth enabled on the app host.
-2. Use `AllowAnonymous` with `allowedPrincipals` (as documented in the lab).
-3. Validate behavior using the scenario IDs in [scenario-ids.md](scenario-ids.md).
+2. Use `Return401`, the Logic App audience, and `allowedPrincipals` for the classroom security proof.
+3. Treat `AllowAnonymous` and private app ingress as optional advanced investigations.
+4. Validate behavior using the scenario IDs in [scenario-ids.md](scenario-ids.md).
 
 ---
 

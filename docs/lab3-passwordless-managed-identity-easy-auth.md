@@ -8,7 +8,7 @@ In this lab, you build a secure service-to-service flow where:
 2. The Function App calls a Logic App HTTP trigger with that bearer token.
 3. Easy Auth on the Logic App validates token and caller identity.
 
-No secrets or SAS signatures are required for this call pattern.
+The Function-to-Logic-App call requires no client secret or SAS signature. The public lab harness uses a Function key for its separate inbound guard.
 
 > New to Microsoft Entra ID, Easy Auth, or OAuth?
 > Read [Identity and Easy Auth concepts for Lab 3](lab3-managed-identity-bearer-token-flow.md) first.
@@ -45,9 +45,9 @@ workflow trigger. See [Authentication and authorization in App Service and Azure
 
 The caller Function App uses its **system-assigned managed identity**, enabled in
 [infra/modules/functionapp-caller.bicep](../infra/modules/functionapp-caller.bicep). Azure supplies the credential,
-so no secret is stored in code or app settings. The code reads the `LOGIC_APP_CLIENT_ID` app setting (the Logic
-App's Entra app registration client ID) and asks Microsoft Entra ID for an access token using the scope
-`<logic-app-client-id>/.default`, then sends it in the HTTP `Authorization` header using the bearer scheme. See
+so no secret is stored in code or app settings. The code reads the `LOGIC_APP_AUDIENCE` app setting (the Logic
+App's Application ID URI) and asks Microsoft Entra ID for an access token using the scope
+`api://<logic-app-client-id>/.default`, then sends it in the HTTP `Authorization` header using the bearer scheme. See
 [solution/CallerFunctionApp/CallLogicApp.cs](../solution/CallerFunctionApp/CallLogicApp.cs),
 [What are managed identities for Azure resources?](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview)
 and the [client credentials flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-client-creds-grant-flow).
@@ -60,8 +60,7 @@ access keys are regenerated, and the call is not tied to a directory identity.
 
 The Entra token flow instead proves the caller identity, uses short-lived tokens issued on demand, and allow-lists the
 caller explicitly. For that reason the intended learner path in this lab does not rely on a SAS-signed callback URL
-for authentication. The current validation guide still shows a SAS-signed callback URL as the endpoint value, which
-is a known gap that is being replaced.
+for authentication. The validation guide uses only the unsigned workflow endpoint plus the bearer token.
 See [Secure access and data for workflows in Azure Logic Apps](https://learn.microsoft.com/azure/logic-apps/logic-apps-securing-a-logic-app).
 
 ## Fast Trainee Path
@@ -122,19 +121,20 @@ flowchart LR
 - Plan: WS1
 - Easy Auth enabled
 - `allowedPrincipals` contains the Function App managed identity object ID
-- Private endpoint + private DNS integration
+- Public inbound access for the classroom path; Easy Auth remains the security boundary
+- Optional private endpoint + private DNS integration for production-oriented exercises
 
 ### Supporting Services
 
 - Storage account
 - Application Insights and Log Analytics
-- VNet and subnets for app integration + private endpoints
+- VNet and subnets for private storage connectivity
 
 ## App Settings (Function App)
 
 | Setting | Example Value | Purpose |
 | --- | --- | --- |
-| `LOGIC_APP_URL` | `https://<logic-app-host>/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01` | Target workflow endpoint |
+| `LOGIC_APP_URL` | `https://<logic-app-host>/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` | Target workflow endpoint |
 | `LOGIC_APP_AUDIENCE` | `api://<logic-app-client-id>` | Token audience for Easy Auth validation |
 | `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `<tenant-id>` | Tenant boundary for auth flow |
 
@@ -176,6 +176,23 @@ Easy Auth checks:
 
 ## Deployment Steps
 
+### Deploy the Lab 3 infrastructure
+
+Set `AZURE_SUBSCRIPTION_ID` in `.env`, sign in to Azure, and preview before deploying:
+
+```powershell
+az login --tenant '<tenant-id>'
+
+./scripts/deploy.ps1 `
+  -EntraAppClientId '<logic-app-client-id>' `
+  -EntraAppTenantId '<tenant-id>' `
+  -DeployFuncCallerDemo `
+  -FuncCallerEntraClientId '<caller-function-client-id>' `
+  -WhatIf
+```
+
+Remove `-WhatIf` after reviewing the changes. The deployment must return the Logic App name and hostname, caller Function App name and hostname, and caller principal ID. Continue with [the canonical deployment and validation guide](lab3-testing-and-verification.md).
+
 ### Step 1: Verify deployed resources
 
 ```powershell
@@ -186,22 +203,16 @@ az resource list --resource-group $resourceGroup --query "[].{name:name,type:typ
 
 ### Step 2: Deploy workflow definition
 
-Use one of these options:
+Publish the Standard Logic Apps project as a ZIP artifact:
 
-#### Option A: Azure Portal
+```powershell
+./scripts/deploy-workflow.ps1 `
+  -SubscriptionId '<subscription-id>' `
+  -ResourceGroupName $resourceGroup `
+  -LogicAppName '<logic-app-name>'
+```
 
-1. Open [Azure Portal](https://portal.azure.com).
-2. Open your Logic App Standard resource.
-3. Go to **Workflows**.
-4. Create workflow `httpTriggerWorkflow`.
-5. Paste JSON from [src/httpTriggerWorkflow/workflow.json](../src/httpTriggerWorkflow/workflow.json).
-6. Save.
-
-#### Option B: VS Code extension
-
-1. Install [Azure Logic Apps (Standard)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-logic-apps).
-2. Connect to your Logic App Standard resource.
-3. Create workflow from JSON.
+The publisher verifies that the live trigger method is `POST`.
 
 ### Step 3: Add Function App identity to Logic App `allowedPrincipals`
 
@@ -251,7 +262,7 @@ cd solution
 ./deploy.ps1 `
   -FunctionAppName $functionAppName `
   -ResourceGroupName $resourceGroup `
-  -LogicAppUrl "https://$logicAppHost/api/workflows/httpTriggerWorkflow/triggers/manual/invoke?api-version=2022-05-01" `
+  -LogicAppUrl "https://$logicAppHost/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -LogicAppAudience $logicAppAudience `
   -TenantId $tenantId
 ```
@@ -265,10 +276,12 @@ $functionAppName = "<function-app-name>"
 $resourceGroup = "<resource-group-name>"
 
 $funcHost = az functionapp show --name $functionAppName --resource-group $resourceGroup --query defaultHostName -o tsv
-Invoke-RestMethod -Method Post -Uri "https://$funcHost/api/CallLogicApp"
+$functionKey = az functionapp keys list --name $functionAppName --resource-group $resourceGroup --query functionKeys.default -o tsv
+Invoke-RestMethod -Method Post -Uri "https://$funcHost/api/CallLogicApp" -Headers @{ 'x-functions-key' = $functionKey }
+Remove-Variable functionKey
 ```
 
-Expected result: HTTP 200 and success payload.
+Expected result: HTTP 200 and success payload. Keep the Function key in memory and do not record it in lab evidence.
 
 ### Test 2: Query Application Insights
 
@@ -293,7 +306,7 @@ Expected traces:
 | 403 Forbidden | Caller identity not in `allowedPrincipals` | Function App principal ID and Easy Auth policy |
 | Workflow not found | Workflow not deployed | `httpTriggerWorkflow` exists and is saved |
 | Credential unavailable | Managed identity disabled | Function App identity status is `On` |
-| Network resolution issues | Private DNS or VNet path misconfigured | Private DNS link, VNet integration, private endpoint |
+| Network resolution issues | Private storage DNS or VNet path misconfigured | Private DNS links and VNet integration |
 
 ## Pattern Comparison
 
@@ -320,6 +333,6 @@ Authorization: Bearer <JWT>
 1. Managed identity removes credential management overhead.
 2. Easy Auth enforces token validation at the app edge.
 3. `allowedPrincipals` provides explicit caller allow-listing, which is the authorization decision.
-4. Private networking and identity checks are complementary controls.
+4. Private networking and identity checks are complementary controls; private inbound access is optional for this classroom lab.
 5. The audience proves *which API* the token was minted for; the principal check proves *who* may call it.
 6. No active learner step depends on a SAS-signed callback URL.

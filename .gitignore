@@ -1,6 +1,11 @@
 # Build outputs
 *.json.bak
 infra/*.json
+!infra/main.json
+**/bin/
+**/obj/
+**/publish/
+**/*.zip
 
 # Secrets and local config
 .env
@@ -28,4 +33,3 @@ docs/evidence/api-responses/*.json
 .terraform/
 *.tfstate*
 third_party/
-infra/*.json

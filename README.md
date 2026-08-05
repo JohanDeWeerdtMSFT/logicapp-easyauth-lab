@@ -4,7 +4,8 @@ This repository is a hands-on lab for trainees who want to learn how to secure A
 
 - Managed Identity (passwordless service-to-service auth)
 - Easy Auth (`authsettingsV2`)
-- Enterprise networking controls (VNet integration, private endpoints, private DNS)
+- Public classroom endpoints protected by Easy Auth, with private storage connectivity
+- Optional private Logic App ingress for production-oriented exercises
 
 > Active trainee path: Lab 3.
 > Lab 1 and Lab 2 concepts are preserved as optional background patterns and are not required to complete the hands-on flow.
@@ -26,25 +27,29 @@ Work through these in order. Steps 1 and 2 are conceptual and take about 15 minu
 1. **Understand the scenario**: a Function App calls a Logic App Standard workflow, and in the call path you build here the caller proves its identity with a Microsoft Entra ID access token that Easy Auth validates against `allowedPrincipals`. This is the behavior of the active learner call; it does not disable the Logic Apps request trigger's own default SAS authentication path, which still exists on the platform.
 2. **Understand the identity concepts**: read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md). It explains Easy Auth, Microsoft Entra ID, managed identity, access token, audience, resource, scope, authentication versus authorization, and why Easy Auth replaces SAS tokens.
 3. **Check identity prerequisites**:
-   - An Azure subscription and permission to create resources in a resource group.
-   - Permission to create a Microsoft Entra [app registration](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app), and permission to set its [Application ID URI / exposed API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes). Microsoft Entra lets users register applications by default; if your tenant has disabled that setting, you need the Application Developer role or an administrator who creates and assigns the app registration for you.
-   - Two app registrations when you enable the Lab 3 caller demo: one representing the Logic App (`entraAppClientId`) and one representing the caller Function App (`funcCallerEntraClientId`).
-   - Your tenant ID and both client IDs. `scripts/deploy.ps1` takes them as `-EntraAppTenantId`, `-EntraAppClientId`, and `-FuncCallerEntraClientId` (the last one together with `-DeployFuncCallerDemo`).
-4. **Check networking prerequisites**: see the warning below.
+    - An Azure subscription and permission to create resources and role assignments: Owner, or Contributor plus User Access Administrator/RBAC Administrator.
+    - Permission to create a Microsoft Entra [app registration](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app), and permission to set its [Application ID URI / exposed API](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes). Microsoft Entra lets users register applications by default; if your tenant has disabled that setting, you need the Application Developer role or an administrator who creates and assigns the app registration for you.
+    - Two app registrations when you enable the Lab 3 caller demo: one representing the Logic App (`entraAppClientId`) and one representing the caller Function App (`funcCallerEntraClientId`).
+    - Your tenant ID and both client IDs. `scripts/deploy.ps1` takes them as `-EntraAppTenantId`, `-EntraAppClientId`, and `-FuncCallerEntraClientId` (the last one together with `-DeployFuncCallerDemo`).
+4. **Choose the networking mode**: use the public classroom default first. Private Logic App ingress is an optional extension.
 
 > [!WARNING]
-> **Private networking affects how you can deploy.**
-> When the Lab 3 caller demo is enabled, the infrastructure provisions a virtual network, VNet integration, a
-> private endpoint, and a private DNS zone for the Logic App, and public network access to the Logic App can be
-> disabled. Azure Resource Manager deployment of the Bicep templates still works from a hosted CI/CD runner,
-> but ZIP/Kudu app-content deployment and HTTP validation against a private-only endpoint generally do **not**
-> work from a GitHub-hosted runner or a Microsoft-hosted Azure DevOps agent, because they have no route or
-> private DNS resolution into the virtual network. Use a machine or self-hosted agent with network reachability,
-> or run the lab in an environment where public access is acceptable.
+> **The active classroom path uses public app endpoints and private storage.**
+> The Function test harness requires a Function key, while its Easy Auth layer remains in `AllowAnonymous` mode. The Logic App uses strict
+> `Return401`, audience validation, and `allowedPrincipals`. The Function then uses its managed identity for the
+> protected Logic App call. The VNet and
+> storage private endpoints remain required because both hosts use the shared storage account with public storage
+> access disabled. The WS1 Workflow Service Plan requires storage account key access to remain enabled, even though
+> the configured `AzureWebJobsStorage` data path uses managed identity. Add `-EnablePrivateAppNetworking` only for the advanced private-ingress exercise. That mode
+> requires a VNet-connected deployment executor for ZIP/Kudu publishing and direct HTTP validation.
 > Background reading: [Private endpoints for App Service](https://learn.microsoft.com/azure/app-service/overview-private-endpoint),
 > [Private endpoint DNS configuration](https://learn.microsoft.com/azure/private-link/private-endpoint-dns),
 > [Azure Pipelines agents](https://learn.microsoft.com/azure/devops/pipelines/agents/agents).
-> A dedicated private networking and CI/CD guide is planned as a follow-up to this documentation phase.
+> See [Private networking and CI/CD](docs/07-private-networking-and-cicd.md) for the optional private-ingress path.
+
+The Function key is a lab access guard, not end-user identity or production authorization. Delete the lab resource
+group when finished. Before adding workflow side effects, replace the public harness with authenticated callers,
+access restrictions, APIM, or private ingress appropriate to the workload.
 
 Whichever network posture you use, the identity flow stays the same: managed identity, Entra access token,
 Easy Auth validation, and `allowedPrincipals`. Only network reachability changes.
@@ -55,8 +60,8 @@ Easy Auth validation, and `allowedPrincipals`. Only network reachability changes
 
 By the end of this lab, you will be able to:
 
-- Explain why `AllowAnonymous + allowedPrincipals` is used for Logic App Standard Easy Auth scenarios.
-- Deploy an environment where Logic App runtime access is private and identity-protected.
+- Explain how `Return401`, token audience validation, and `allowedPrincipals` protect the Logic App trigger.
+- Deploy public classroom endpoints protected by Easy Auth while keeping runtime storage private.
 - Write and run .NET code that acquires a Microsoft Entra token via managed identity.
 - Prove the secure flow using Logic App run history and Application Insights traces.
 
@@ -67,24 +72,24 @@ By the end of this lab, you will be able to:
 ```mermaid
 flowchart LR
     subgraph Azure[Azure Resource Group]
+        FA["Function App: Function key + managed identity"]
+        LA["Logic App Standard: Easy Auth Return401"]
+        AI[Application Insights]
         subgraph Network[Virtual Network]
-            FA[Function App\nSystem-assigned MI]
-            PE[Private Endpoint\nfor Logic App]
-            LA[Logic App Standard\nEasy Auth enabled]
-            AI[Application Insights]
-            SA[Storage Account]
+            SA[Private Storage Endpoints]
         end
     end
 
     Entra[Microsoft Entra ID]
 
-    FA -->|1. Request access token| Entra
-    Entra -->|2. Return JWT for Logic App audience| FA
-    FA -->|3. HTTPS call + Authorization Bearer token| PE
-    PE --> LA
-    LA -->|4. Easy Auth validates token + principal| LA
-    FA -->|5. Logs| AI
-    LA -->|6. Workflow state| SA
+    User[Learner] -->|1. Invoke with Function key| FA
+    FA -->|2. Request managed-identity token| Entra
+    Entra -->|3. Return JWT for Logic App audience| FA
+    FA -->|4. Public HTTPS call + Authorization Bearer token| LA
+    LA -->|5. Easy Auth validates token + principal| LA
+    FA -->|6. Logs| AI
+    LA -->|7. Workflow state| SA
+    FA -->|8. Host storage| SA
 ```
 
 ---
@@ -181,6 +186,9 @@ You need an Entra app registration for the Easy Auth trust relationship.
 - [How to register an app](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app)
 - [How to expose an API / application ID URI (audience)](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes)
 
+The deployment script verifies that the Logic App registration has the default Application ID URI
+`api://<logic-app-client-id>` and creates its tenant service principal when missing.
+
 ### Step 1: Clone and configure
 
 ```bash
@@ -195,13 +203,18 @@ Fill `.env` with your tenant/subscription/region values.
 
 ```powershell
 az login
-./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"
+./scripts/deploy.ps1 `
+    -EntraAppClientId "<logic-app-client-id>" `
+    -EntraAppTenantId "<tenant-id>" `
+    -DeployFuncCallerDemo `
+    -FuncCallerEntraClientId "<caller-function-client-id>"
 ```
 
 ### Step 3: Deploy code and validate
 
-- Follow: [labs/lab3-bearer-token/docs/lab3-testing-and-verification.md](labs/lab3-bearer-token/docs/lab3-testing-and-verification.md)
+- Follow: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
+- Review the current live baseline and known documentation drift in [docs/evidence/current-validation-and-drift.md](docs/evidence/current-validation-and-drift.md)
 
 ---
 
@@ -215,7 +228,7 @@ One-click startup flow:
 2. Wait for container setup to complete.
 3. Run `az login --use-device-code`.
 4. Configure `.env` from `.env.example`.
-5. Run `./scripts/deploy.ps1 -EntraAppClientId "<client-id>" -EntraAppTenantId "<tenant-id>"`.
+5. Run `./scripts/deploy.ps1 -EntraAppClientId "<logic-app-client-id>" -EntraAppTenantId "<tenant-id>" -DeployFuncCallerDemo -FuncCallerEntraClientId "<caller-function-client-id>"`.
 
 The container includes Azure CLI, PowerShell, and .NET 8.
 
