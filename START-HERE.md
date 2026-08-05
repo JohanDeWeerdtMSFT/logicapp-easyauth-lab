@@ -4,7 +4,7 @@ This repository is now focused on one trainee path:
 
 - Lab 3: secure Function App to Logic App calls with managed identity + Easy Auth.
 
-> **Instructor:** Use [the numbered instructor walkthrough](docs/lab3-instructor-walkthrough.md) as the single end-to-end presentation script. It starts with app registrations and ends with the live demo, run history, logs, and cleanup.
+> **Instructor:** Already have the Logic App and Function App? Start with [Portal-only setup for existing resources](docs/lab3-instructor-walkthrough.md#portal-only-setup-for-existing-resources). For a new environment, use the complete numbered walkthrough from Step 1 through Step 17.
 
 Lab 1 and Lab 2 material is now background context only and is not required for completion of the active hands-on path.
 

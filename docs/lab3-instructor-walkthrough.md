@@ -2,6 +2,133 @@
 
 Use this page while presenting the environment to an attendee. Complete the steps in order. Each step includes what to do, what to show in the portal, and what to explain.
 
+> **Already have the Logic App and Function App and want portal-only setup?** Use [Portal-only setup for existing resources](#portal-only-setup-for-existing-resources). The existing validated environment already contains the `/runtime/*` exclusion required for portal run history. Azure portal does not expose that one Easy Auth property.
+
+## Portal-only setup for existing resources
+
+Use this route when the Logic App Standard resource, Function App, workflow, and Function code already exist.
+
+### Portal Step 1: Record the tenant and app names
+
+Open the Azure portal and record:
+
+- Tenant ID: `00922812-791e-41c8-a99e-45c3ed784cf5`
+- Resource group: `rg-la-easyauth-lab-dev`
+- Logic App: `la-easyauth-lab-dev-la-daaq6t5xzrpaw`
+- Function App: `la-easyauth-lab-dev-caller-daaq6t5xzrpaw`
+
+### Portal Step 2: Inspect the Logic App API registration
+
+1. Open **Microsoft Entra ID** > **App registrations**.
+2. Open the registration whose Application (client) ID is `786594a8-6b38-40cf-8c6b-d434b539dd46`.
+3. On **Overview**, show the Application (client) ID and Directory (tenant) ID.
+4. Open **Expose an API**.
+5. Confirm the Application ID URI is `api://786594a8-6b38-40cf-8c6b-d434b539dd46`.
+6. Do not create a client secret, delegated scope, app role, or redirect URI for this managed-identity lab.
+
+Explain that this registration represents the protected API. The Application ID URI becomes the token audience.
+
+### Portal Step 3: Enable the Function managed identity
+
+1. Open the Function App.
+2. Select **Settings** > **Identity**.
+3. On **System assigned**, confirm **Status** is **On**.
+4. Record the **Object (principal) ID**: `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1`.
+
+Explain that this managed identity is the actual caller. It is different from the Logic App app-registration client ID.
+
+### Portal Step 4: Configure Logic App Easy Auth
+
+1. Open the Logic App Standard resource.
+2. Select **Settings** > **Authentication**.
+3. If Microsoft is not listed, select **Add identity provider**.
+4. Select **Microsoft** and **Workforce configuration (current tenant)**.
+5. Select **Pick an existing app registration in this directory**.
+6. Select the Logic App API registration from Portal Step 2.
+7. Under authentication settings, select **Require authentication**.
+8. For unauthenticated requests, select **HTTP 401 Unauthorized**.
+9. Under additional checks, use the values in the following table.
+10. Save the identity provider.
+
+| Additional check | Portal value |
+| --- | --- |
+| Client application requirement | Allow requests from any application for this lab |
+| Identity requirement | Allow requests from specific identities |
+| Allowed identity | Function managed-identity Object ID from Portal Step 3 |
+| Tenant requirement | Allow requests only from the issuer tenant |
+| Allowed token audiences | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` |
+
+If Microsoft is already listed, select **Edit** beside it and verify the same values.
+
+> The portal can configure the identity provider, `Require authentication`, HTTP 401, allowed audience, tenant, and specific identity requirement. It cannot display or configure Easy Auth `excludedPaths`. The current environment already contains `/runtime/*`, which permits Logic Apps run-history operations while `/api/*` remains protected. Do not delete and recreate Authentication immediately before the demo because that can remove this hidden property.
+
+### Portal Step 5: Configure the Function application settings
+
+1. Open the Function App.
+2. Select **Settings** > **Environment variables**.
+3. On **App settings**, confirm these values:
+
+| Name | Value |
+| --- | --- |
+| `LOGIC_APP_URL` | `https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` |
+| `LOGIC_APP_AUDIENCE` | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` |
+| `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `00922812-791e-41c8-a99e-45c3ed784cf5` |
+
+Select **Apply** if you changed a value, then confirm the restart.
+
+Explain that the Function requests `LOGIC_APP_AUDIENCE/.default` using its managed identity and sends the resulting token to `LOGIC_APP_URL`.
+
+### Portal Step 6: Confirm the Function trigger exists
+
+1. In the Function App, select **Functions**.
+2. Open `CallLogicApp`.
+3. Open **Function Keys** and confirm a default Function key exists. Do not show or copy its value on screen.
+
+The Function key protects the attendee-to-Function demo call. It is not used for the Function-to-Logic-App call.
+
+### Portal Step 7: Run the Function from the portal
+
+1. In `CallLogicApp`, select **Code + Test** or **Test/Run** if available.
+2. Select HTTP method **POST**.
+3. Use this request body:
+
+```json
+{
+  "scenario": "PORTAL-DEMO"
+}
+```
+
+1. Run the test.
+
+Expect HTTP 200 and a response containing:
+
+- `status: success`
+- `scenario: PORTAL-DEMO`
+- Token audience `api://786594a8-6b38-40cf-8c6b-d434b539dd46`
+- Token object ID `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1`
+- An authenticated Logic App response
+
+If **Test/Run** is unavailable for the .NET isolated Function, open **Get Function URL**, use the URL in the browser's preferred REST client, and send the same POST body. The URL contains the Function key; do not display or retain it after the demo.
+
+### Portal Step 8: Show the Logic App execution
+
+1. Open the Logic App > **Workflows** > `httpTriggerWorkflow`.
+2. Select **Run history**.
+3. Refresh the list.
+4. Open the newest **Succeeded** run.
+5. Show the request trigger and response action.
+6. Point out the scenario and authenticated principal in the output.
+
+### Portal Step 9: Explain the proof
+
+Summarize:
+
+1. The Function key admitted the attendee into the test Function.
+2. The Function did not use that key downstream.
+3. The Function managed identity requested a short-lived Entra token for the Logic App audience.
+4. Easy Auth validated the token and allowed only the configured managed-identity object ID.
+5. The workflow executed and produced a visible run-history entry.
+
 ## What the attendee will learn
 
 By the end of the walkthrough, the attendee should be able to explain this flow:
