@@ -18,8 +18,9 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 | 1 | Understand the goal | Read [README.md](README.md), including **Before you deploy** |
 | 2 | Learn the concepts | Read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
 | 3 | Follow the walkthrough | Use [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md) from Step 1 through Step 17 |
-| 4 | Run deeper validation | Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
-| 5 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
+| 4 | Test Easy Auth directly | Use [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md) to prove 401, 403, and 200 from the lab PC |
+| 5 | Run deeper validation | Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
+| 6 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Step 0 - If Using GitHub Codespaces
 
@@ -51,9 +52,11 @@ Follow [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md
 
 ## Step 4 - Run Deeper Validation
 
-1. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) for the extended B1/B2/B3/B4/B6 matrix.
-2. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
-3. Compare the deployment with [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
+1. Follow [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md) to test Easy Auth directly with a delegated lab-user token. This isolates Easy Auth from the Function implementation and proves missing-token `401`, authenticated-but-not-allowed `403`, and temporarily allowed `200` behavior.
+2. Complete the guide's cleanup step immediately after the direct test so the temporary lab-user Object ID is removed while the Function managed identity remains allowed.
+3. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) for the extended B1/B2/B3/B4/B6 matrix.
+4. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
+5. Compare the deployment with [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
 ## Step 5 - Troubleshoot If Needed
 
@@ -65,6 +68,7 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 | --- | --- |
 | How do I deploy quickly? | Complete steps 1-2, then run `scripts/deploy.ps1` in Step 4. |
 | Where are expected scenarios? | [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
+| How can I test Easy Auth without Function code? | [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md) |
 | Where is troubleshooting? | [docs/troubleshooting.md](docs/troubleshooting.md) |
 | Where are the identity concepts explained? | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
 | How do I clean up resources? | [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md#question-2-is-there-an-undeploy-option) |
@@ -75,8 +79,9 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 1. [README.md](README.md)
 2. [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
 3. [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md)
-4. [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
-5. [docs/evidence/findings.md](docs/evidence/findings.md)
+4. [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md)
+5. [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
+6. [docs/evidence/findings.md](docs/evidence/findings.md)
 
 ## Optional Background Reading
 

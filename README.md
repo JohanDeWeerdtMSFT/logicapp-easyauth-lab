@@ -121,8 +121,9 @@ Follow this order: **start here → concepts → deployment → validation → t
 | 1 | Start here | [START-HERE.md](START-HERE.md) | Linear navigation for the whole lab |
 | 2 | Concepts | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) | Easy Auth, Entra ID, managed identity, tokens, audience/resource/scope, authn vs authz, SAS comparison |
 | 3 | Walkthrough | [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) | Architecture, settings, deployment steps |
-| 4 | Validation | [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) | Prove the secure call works |
-| 5 | Troubleshooting | [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md) | Recover from 401, 403, invalid audience, and network failures |
+| 4 | Direct user validation | [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md) | Prove 401, 403, and 200 directly from a lab PC before relying on Function caller code |
+| 5 | Full validation | [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) | Prove the managed-identity service-to-service call and negative scenarios |
+| 6 | Troubleshooting | [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md) | Recover from 401, 403, invalid audience, route, and network failures |
 
 ### Key terms before you start
 
@@ -213,7 +214,7 @@ az login
 ### Step 3: Deploy code and validate
 
 - Instructor-led setup: [follow the numbered walkthrough](docs/lab3-instructor-walkthrough.md) from app registrations through run history and cleanup.
-- Test Easy Auth without Function caller code: [use the direct PC testing guide](guides/DIRECT-EASYAUTH-TESTING.md).
+- Test Easy Auth without Function caller code: [use the direct PC testing guide](guides/DIRECT-EASYAUTH-TESTING.md). It includes delegated-scope setup, Azure CLI preauthorization, sanitized portal screenshots, exact unsigned-route validation, status-specific diagnostics, and mandatory authorization cleanup.
 - Follow: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Run the presentation-ready proof with `scripts/demo-easyauth.ps1` after deploying the workflow and Function code.
 - Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)

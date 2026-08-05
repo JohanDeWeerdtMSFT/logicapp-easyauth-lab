@@ -26,12 +26,16 @@ This file records the current live classroom baseline. When older evidence or as
 | B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator on 2026-08-05 |
 | B2 invalid token | HTTP 401 | Direct request with an invalid expired token |
 | B3 wrong audience | HTTP 401 | Direct request with an Azure Resource Manager token |
+| Direct lab-user test before allow-listing | HTTP 403 | Delegated `user_impersonation` token was valid, but the user `oid` was absent from `allowedPrincipals` |
+| Direct lab-user test after temporary allow-listing | HTTP 200, authenticated principal matched the lab user, scenario `DIRECT-USER-TEST` | Live direct-PC validation on 2026-08-05 |
 | B6 unauthorized principal | Follow-up required: HTTP 200 observed after ARM showed the temporary principal | Runtime policy propagation issue on 2026-08-05; captured policy restoration confirmed |
 | B1 after restoration | HTTP 200 and authenticated workflow response | Canonical validator at 2026-08-04T20:42:07Z |
 | Public classroom resource cleanup | No Logic App private endpoint or App Service private DNS zone; four storage private endpoints retained | Azure inventory after cleanup |
 | Deployment history cleanup | No failed deployment records remain | Azure deployment inventory |
 
 The B1 response reported the expected audience, tenant issuer, Function managed-identity object ID, scenario `B1`, and an authenticated Logic App principal. No bearer token was stored as evidence.
+
+The direct-user `200` test temporarily adds the lab user's Object ID as a second allowed principal. It is test state, not the canonical baseline. Complete Step 10 in [the direct PC testing guide](../../guides/DIRECT-EASYAUTH-TESTING.md) to remove that user and retain only the Function managed identity.
 
 ## Drift resolved
 
@@ -53,6 +57,9 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 | Public classroom deployment retained dual app ingress | The retained Logic App private endpoint and App Service private DNS zone were removed; storage private endpoints remain. |
 | Tracked `infra/main.json` represented the old topology | Regenerated from the current Bicep source and verified to include `enablePrivateAppNetworking`. |
 | Strict Easy Auth blocked portal run history with HTTP 401 | Added the narrow `/runtime/*` exclusion; `/api/*` remains protected and an unsigned trigger call still returns HTTP 401. |
+| Direct-user test reused a stale `/triggers/manual/` local URL | Added exact unsigned-route validation before authentication tests and status-specific Step 8 diagnostics. Easy Auth can return 401/403 before the workflow runtime resolves the route, so those statuses alone do not prove the trigger path is valid. |
+| Direct-user setup was difficult to verify visually | Added sanitized screenshots for the delegated scope, Azure CLI preauthorization, and temporary two-principal Easy Auth configuration. |
+| Generated Function `bin`, `obj`, `publish`, and ZIP output was tracked | Removed all 275 ignored build/package artifacts from the Git index while retaining the local files. A clean Release build from `solution/CallerFunctionApp/CallerFunctionApp.csproj` succeeded with zero warnings and errors. Existing ignore rules prevent regenerated output from being recommitted. |
 
 ## Open non-blocking findings
 
