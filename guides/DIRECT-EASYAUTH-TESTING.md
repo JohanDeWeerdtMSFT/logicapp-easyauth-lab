@@ -128,6 +128,14 @@ Pre-authorization suppresses the attendee consent prompt for this specific trust
 1. On the same **Expose an API** page, find **Authorized client applications**.
 2. Select **Add a client application**.
 3. Enter `{azure-cli-client-id}` from Step 1.
+4. Under **Authorized scopes**, select the checkbox beside `api://{logic-app-client-id}/user_impersonation`.
+5. Confirm that the scope checkbox is selected.
+6. Select **Add application**.
+
+After saving, confirm that **Authorized client applications** contains a row with:
+
+- Client ID: `{azure-cli-client-id}`
+- Authorized scope: `api://{logic-app-client-id}/user_impersonation`
 
 ### Find the Azure CLI client ID if it isn't visible in the portal
 
@@ -165,12 +173,7 @@ finally {
 }
 ```
 
-Copy the displayed client ID into the `$azureCliClientId` variable from Step 2. Do not print or save the token itself.
-
-Return to **Authorized client applications** and enter the value of `$azureCliClientId`.
-
-1. Select the `user_impersonation` authorized scope.
-2. Select **Add application**.
+Copy the displayed client ID into the `$azureCliClientId` variable from Step 2. Do not print or save the token itself. Return to **Authorized client applications**, enter `$azureCliClientId`, and continue with step 4 above to select the scope checkbox.
 
 Only pre-authorize clients that you trust. For a temporary lab, remove the authorized client or delegated scope during cleanup if it is no longer required.
 
