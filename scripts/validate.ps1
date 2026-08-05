@@ -37,6 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'lib' 'EasyAuthLab.psm1') -Force
 $workflowName = 'httpTriggerWorkflow'
 $triggerName = 'When_a_HTTP_request_is_received'
 $results = [System.Collections.Generic.List[object]]::new()
@@ -273,6 +274,27 @@ try {
             ConvertTo-Json -Depth 100 |
             Set-Content $mutationPayloadPath -Encoding utf8NoBOM
 
+        # Probing the real Function path is the only reliable signal that App
+        # Service Authentication runtime is enforcing the new policy; ARM state
+        # alone is not sufficient.
+        $b6Probe = {
+            (Invoke-LabRequest `
+                -Scenario 'B6-probe' `
+                -Uri $functionAppUrl `
+                -ExpectedStatus 403 `
+                -Headers $functionHeaders `
+                -Record $false).actualStatus
+        }
+        $restartLogicApp = {
+            Write-Host 'Runtime still allowed the call; restarting the Logic App to refresh Easy Auth.' -ForegroundColor Yellow
+            az webapp restart `
+                --subscription $SubscriptionId `
+                --resource-group $ResourceGroupName `
+                --name $LogicAppName `
+                --output none
+            Start-Sleep -Seconds 30
+        }
+
         try {
             az rest `
                 --subscription $SubscriptionId `
@@ -285,6 +307,24 @@ try {
             }
             Wait-AllowedPrincipals -AuthUri $authUri -ExpectedPrincipals @($nonCallerPrincipalId)
 
+            $b6Wait = Wait-RuntimeHttpStatus `
+                -Probe $b6Probe `
+                -ExpectedStatus 403 `
+                -RefreshAction $restartLogicApp
+
+            if (-not $b6Wait.succeeded) {
+                $currentPrincipals = @(
+                    az rest `
+                        --subscription $SubscriptionId `
+                        --method get `
+                        --uri $authUri `
+                        --query 'properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities' `
+                        --output json | ConvertFrom-Json
+                )
+                Write-Warning ("B6 timed out waiting for runtime enforcement. Expected HTTP 403, observed HTTP $($b6Wait.lastStatus) after $($b6Wait.attempts) attempts. " +
+                    "Current ARM allowedPrincipals: $($currentPrincipals -join ', '). Restoration runs next.")
+            }
+
             $b6 = Invoke-LabRequest `
                 -Scenario 'B6' `
                 -Uri $functionAppUrl `
@@ -292,10 +332,14 @@ try {
                 -Headers $functionHeaders
             $b6.assertions = [ordered]@{
                 errorType = ($b6.body.error -eq 'Forbidden')
+                runtimeEnforced = [bool]$b6Wait.succeeded
             }
             $b6.passed = $b6.passed -and -not ($b6.assertions.Values -contains $false)
         }
         finally {
+            # Restoration must succeed even when the B6 assertion, the runtime
+            # wait, or the request itself failed.
+            $restorationSucceeded = $false
             try {
                 az rest `
                     --subscription $SubscriptionId `
@@ -308,9 +352,11 @@ try {
                 }
 
                 Wait-AllowedPrincipals -AuthUri $authUri -ExpectedPrincipals $originalPrincipals
+                $restorationSucceeded = $true
             }
             finally {
                 Remove-Item $originalPayloadPath, $mutationPayloadPath -Force -ErrorAction SilentlyContinue
+                Write-Host "B6 restoration succeeded: $restorationSucceeded" -ForegroundColor DarkGray
             }
         }
 
@@ -327,6 +373,41 @@ try {
             throw 'B6 restoration verification failed: allowedPrincipals does not match the captured original value.'
         }
 
+        # ARM agreement is not enough: confirm the runtime allows the original
+        # Function managed identity again before declaring the lab restored.
+        $restoreWait = Wait-RuntimeHttpStatus `
+            -Probe {
+                (Invoke-LabRequest `
+                    -Scenario 'B6-restore-probe' `
+                    -Uri $functionAppUrl `
+                    -ExpectedStatus 200 `
+                    -Headers $functionHeaders `
+                    -Record $false).actualStatus
+            } `
+            -ExpectedStatus 200 `
+            -RefreshAction $restartLogicApp
+
+        $b6Restored = Invoke-LabRequest `
+            -Scenario 'B6-restored' `
+            -Uri $functionAppUrl `
+            -ExpectedStatus 200 `
+            -Headers $functionHeaders
+
+        $restoredWorkflowResponse = $null
+        if ($b6Restored.body -and $b6Restored.body.logicAppResponse) {
+            try {
+                $restoredWorkflowResponse = $b6Restored.body.logicAppResponse | ConvertFrom-Json
+            }
+            catch {
+                $restoredWorkflowResponse = $null
+            }
+        }
+
+        $b6Restored.assertions = [ordered]@{
+            runtimeRestored = [bool]$restoreWait.succeeded
+            workflowPrincipal = ($restoredWorkflowResponse.authInfo.principalId -eq $functionPrincipalId)
+        }
+        $b6Restored.passed = $b6Restored.passed -and -not ($b6Restored.assertions.Values -contains $false)
     }
 }
 finally {

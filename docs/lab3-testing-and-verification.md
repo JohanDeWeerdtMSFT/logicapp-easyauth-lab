@@ -367,7 +367,9 @@ Run this exercise only in an isolated lab resource group. The canonical validato
   -RunAuthorizationMutation
 ```
 
-Expected: B6 returns HTTP 403 because the managed-identity token is valid but its `oid` is not the temporary allow-listed object ID. The validator then restores the captured policy and verifies the original principal list. You can independently confirm the restored value:
+Expected: B6 returns HTTP 403 because the managed-identity token is valid but its `oid` is not the temporary allow-listed object ID.
+
+Easy Auth runtime enforcement lags behind the ARM resource. The validator therefore waits for the *observed* HTTP 403, not only for ARM to return the temporary principal. If bounded retries are not enough, it restarts the Logic App once and continues retrying. It then restores the captured policy in a `finally` block, waits for ARM to return the original principal list, and proves restoration with a `B6-restored` request that must return HTTP 200 with the original Function managed identity principal. You can independently confirm the restored value:
 
 ```powershell
 az rest --method get --uri $authUri `
@@ -420,4 +422,19 @@ After the manual learning steps, run the canonical validator. It retrieves the F
   -RunAuthorizationMutation
 ```
 
-Expected: B1 returns `200`, B2/B3/B4 return `401`, and B6 returns `403`. The command exits nonzero if any expected status or B1 claim assertion fails.
+Expected: B1 returns `200`, B2/B3/B4 return `401`, B6 returns `403`, and `B6-restored` returns `200`. The command exits nonzero if any expected status or assertion fails.
+
+### Storage: private network access and Shared Key authorization are separate controls
+
+The shared storage account uses two independent settings:
+
+- `publicNetworkAccess: Disabled` keeps storage ingress private. The deployment asserts this value for the caller-demo classroom path.
+- `allowSharedKeyAccess: true` keeps Shared Key authorization available, which Logic App Standard on a Workflow Service Plan (WS1) still requires. This is not the same as how the application authenticates: `AzureWebJobsStorage` remains identity-based.
+
+`scripts/deploy.ps1` reads the *effective* storage account settings after deployment. If an inherited Azure Policy `Modify` assignment has rewritten `allowSharedKeyAccess` to `false`, the deployment fails with actionable guidance instead of reporting success. See [Troubleshooting](troubleshooting.md) and Microsoft Learn: [Set up managed identity access to your storage account](https://learn.microsoft.com/azure/logic-apps/create-single-tenant-workflows-azure-portal#set-up-managed-identity-access-to-your-storage-account).
+
+### Run the focused helper tests
+
+```powershell
+Invoke-Pester ./labs/lab3-bearer-token/tests
+```

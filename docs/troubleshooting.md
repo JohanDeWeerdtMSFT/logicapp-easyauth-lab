@@ -128,6 +128,33 @@ az deployment operation cancel --resource-group rg-easyauth-lab-dev \
 
 ---
 
+#### ❌ "Storage account ... reports allowSharedKeyAccess = false" during deployment
+
+**Cause:** An inherited management-group Azure Policy assignment with a `Modify` effect (for example the policy definition `StorageAccount_DisableLocalAuth_Modify`, display name `SFI-ID4.2.1 Storage Accounts - Safe Secrets Standard`, assignment `MCAPSGovDeployPolicies`) rewrites `allowSharedKeyAccess` to `false` while the ARM deployment reports success.
+
+Logic App Standard hosted on a Workflow Service Plan (WS1) still requires storage account key access. Microsoft Learn documents App Service Environment v3 as the hosting option that supports disabling key access after managed-identity setup. See [Set up managed identity access to your storage account](https://learn.microsoft.com/azure/logic-apps/create-single-tenant-workflows-azure-portal#set-up-managed-identity-access-to-your-storage-account).
+
+**Two separate controls:** private network access (`publicNetworkAccess`) and Shared Key authorization (`allowSharedKeyAccess`) are independent. The lab keeps storage ingress private *and* keeps Shared Key authorization enabled. Never enable public storage access to work around this error.
+
+**Diagnosis:**
+```bash
+az storage account show --resource-group rg-la-easyauth-lab-dev \
+  --name <storage-account> \
+  --query "{publicNetworkAccess:publicNetworkAccess, allowSharedKeyAccess:allowSharedKeyAccess}"
+
+# Identify the policy assignment responsible for the Modify effect
+az policy state list --resource-group rg-la-easyauth-lab-dev \
+  --query "[?contains(policyDefinitionName, 'DisableLocalAuth')].{assignment:policyAssignmentName, definition:policyDefinitionName}" -o table
+```
+
+**Fix (all options require governance-owner approval; `deploy.ps1` never creates exemptions automatically):**
+
+1. Request a time-limited, resource-scoped Azure Policy exemption for this storage account.
+2. Deploy the lab into a subscription or management group without the `DisableLocalAuth` `Modify` assignment.
+3. Host the Logic App on App Service Environment v3.
+
+---
+
 #### ❌ Quota exceeded error
 
 **Cause:** Your subscription doesn't have enough quota for resources
@@ -230,6 +257,14 @@ az deployment operation cancel --resource-group rg-easyauth-lab-dev \
    # Re-run setup to fix configuration
    ./setup.ps1
    ```
+
+---
+
+#### ❌ B6 returns HTTP 200 after the temporary principal was applied
+
+**Cause:** ARM returning the new `authsettingsV2` value does not mean the App Service Authentication runtime is already enforcing it. Configuration propagation to the runtime lags behind the resource update.
+
+**Fix:** `scripts/validate.ps1` now waits for the *observed* HTTP outcome instead of ARM state. It retries the B6 path until HTTP 403 is seen and, if bounded retries are not enough, restarts the Logic App once and keeps retrying. The captured policy is always restored in a `finally` block, and restoration is proven by a B1-style request that returns HTTP 200 with the original Function managed identity principal. If the wait still times out, the validator reports the expected and observed status and the current ARM `allowedPrincipals`, never keys or tokens.
 
 ---
 
