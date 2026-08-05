@@ -60,7 +60,24 @@ $delegatedScope = "$audience/user_impersonation"
 $logicAppUrl = "https://$logicAppDefaultDomain/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01"
 ```
 
-The Logic App URL must be the **unsigned** endpoint. It must not contain `sig=`, `sp=`, or `sv=` query parameters.
+Validate the URL before continuing. This catches an old `/triggers/manual/` route that Easy Auth can mask during the expected `401` and `403` tests:
+
+```powershell
+$logicAppUri = [Uri]$logicAppUrl
+$expectedPath = '/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke'
+
+if ($logicAppUri.Scheme -ne 'https' -or
+    $logicAppUri.Host -ne $logicAppDefaultDomain -or
+    $logicAppUri.AbsolutePath -ne $expectedPath -or
+    $logicAppUri.Query -notmatch '(?:^\?|&)api-version=2022-05-01(?:&|$)' -or
+    $logicAppUrl -match '[?&](sig|sp|sv)=') {
+  throw 'The Logic App URL is not the expected unsigned When_a_HTTP_request_is_received trigger URL.'
+}
+
+'Logic App URL validation passed.'
+```
+
+The Logic App URL must be the **unsigned** endpoint. It must not contain `sig=`, `sp=`, or `sv=` query parameters. A `401` or `403` from Easy Auth alone does not prove that the workflow route is correct because authentication and authorization run before the Logic App runtime resolves the trigger route.
 
 ## Step 3: Sign in as the lab user
 
@@ -269,9 +286,14 @@ This proves that Easy Auth authenticated the token but rejected the principal du
 5. Edit **Allowed identities**.
 6. Keep the existing Function managed-identity Object ID if one is present.
 7. Add `{lab-user-object-id}` from Step 1.
-8. Save the identity provider.
+8. Select **OK** in the **Allowed identities** pane.
+9. Confirm that **Allowed identities** displays both Object IDs.
+10. Select **Save** on the identity provider page. Selecting **OK** in the side pane does not save the identity provider by itself.
+11. Wait for the Azure portal save notification to report success before continuing.
 
 Do not replace the Function identity. Add the user as a second temporary identity.
+
+For this isolated lab, leave **Client application requirement** set to **Allow requests from any application**. The exact audience, tenant, and allowed identities still constrain access. The portal labels this choice **Not recommended** because a production API should normally also restrict trusted client applications or enforce application roles/scopes. Client application IDs are not the same values as the principal Object IDs under **Allowed identities**.
 
 ## Step 8: Fetch a fresh token and call again
 
@@ -283,14 +305,33 @@ $bearerToken = az account get-access-token `
   --output tsv
 
 try {
-  $result = Invoke-RestMethod `
+  $response = Invoke-WebRequest `
     -Method Post `
     -Uri "$logicAppUrl&scenario=DIRECT-USER-TEST" `
     -Headers @{ Authorization = "Bearer $bearerToken" } `
     -ContentType 'application/json' `
-    -Body '{"message":"Direct Easy Auth user test"}'
+    -Body '{"message":"Direct Easy Auth user test"}' `
+    -SkipHttpErrorCheck
 
-  $result | ConvertTo-Json -Depth 10
+  $statusCode = [int]$response.StatusCode
+  switch ($statusCode) {
+    200 {
+      $result = $response.Content | ConvertFrom-Json
+      $result | ConvertTo-Json -Depth 10
+    }
+    401 {
+      throw 'HTTP 401: Easy Auth rejected the token. Recheck the tenant, audience, and delegated scope.'
+    }
+    403 {
+      throw 'HTTP 403: The user is not active in Allowed identities yet. Confirm both portal saves completed, wait for the change to propagate, and retry Step 8.'
+    }
+    404 {
+      throw 'HTTP 404: Authentication passed, but the workflow route was not found. Rerun the Step 2 URL validation and confirm the trigger name is When_a_HTTP_request_is_received.'
+    }
+    default {
+      throw "Unexpected HTTP status $statusCode."
+    }
+  }
 }
 finally {
   Remove-Variable bearerToken -ErrorAction SilentlyContinue
@@ -298,6 +339,8 @@ finally {
 ```
 
 Expected: HTTP `200` and a new succeeded Logic App run.
+
+The generic App Service page **You do not have permission to view this directory or page** does not identify the cause by itself. The status-specific handling above distinguishes an Easy Auth rejection (`401` or `403`) from a validly authenticated request sent to the wrong workflow route (`404`).
 
 ## Step 9: Verify the workflow run
 
