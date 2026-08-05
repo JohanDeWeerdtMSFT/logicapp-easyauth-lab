@@ -54,6 +54,7 @@ $logicAppDefaultDomain = '{logic-app-default-domain}'
 $labUserObjectId = '{lab-user-object-id}'
 
 $audience = "api://$logicAppClientId"
+$delegatedScope = "$audience/user_impersonation"
 $logicAppUrl = "https://$logicAppDefaultDomain/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01"
 ```
 
@@ -87,23 +88,89 @@ $noTokenResponse = Invoke-WebRequest `
 
 Expected: `401`.
 
+## Before Step 5: Enable delegated user testing with Azure CLI
+
+The managed-identity Function requests the app-only scope `$audience/.default`. A human user on a lab PC uses a **delegated scope** instead. The Logic App API app registration must expose that scope and permit the Azure CLI public client to request it.
+
+If this configuration is missing, Step 5 fails with `AADSTS65001` (`consent_required`) or `AADSTS650057` (`Invalid resource`).
+
+### Add the delegated scope
+
+1. Open **Microsoft Entra ID** > **App registrations**.
+2. Open the Logic App API registration identified by `{logic-app-client-id}`.
+3. Select **Expose an API**.
+4. Confirm the Application ID URI is `api://{logic-app-client-id}`.
+5. Under **Scopes defined by this API**, select **Add a scope**.
+6. Configure the scope:
+
+| Field | Value |
+| --- | --- |
+| Scope name | `user_impersonation` |
+| Who can consent | **Admins and users** |
+| Admin consent display name | `Access the Logic App Easy Auth lab` |
+| Admin consent description | `Allow the application to access the Logic App Easy Auth lab on behalf of the signed-in user.` |
+| User consent display name | `Access the Logic App Easy Auth lab` |
+| User consent description | `Allow this application to test the Logic App API on your behalf.` |
+| State | **Enabled** |
+
+The resulting full scope is:
+
+```text
+api://{logic-app-client-id}/user_impersonation
+```
+
+### Pre-authorize Microsoft Azure CLI
+
+Pre-authorization suppresses the attendee consent prompt for this specific trusted client and scope.
+
+1. On the same **Expose an API** page, find **Authorized client applications**.
+2. Select **Add a client application**.
+3. Enter the Microsoft Azure CLI Application (client) ID:
+
+```text
+04b07795-8ddb-461a-bbee-02f9e1bf7b46
+```
+
+This is Microsoft's public client ID for Azure CLI. It is not a tenant-specific ID, credential, or secret.
+
+1. Select the `user_impersonation` authorized scope.
+2. Select **Add application**.
+
+Only pre-authorize clients that you trust. For a temporary lab, remove the authorized client or delegated scope during cleanup if it is no longer required.
+
+Official reference: [Configure an application to expose a web API](https://learn.microsoft.com/entra/identity-platform/quickstart-configure-app-expose-web-apis#add-a-scope).
+
 ## Step 5: Fetch a user bearer token
+
+Complete [Enable delegated user testing with Azure CLI](#before-step-5-enable-delegated-user-testing-with-azure-cli) before running this step.
+
+If you just added the delegated scope or authorized client, refresh the Azure CLI sign-in so the authorization request includes that scope:
+
+```powershell
+az login `
+  --tenant $tenantId `
+  --scope $delegatedScope
+
+az account set --subscription $subscriptionId
+```
+
+Complete any browser sign-in prompt as the lab user. Then obtain the token:
 
 ```powershell
 $bearerToken = az account get-access-token `
   --tenant $tenantId `
-  --resource $audience `
+  --scope $delegatedScope `
   --query accessToken `
   --output tsv
 
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($bearerToken)) {
-  throw 'Token acquisition failed. Verify the tenant, Application ID URI, and enterprise application for the Logic App API registration.'
+  throw 'Token acquisition failed. Complete the delegated-scope and Azure CLI preauthorization section before Step 5.'
 }
 ```
 
 Do not print, decode, save, or paste the token into documentation or chat.
 
-If token acquisition requires consent or is blocked by tenant policy, ask the tenant administrator to approve the test client for the Logic App API. Do not create a client secret as a workaround.
+If token acquisition remains blocked by tenant policy, ask the tenant administrator to approve the Azure CLI client for the delegated scope. Do not create a client secret as a workaround.
 
 ## Step 6: Call the Logic App before allow-listing the user
 
@@ -146,7 +213,7 @@ Do not replace the Function identity. Add the user as a second temporary identit
 ```powershell
 $bearerToken = az account get-access-token `
   --tenant $tenantId `
-  --resource $audience `
+  --scope $delegatedScope `
   --query accessToken `
   --output tsv
 
