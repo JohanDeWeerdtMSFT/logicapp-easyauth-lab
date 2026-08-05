@@ -197,11 +197,29 @@ If you just added the delegated scope or authorized client, refresh the Azure CL
 az login `
   --tenant $tenantId `
   --scope $delegatedScope
-
-az account set --subscription $subscriptionId
 ```
 
-Complete any browser sign-in prompt as the lab user. Then obtain the token:
+Complete the interactive sign-in before continuing:
+
+1. On Windows, Azure CLI 2.61.0 or later normally opens the Windows Web Account Manager (WAM) account picker. Other environments may open a browser or display a device-login URL and code.
+2. Select or enter the **lab user** from Step 1. Do not select a different cached work account.
+3. Complete any passwordless, multifactor authentication, or Conditional Access prompts required by the tenant.
+4. If Azure CLI displays the tenant and subscription selector, confirm that both belong to this lab. Press Enter only when the entry marked with `*` is the correct subscription; otherwise, enter the number beside the correct entry.
+5. Wait until `az login` returns to PowerShell successfully. Because Microsoft Azure CLI was pre-authorized for `user_impersonation`, a permission consent page is not normally expected. If Entra displays a consent page or an authorization error, stop and recheck the delegated scope and authorized client configuration instead of approving an unexpected request.
+
+This interaction is required because `--scope $delegatedScope` asks Microsoft Entra ID to authorize Azure CLI for this custom Logic App API scope on behalf of the selected user. An earlier Azure management sign-in does not necessarily have a cached token or grant for this API and scope. For background, see [Sign into Azure interactively using the Azure CLI](https://learn.microsoft.com/cli/azure/authenticate-azure-cli-interactively), [Scopes when acquiring tokens](https://learn.microsoft.com/entra/identity-platform/msal-acquire-cache-tokens#scopes-when-acquiring-tokens), and [Pre-authorize a client application](https://learn.microsoft.com/entra/identity-platform/quickstart-configure-app-expose-web-apis#add-a-scope).
+
+After the scoped sign-in succeeds, explicitly select and verify the lab subscription:
+
+```powershell
+az account set --subscription $subscriptionId
+
+az account show `
+  --query '{signedInAs:user.name, tenantId:tenantId, subscriptionId:id}' `
+  --output table
+```
+
+Confirm that the table shows the lab user, tenant, and subscription from Steps 1 and 2. Then obtain the token:
 
 ```powershell
 $bearerToken = az account get-access-token `
