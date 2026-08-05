@@ -15,20 +15,20 @@
 - **Token Properties:**
   - Format: JWT (valid format with header.payload.signature)
   - Length: ~1,500 characters
-  - Issuer: `https://sts.windows.net/00922812-791e-41c8-a99e-45c3ed784cf5/`
+  - Issuer: `https://sts.windows.net/{tenant-id}/`
   - Claims: aud, iss, iat, nbf, exp, appid, oid, sub (standard JWT structure)
 
 ### Step 2: Function App Endpoint Test
-- **Endpoint:** `https://la-easyauth-lab-dev-caller-daaq6t5xzrpaw.azurewebsites.net/api/CallLogicApp`
+- **Endpoint:** `https://la-easyauth-lab-dev-caller-{unique-suffix}.azurewebsites.net/api/CallLogicApp`
 - **Test 1 (HEAD request):**
-  - Command: `curl -I https://la-easyauth-lab-dev-caller-daaq6t5xzrpaw.azurewebsites.net/api/CallLogicApp`
+  - Command: `curl -I https://la-easyauth-lab-dev-caller-{unique-suffix}.azurewebsites.net/api/CallLogicApp`
   - Result: HTTP 404 Not Found (expected - GET not supported on POST endpoint)
   - Conclusion: ✅ Function App is running and responding
 
 ### Step 3: Bearer Token Flow Test
 - **Test Command:**
   ```powershell
-  curl -X POST https://la-easyauth-lab-dev-caller-daaq6t5xzrpaw.azurewebsites.net/api/CallLogicApp \
+  curl -X POST https://la-easyauth-lab-dev-caller-{unique-suffix}.azurewebsites.net/api/CallLogicApp \
     -H "Authorization: Bearer <token>" \
     -H "Content-Type: application/json" \
     -d "{\"scenario\":\"bearer-test\"}"
@@ -43,7 +43,7 @@
   ```json
   {
     "error": "InternalError",
-    "detail": "ManagedIdentityCredential authentication failed: [Managed Identity] Managed Identity Correlation ID: 7a8c8ab6-8e7d-4de0-a7e7-a57848547a16\nUse this Correlation ID for further investigation.\nSee the troubleshooting guide for more information. https://aka.ms/azsdk/net/identity/managedidentitycredential/troubleshoot"
+    "detail": "ManagedIdentityCredential authentication failed: [Managed Identity] Managed Identity Correlation ID: {correlation-id}\nUse this Correlation ID for further investigation.\nSee the troubleshooting guide for more information. https://aka.ms/azsdk/net/identity/managedidentitycredential/troubleshoot"
   }
 ```
 
@@ -62,7 +62,7 @@
 
 ### ⚠️ What FAILED
 
-The Function App's `DefaultAzureCredential` token acquisition failed when attempting to get a token for the Logic App audience (`api://786594a8-6b38-40cf-8c6b-d434b539dd46`).
+The Function App's `DefaultAzureCredential` token acquisition failed when attempting to get a token for the Logic App audience (`api://{logic-app-client-id}`).
 
 **Error Message Analysis:**
 - "ManagedIdentityCredential authentication failed" indicates the managed identity couldn't acquire a token
@@ -110,7 +110,7 @@ The test **partially validates** the bearer token flow:
 To fix the DefaultAzureCredential failure and complete the end-to-end flow:
 
 1. **Verify Audience Configuration**
-   - Check if `api://786594a8-6b38-40cf-8c6b-d434b539dd46` is correctly configured as the Logic App audience
+   - Check if `api://{logic-app-client-id}` is correctly configured as the Logic App audience
    - Verify the service principal is registered in Entra ID
 
 2. **Update Function App Configuration**
@@ -150,8 +150,8 @@ Remaining issue:
 
 ## Test Environment
 
-- **Function App:** `la-easyauth-lab-dev-caller-daaq6t5xzrpaw`
-- **Subscription:** `6851693c-0b74-4462-8da8-cd498b088827`
+- **Function App:** `la-easyauth-lab-dev-caller-{unique-suffix}`
+- **Subscription:** `{subscription-id}`
 - **Region:** `westeurope`
 - **Runtime:** .NET 8 Isolated Worker
 - **Test Time:** 2026-07-03 16:06:00 UTC

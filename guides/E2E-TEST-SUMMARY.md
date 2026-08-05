@@ -11,7 +11,7 @@
 The Function App's `GetAccessTokenAsync()` method was using an incorrect token scope format:
 - ❌ **Old (Failed):** `api://{logicAppClientId}/.default`
 - ❌ **Also Failed:** Hostname as resource (`https://{functionAppName}.azurewebsites.net`)
-- ✅ **Fixed:** `786594a8-6b38-40cf-8c6b-d434b539dd46/.default` (client ID with `.default` scope)
+- ✅ **Fixed:** `{logic-app-client-id}/.default` (client ID with `.default` scope)
 
 ### Key Learning
 | Scenario | Format | Result |
@@ -28,7 +28,7 @@ The Function App's `GetAccessTokenAsync()` method was using an incorrect token s
 - ✅ `CallLogicApp.cs` updated with correct token scope format
 - ✅ Removed dependency on `LOGIC_APP_AUDIENCE` environment variable
 - ✅ Simplified `GetAccessTokenAsync()` signature
-- ✅ Added fallback to hardcoded Logic App client ID: `786594a8-6b38-40cf-8c6b-d434b539dd46`
+- ✅ Added fallback to hardcoded Logic App client ID: `{logic-app-client-id}`
 
 ### Build & Deployment
 - ✅ Project built successfully: **0 errors, 0 warnings, 79 files generated**
@@ -90,7 +90,7 @@ az functionapp show --resource-group rg-la-easyauth-lab-dev --name <function-app
 // NEW CODE: Uses correct scope format
 var credential = new DefaultAzureCredential();
 var token = await credential.GetTokenAsync(
-    new TokenRequestContext(new[] { "786594a8-6b38-40cf-8c6b-d434b539dd46/.default" }),
+    new TokenRequestContext(new[] { "{logic-app-client-id}/.default" }),
     cancellationToken
 );
 // Result: ✅ Token acquired successfully

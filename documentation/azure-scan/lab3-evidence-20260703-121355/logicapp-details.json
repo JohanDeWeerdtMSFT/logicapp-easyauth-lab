@@ -1,16 +1,16 @@
 {
   "extendedLocation": null,
-  "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+  "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}",
   "identity": {
-    "principalId": "77962c44-5aa3-485e-9bc1-6641997d8c56",
-    "tenantId": "00922812-791e-41c8-a99e-45c3ed784cf5",
+    "principalId": "{logic-app-managed-identity-principal-id}",
+    "tenantId": "{tenant-id}",
     "type": "SystemAssigned",
     "userAssignedIdentities": null
   },
   "kind": "functionapp,workflowapp",
   "location": "West Europe",
   "managedBy": null,
-  "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+  "name": "la-easyauth-lab-dev-la-{unique-suffix}",
   "plan": null,
   "properties": {
     "adminEnabled": true,
@@ -36,18 +36,18 @@
     "customDomainVerificationId": "CA99D231378663B59311A75004BDC6B227621A388631915321F6F92FD03A8E94",
     "dailyMemoryTimeQuota": 0,
     "daprConfig": null,
-    "defaultHostName": "la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net",
-    "deploymentId": "la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+    "defaultHostName": "la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net",
+    "deploymentId": "la-easyauth-lab-dev-la-{unique-suffix}",
     "dnsConfiguration": {},
     "domainVerificationIdentifiers": null,
     "eligibleLogCategories": "WorkflowRuntime,FunctionAppLogs,AppServiceAuthenticationLogs,AppServiceAuditLogs,AppServiceIPSecAuditLogs",
     "enabled": true,
     "enabledHostNames": [
-      "la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net",
-      "la-easyauth-lab-dev-la-daaq6t5xzrpaw.scm.azurewebsites.net"
+      "la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net",
+      "la-easyauth-lab-dev-la-{unique-suffix}.scm.azurewebsites.net"
     ],
     "endToEndEncryptionEnabled": false,
-    "ftpUsername": "la-easyauth-lab-dev-la-daaq6t5xzrpaw\\$la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+    "ftpUsername": "la-easyauth-lab-dev-la-{unique-suffix}\\$la-easyauth-lab-dev-la-{unique-suffix}",
     "ftpsHostName": "ftps://waws-prod-am2-691.ftp.azurewebsites.windows.net/site/wwwroot",
     "functionAppConfig": null,
     "functionExecutionUnitsCache": null,
@@ -61,7 +61,7 @@
         "hostType": "Standard",
         "ipBasedSslResult": null,
         "ipBasedSslState": "NotConfigured",
-        "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net",
+        "name": "la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net",
         "sslState": "Disabled",
         "thumbprint": null,
         "toUpdate": null,
@@ -74,7 +74,7 @@
         "hostType": "Repository",
         "ipBasedSslResult": null,
         "ipBasedSslState": "NotConfigured",
-        "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw.scm.azurewebsites.net",
+        "name": "la-easyauth-lab-dev-la-{unique-suffix}.scm.azurewebsites.net",
         "sslState": "Disabled",
         "thumbprint": null,
         "toUpdate": null,
@@ -84,7 +84,7 @@
       }
     ],
     "hostNames": [
-      "la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net"
+      "la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net"
     ],
     "hostNamesDisabled": false,
     "hostingEnvironment": null,
@@ -108,7 +108,7 @@
     "managedEnvironmentId": null,
     "maxNumberOfWorkers": null,
     "migrationState": null,
-    "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+    "name": "la-easyauth-lab-dev-la-{unique-suffix}",
     "outboundIpAddresses": "20.4.185.42,20.4.185.57,20.4.185.62,20.4.185.118,20.4.185.171,20.103.52.123,20.105.216.30",
     "outboundIpv6Addresses": "2603:1020:203:a::412,2603:1020:203:1f::3d8,2603:1020:203:18::3db,2603:1020:203:19::3cf,2603:1020:203:f::400,2603:1020:203:18::3dc,2603:1020:206:8::4a,2603:10e1:100:2::1469:d81e,2603:1020:206:6::a7,2603:10e1:100:2::1469:d870",
     "outboundVnetRouting": {
@@ -126,16 +126,16 @@
     "possibleOutboundIpv6Addresses": "2603:1020:203:f::3fa,2603:1020:203:1f::3d6,2603:1020:203:10::3ad,2603:1020:203:a::410,2603:1020:203:12::3d1,2603:1020:203:18::3da,2603:1020:203:a::412,2603:1020:203:1f::3d8,2603:1020:203:18::3db,2603:1020:203:19::3cf,2603:1020:203:f::400,2603:1020:203:18::3dc,2603:1020:203:d::3e5,2603:1020:203:d::3e6,2603:1020:203:1e::37a,2603:1020:203:a::415,2603:1020:203:b::3f4,2603:1020:203:15::3de,2603:1020:203:8::3e8,2603:1020:203:11::3c5,2603:1020:203:e::3ec,2603:1020:203:17::403,2603:1020:203:1a::3c8,2603:1020:203:9::3e2,2603:1020:203:9::3e3,2603:1020:203:5::3d8,2603:1020:203:11::3c9,2603:1020:203:1f::3df,2603:1020:203:b::3fc,2603:1020:203:20::3a7,2603:1020:206:8::4a,2603:10e1:100:2::1469:d81e,2603:1020:206:6::a7,2603:10e1:100:2::1469:d870",
     "privateEndpointConnections": [
       {
-        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/privateEndpointConnections/plsc-la-easyauth-lab-dev-la-daaq6t5xzrpaw-b359be1e-352d-491f-9295-3dccc06a3196",
+        "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/privateEndpointConnections/plsc-la-easyauth-lab-dev-la-{unique-suffix}-{private-endpoint-connection-suffix}",
         "location": "West Europe",
-        "name": "plsc-la-easyauth-lab-dev-la-daaq6t5xzrpaw-b359be1e-352d-491f-9295-3dccc06a3196",
+        "name": "plsc-la-easyauth-lab-dev-la-{unique-suffix}-{private-endpoint-connection-suffix}",
         "properties": {
           "groupIds": null,
           "ipAddresses": [
             "10.0.1.4"
           ],
           "privateEndpoint": {
-            "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/privateEndpoints/pe-la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+            "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/privateEndpoints/pe-la-easyauth-lab-dev-la-{unique-suffix}",
             "resourceGroup": "rg-la-easyauth-lab-dev"
           },
           "privateLinkServiceConnectionState": {
@@ -152,16 +152,16 @@
     "privateLinkIdentifiers": "302152067",
     "publicNetworkAccess": "Disabled",
     "redundancyMode": "None",
-    "repositorySiteName": "la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+    "repositorySiteName": "la-easyauth-lab-dev-la-{unique-suffix}",
     "reserved": false,
     "resourceConfig": null,
     "resourceGroup": "rg-la-easyauth-lab-dev",
     "runtimeAvailabilityState": "Normal",
     "sandboxType": null,
     "scmSiteAlsoStopped": false,
-    "selfLink": "https://waws-prod-am2-691.api.azurewebsites.windows.net:455/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/webspaces/rg-la-easyauth-lab-dev-WestEuropewebspace/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+    "selfLink": "https://waws-prod-am2-691.api.azurewebsites.windows.net:455/subscriptions/{subscription-id}/webspaces/rg-la-easyauth-lab-dev-WestEuropewebspace/sites/la-easyauth-lab-dev-la-{unique-suffix}",
     "serverFarm": null,
-    "serverFarmId": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-dev-plan",
+    "serverFarmId": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-dev-plan",
     "siteConfig": {
       "acrUseManagedIdentityCreds": false,
       "acrUserManagedIdentityID": null,
@@ -290,7 +290,7 @@
     "usageState": "Normal",
     "useContainerLocalhostBindings": null,
     "useQueryStringAffinity": false,
-    "virtualNetworkSubnetId": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/la-easyauth-lab-dev-vnet/subnets/snet-app-integration",
+    "virtualNetworkSubnetId": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/la-easyauth-lab-dev-vnet/subnets/snet-app-integration",
     "webSpace": "rg-la-easyauth-lab-dev-WestEuropewebspace",
     "workloadProfileName": null
   },

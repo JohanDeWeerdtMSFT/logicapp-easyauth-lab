@@ -2,7 +2,7 @@
 
 Use this page while presenting the environment to an attendee. Complete the steps in order. Each step includes what to do, what to show in the portal, and what to explain.
 
-> **Already have the Logic App and Function App and want portal-only setup?** Use [Portal-only setup for existing resources](#portal-only-setup-for-existing-resources). The existing validated environment already contains the `/runtime/*` exclusion required for portal run history. Azure portal does not expose that one Easy Auth property.
+> **Already have the Logic App and Function App and want portal-only setup?** Use [Portal-only setup for existing resources](#portal-only-setup-for-existing-resources). Verify that your environment contains the `/runtime/*` exclusion required for portal run history. Azure portal does not expose that one Easy Auth property.
 
 ## Portal-only setup for existing resources
 
@@ -10,20 +10,20 @@ Use this route when the Logic App Standard resource, Function App, workflow, and
 
 ### Portal Step 1: Record the tenant and app names
 
-Open the Azure portal and record:
+Open the Azure portal and replace each placeholder with your own value:
 
-- Tenant ID: `00922812-791e-41c8-a99e-45c3ed784cf5`
+- Tenant ID: `{tenant-id}`
 - Resource group: `rg-la-easyauth-lab-dev`
-- Logic App: `la-easyauth-lab-dev-la-daaq6t5xzrpaw`
-- Function App: `la-easyauth-lab-dev-caller-daaq6t5xzrpaw`
+- Logic App: `la-easyauth-lab-dev-la-{unique-suffix}`
+- Function App: `la-easyauth-lab-dev-caller-{unique-suffix}`
 
 ### Portal Step 2: Inspect the Logic App API registration
 
 1. Open **Microsoft Entra ID** > **App registrations**.
-2. Open the registration whose Application (client) ID is `786594a8-6b38-40cf-8c6b-d434b539dd46`.
+2. Open the registration whose Application (client) ID is `{logic-app-client-id}`.
 3. On **Overview**, show the Application (client) ID and Directory (tenant) ID.
 4. Open **Expose an API**.
-5. Confirm the Application ID URI is `api://786594a8-6b38-40cf-8c6b-d434b539dd46`.
+5. Confirm the Application ID URI is `api://{logic-app-client-id}`.
 6. Do not create a client secret, delegated scope, app role, or redirect URI for this managed-identity lab.
 
 Explain that this registration represents the protected API. The Application ID URI becomes the token audience.
@@ -33,7 +33,7 @@ Explain that this registration represents the protected API. The Application ID 
 1. Open the Function App.
 2. Select **Settings** > **Identity**.
 3. On **System assigned**, confirm **Status** is **On**.
-4. Record the **Object (principal) ID**: `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1`.
+4. Record the **Object (principal) ID**: `{function-managed-identity-object-id}`.
 
 Explain that this managed identity is the actual caller. It is different from the Logic App app-registration client ID.
 
@@ -56,11 +56,11 @@ Explain that this managed identity is the actual caller. It is different from th
 | Identity requirement | Allow requests from specific identities |
 | Allowed identity | Function managed-identity Object ID from Portal Step 3 |
 | Tenant requirement | Allow requests only from the issuer tenant |
-| Allowed token audiences | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` |
+| Allowed token audiences | `api://{logic-app-client-id}` |
 
 If Microsoft is already listed, select **Edit** beside it and verify the same values.
 
-> The portal can configure the identity provider, `Require authentication`, HTTP 401, allowed audience, tenant, and specific identity requirement. It cannot display or configure Easy Auth `excludedPaths`. The current environment already contains `/runtime/*`, which permits Logic Apps run-history operations while `/api/*` remains protected. Do not delete and recreate Authentication immediately before the demo because that can remove this hidden property.
+> The portal can configure the identity provider, `Require authentication`, HTTP 401, allowed audience, tenant, and specific identity requirement. It cannot display or configure Easy Auth `excludedPaths`. Verify `/runtime/*` separately before the demo; it permits Logic Apps run-history operations while `/api/*` remains protected. Deleting and recreating Authentication can remove this hidden property.
 
 ### Portal Step 5: Configure the Function application settings
 
@@ -70,9 +70,9 @@ If Microsoft is already listed, select **Edit** beside it and verify the same va
 
 | Name | Value |
 | --- | --- |
-| `LOGIC_APP_URL` | `https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` |
-| `LOGIC_APP_AUDIENCE` | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` |
-| `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `00922812-791e-41c8-a99e-45c3ed784cf5` |
+| `LOGIC_APP_URL` | `https://la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01` |
+| `LOGIC_APP_AUDIENCE` | `api://{logic-app-client-id}` |
+| `WEBSITE_AUTH_AAD_ALLOWED_TENANTS` | `{tenant-id}` |
 
 Select **Apply** if you changed a value, then confirm the restart.
 
@@ -111,8 +111,8 @@ Expect HTTP 200 and a response containing:
 
 - `status: success`
 - `scenario: PORTAL-DEMO`
-- Token audience `api://786594a8-6b38-40cf-8c6b-d434b539dd46`
-- Token object ID `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1`
+- Token audience `api://{logic-app-client-id}`
+- Token object ID `{function-managed-identity-object-id}`
 - An authenticated Logic App response
 
 If **Test/Run** is unavailable for the .NET isolated Function, open **Get Function URL**, use the URL in the browser's preferred REST client, and send the same POST body. The URL contains the Function key; do not display or retain it after the demo.
@@ -197,16 +197,16 @@ $logicAppRegistrationName = "la-easyauth-lab-$environmentName-api"
 $callerRegistrationName = "la-easyauth-lab-$environmentName-caller"
 ```
 
-For the validated demo environment, the values are:
+Fill these values from your own Azure portal before continuing:
 
 ```powershell
-$subscriptionId = '6851693c-0b74-4462-8da8-cd498b088827'
-$tenantId = '00922812-791e-41c8-a99e-45c3ed784cf5'
+$subscriptionId = '{subscription-id}'
+$tenantId = '{tenant-id}'
 $location = 'westeurope'
 $environmentName = 'dev'
 $resourceGroup = 'rg-la-easyauth-lab-dev'
-$logicAppClientId = '786594a8-6b38-40cf-8c6b-d434b539dd46'
-$callerClientId = 'a571dbde-47f4-4e3d-a1f8-1b012d065786'
+$logicAppClientId = '{logic-app-client-id}'
+$callerClientId = '{caller-app-client-id}'
 ```
 
 ## Step 4: Create the Logic App API app registration

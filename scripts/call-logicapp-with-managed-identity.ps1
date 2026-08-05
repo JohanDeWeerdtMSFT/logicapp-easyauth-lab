@@ -12,7 +12,7 @@
     protected Logic App API.
 
     Azure portal location:
-    Microsoft Entra ID > App registrations > la-easyauth-lab-dev >
+    Microsoft Entra ID > App registrations > your Logic App API registration >
     Expose an API > Application ID URI.
 
     The GUID inside api://... is the registration's Application (client) ID,
@@ -33,16 +33,20 @@
 
 [CmdletBinding()]
 param(
-    # Current Logic App API registration:
-    # Microsoft Entra ID > App registrations > la-easyauth-lab-dev.
-    # Application (client) ID: 786594a8-6b38-40cf-8c6b-d434b539dd46
-    # Expose an API > Application ID URI: api://786594a8-...
-    [string]$Audience = 'api://786594a8-6b38-40cf-8c6b-d434b539dd46',
+    # Find this value in Azure portal:
+    # Microsoft Entra ID > App registrations > your Logic App API registration
+    # > Expose an API > Application ID URI.
+    # Expected format: api://<application-client-id>
+    [Parameter(Mandatory)]
+    [ValidatePattern('^api://[0-9a-fA-F-]{36}$')]
+    [string]$Audience,
 
-    # Current Logic App Standard resource:
-    # la-easyauth-lab-dev-la-daaq6t5xzrpaw > Overview > Default domain.
-    # The workflow and trigger names are visible under Workflows in the portal.
-    [string]$LogicAppUrl = 'https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01'
+    # Find the hostname in Logic App Standard > Overview > Default domain.
+    # Find the workflow and trigger names under Logic App Standard > Workflows.
+    # Use the unsigned endpoint: no sig, sp, or sv query parameters.
+    [Parameter(Mandatory)]
+    [ValidatePattern('^https://[^/]+\.azurewebsites\.net/api/.+')]
+    [string]$LogicAppUrl
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,7 +64,7 @@ if ([string]::IsNullOrWhiteSpace($env:IDENTITY_ENDPOINT) -or
 # The identity represented by the resulting token is the Function App's
 # system-assigned managed identity. Find its Object (principal) ID here:
 # Function App > Settings > Identity > System assigned.
-# Current Object (principal) ID: 82fc3b4f-e83c-42b4-9981-b3fb92ed25e1
+# Record this value for comparison; do not hard-code it in this script.
 #
 # That same object ID must appear in the Logic App Easy Auth configuration:
 # Logic App > Settings > Authentication > Microsoft > Edit > Allowed identities.

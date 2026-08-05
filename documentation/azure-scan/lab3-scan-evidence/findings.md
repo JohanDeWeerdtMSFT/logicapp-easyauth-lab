@@ -51,7 +51,7 @@ Lab 3 successfully deploys a **managed identity-based authentication pattern** f
 
 | Resource | Type | SKU | Status | Key Details |
 |----------|------|-----|--------|------------|
-| **laeasyauthlabdevdaaq6t5x** | Storage Account | Standard_LRS | ✅ Succeeded | Used by both Logic App & Function App |
+| **laeasyauthlabdev{storage-suffix}** | Storage Account | Standard_LRS | ✅ Succeeded | Used by both Logic App & Function App |
 | **la-easyauth-lab-dev-law** | Log Analytics Workspace | - | ✅ Succeeded | Monitoring and diagnostics |
 | **la-easyauth-lab-dev-ai** | Application Insights | - | ✅ Succeeded | Instrumentation for Function App |
 
@@ -65,9 +65,9 @@ Lab 3 successfully deploys a **managed identity-based authentication pattern** f
 
 #### Function App Managed Identity
 ```
-Principal ID: 77962c44-5aa3-485e-9bc1-6641997d8c56
+Principal ID: {logic-app-managed-identity-principal-id}
 Type: SystemAssigned
-Tenant: 00922812-791e-41c8-a99e-45c3ed784cf5
+Tenant: {tenant-id}
 ```
 
 ✅ **Finding:** Function App has system-assigned managed identity enabled. This identity is used to:
@@ -77,9 +77,9 @@ Tenant: 00922812-791e-41c8-a99e-45c3ed784cf5
 
 #### Logic App Managed Identity
 ```
-Principal ID: 77962c44-5aa3-485e-9bc1-6641997d8c56 (Note: May differ at runtime)
+Principal ID: {logic-app-managed-identity-principal-id} (Note: May differ at runtime)
 Type: SystemAssigned
-Tenant: 00922812-791e-41c8-a99e-45c3ed784cf5
+Tenant: {tenant-id}
 ```
 
 ✅ **Finding:** Logic App has system-assigned managed identity for future integration scenarios.
@@ -160,7 +160,7 @@ Tenant: 00922812-791e-41c8-a99e-45c3ed784cf5
 
 ### HTTP Request (Function App → Logic App)
 ```
-POST https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/trigger
+POST https://la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net/api/trigger
 Host: 10.0.1.x (resolved via private DNS)
 Authorization: Bearer {access_token}
 X-Forwarded-Proto: https

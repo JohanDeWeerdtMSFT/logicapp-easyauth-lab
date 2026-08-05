@@ -42,7 +42,7 @@ The Function App uses `DefaultAzureCredential` to automatically acquire bearer t
 private async Task<AccessToken> GetAccessTokenAsync(CancellationToken cancellationToken)
 {
     var logicAppClientId = Environment.GetEnvironmentVariable("LOGIC_APP_CLIENT_ID")
-                           ?? "{logicAppClientId}";  // Example: 2ebb3a00-e3fd-4773-b6cc-3da280a6da16
+                           ?? "{logicAppClientId}";  // Example: {example-client-id}
 
     var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
     {

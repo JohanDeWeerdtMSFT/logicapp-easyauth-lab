@@ -1,18 +1,18 @@
 {
-  "defaultHostName": "la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net",
+  "defaultHostName": "la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net",
   "identity": {
     "principalId": null,
     "tenantId": null,
     "type": "UserAssigned",
     "userAssignedIdentities": {
-      "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourcegroups/rg-la-easyauth-lab-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-la-easyauth-dev": {
-        "clientId": "39f79d6c-8862-4a95-9ab1-949f3c30685a",
-        "principalId": "9e5f7021-c186-4223-84f9-17ab5c5d52df"
+      "/subscriptions/{subscription-id}/resourcegroups/rg-la-easyauth-lab-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-la-easyauth-dev": {
+        "clientId": "{storage-identity-client-id}",
+        "principalId": "{storage-identity-principal-id}"
       }
     }
   },
   "kind": "functionapp,workflowapp",
-  "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw",
+  "name": "la-easyauth-lab-dev-la-{unique-suffix}",
   "state": "Running",
-  "virtualNetworkSubnetId": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp"
+  "virtualNetworkSubnetId": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp"
 }

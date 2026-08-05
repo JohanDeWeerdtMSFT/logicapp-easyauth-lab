@@ -52,12 +52,12 @@ az functionapp config appsettings list `
 
 # Check Function App managed identity
 az functionapp identity show `
-  --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" `
+  --name "la-easyauth-lab-dev-caller-{unique-suffix}" `
   --resource-group "rg-la-easyauth-lab-dev"
 
 # Check function deployment
 az functionapp deployment slot list `
-  --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" `
+  --name "la-easyauth-lab-dev-caller-{unique-suffix}" `
   --resource-group "rg-la-easyauth-lab-dev" `
   --query "[].name"
 ```
@@ -78,12 +78,12 @@ This ZIP deployment publishes `src/host.json` and the workflow directory separat
 ```powershell
 # List workflows
 az rest --method get `
-  --uri "https://management.azure.com/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/workflows?api-version=2023-12-01" `
+  --uri "https://management.azure.com/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/workflows?api-version=2023-12-01" `
   --query "value[].name"
 
 # Get workflow status
 az rest --method get `
-  --uri "https://management.azure.com/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/workflows/httpTriggerWorkflow?api-version=2023-12-01" `
+  --uri "https://management.azure.com/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/workflows/httpTriggerWorkflow?api-version=2023-12-01" `
   --query "properties.state"
 ```
 
@@ -92,7 +92,7 @@ az rest --method get `
 ```powershell
 # Get Function App's managed identity Object ID
 $funcAppObjectId = az functionapp identity show `
-  --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" `
+  --name "la-easyauth-lab-dev-caller-{unique-suffix}" `
   --resource-group "rg-la-easyauth-lab-dev" `
   --query principalId -o tsv
 
@@ -100,7 +100,7 @@ Write-Host "Function App Object ID: $funcAppObjectId"
 
 # Add to Logic App's Easy Auth allowedPrincipals
 az rest --method patch `
-  --uri "https://management.azure.com/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/config/authsettingsv2?api-version=2023-12-01" `
+  --uri "https://management.azure.com/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/config/authsettingsv2?api-version=2023-12-01" `
   --body @-<<EOF
 {
   "properties": {
@@ -128,7 +128,7 @@ Write-Host "Function App added to Logic App allowedPrincipals"
 ```bash
 # Get Function App URL
 FUNC_URL=$(az functionapp show \
-  --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" \
+  --name "la-easyauth-lab-dev-caller-{unique-suffix}" \
   --resource-group "rg-la-easyauth-lab-dev" \
   --query defaultHostName -o tsv)
 
@@ -150,7 +150,7 @@ traces
 ```powershell
 # Get bearer token using your own identity (for testing)
 $token = $(az account get-access-token `
-  --resource "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
+  --resource "api://{logic-app-client-id}" `
   --query accessToken -o tsv)
 
 # Call Logic App directly with bearer token
@@ -160,7 +160,7 @@ $headers = @{
 }
 
 $response = Invoke-WebRequest `
-  -Uri "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
+  -Uri "https://la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
   -Method Post `
   -Headers $headers `
   -Body '{"test":"message"}'
@@ -173,7 +173,7 @@ Write-Host $response.Content
 ### 401 Unauthorized
 ```
 Cause: Bearer token invalid or audience mismatch
-Fix:   Verify LOGIC_APP_AUDIENCE = api://786594a8-6b38-40cf-8c6b-d434b539dd46
+Fix:   Verify LOGIC_APP_AUDIENCE = api://{logic-app-client-id}
 ```
 
 ### 403 Forbidden
@@ -237,20 +237,20 @@ traces
 
 # Deploy Function App code
 cd solution; .\deploy.ps1 `
-  -FunctionAppName "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" `
+  -FunctionAppName "la-easyauth-lab-dev-caller-{unique-suffix}" `
   -ResourceGroupName "rg-la-easyauth-lab-dev" `
-  -LogicAppUrl "https://la-easyauth-lab-dev-la-daaq6t5xzrpaw.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
-  -LogicAppAudience "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
-  -TenantId "00922812-791e-41c8-a99e-45c3ed784cf5"; `
+  -LogicAppUrl "https://la-easyauth-lab-dev-la-{unique-suffix}.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
+  -LogicAppAudience "api://{logic-app-client-id}" `
+  -TenantId "{tenant-id}"; `
 
 # Add Function App to allowedPrincipals
-$funcAppObjectId = az functionapp identity show --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" --resource-group "rg-la-easyauth-lab-dev" --query principalId -o tsv; `
+$funcAppObjectId = az functionapp identity show --name "la-easyauth-lab-dev-caller-{unique-suffix}" --resource-group "rg-la-easyauth-lab-dev" --query principalId -o tsv; `
 
-az rest --method patch --uri "https://management.azure.com/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/config/authsettingsv2?api-version=2023-12-01" `
+az rest --method patch --uri "https://management.azure.com/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/config/authsettingsv2?api-version=2023-12-01" `
   --body "{\"properties\": {\"identityProviders\": {\"azureActiveDirectory\": {\"validation\": {\"allowedPrincipals\": {\"identities\": [\"$funcAppObjectId\"]}}}}}}"; `
 
 # Test
-$FUNC_URL = az functionapp show --name "la-easyauth-lab-dev-caller-daaq6t5xzrpaw" --resource-group "rg-la-easyauth-lab-dev" --query defaultHostName -o tsv; `
+$FUNC_URL = az functionapp show --name "la-easyauth-lab-dev-caller-{unique-suffix}" --resource-group "rg-la-easyauth-lab-dev" --query defaultHostName -o tsv; `
 curl -X POST "https://$FUNC_URL/api/CallLogicApp"
 ```
 

@@ -301,8 +301,13 @@ public class CallLogicApp
         // (see infra/modules/functionapp-caller.bicep) and it must match one of the
         // allowedAudiences configured on the Logic App's Easy Auth (infra/modules/easyauth.bicep).
         // Its value is the Application ID URI, e.g. api://<logic-app-app-registration-client-id>.
-        var logicAppAudience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE")
-                               ?? "api://786594a8-6b38-40cf-8c6b-d434b539dd46"; // Default for this lab
+        var logicAppAudience = Environment.GetEnvironmentVariable("LOGIC_APP_AUDIENCE");
+        if (string.IsNullOrWhiteSpace(logicAppAudience))
+        {
+            throw new InvalidOperationException(
+                "LOGIC_APP_AUDIENCE is required. Find the Application ID URI in Microsoft Entra ID " +
+                "> App registrations > the Logic App API registration > Expose an API.");
+        }
 
         // DefaultAzureCredential tries: env vars → managed identity → Azure CLI → Visual Studio → …
         // In production the managed identity is used automatically.

@@ -35,8 +35,8 @@
       -FunctionAppName "la-easyauth-lab-dev-caller-xyz123" `
       -ResourceGroupName "rg-la-easyauth-lab-dev" `
     -LogicAppUrl "https://la-easyauth-lab-dev-la-xyz123.azurewebsites.net/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
-      -LogicAppAudience "api://786594a8-6b38-40cf-8c6b-d434b539dd46" `
-      -TenantId "00922812-791e-41c8-a99e-45c3ed784cf5"
+      -LogicAppAudience "api://{logic-app-client-id}" `
+      -TenantId "{tenant-id}"
     
     Note: No SAS signature (sig=...) is required! The bearer token authenticates the request.
 #>

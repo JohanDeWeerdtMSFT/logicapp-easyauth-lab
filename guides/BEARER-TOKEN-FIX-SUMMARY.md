@@ -51,7 +51,7 @@ var token = await credential.GetTokenAsync(
 
 1. **GetAccessTokenAsync() method** (lines 192-227)
    - Removed dependency on `LOGIC_APP_AUDIENCE` environment variable
-   - Now uses `LOGIC_APP_CLIENT_ID` with fallback to known value: `786594a8-6b38-40cf-8c6b-d434b539dd46`
+   - Now uses `LOGIC_APP_CLIENT_ID` with fallback to known value: `{logic-app-client-id}`
    - Constructs token scope as `{clientId}/.default` (correct format for managed identity)
 
 2. **Run() method** (line 72)
@@ -78,14 +78,14 @@ var token = await credential.GetTokenAsync(
 
 ### Step 1: Acquire a Bearer Token
 ```powershell
-$clientId = "786594a8-6b38-40cf-8c6b-d434b539dd46"
+$clientId = "{logic-app-client-id}"
 $token = az account get-access-token --resource $clientId --query accessToken -o tsv
 ```
 
 ### Step 2: Call the Function App with Bearer Token
 ```powershell
 curl.exe -X POST `
-  "https://la-easyauth-lab-dev-caller-daaq6t5xzrpaw.azurewebsites.net/api/CallLogicApp" `
+  "https://la-easyauth-lab-dev-caller-{unique-suffix}.azurewebsites.net/api/CallLogicApp" `
   -H "Authorization: Bearer $token" `
   -H "Content-Type: application/json" `
   -d '{"scenario":"test"}'
@@ -127,7 +127,7 @@ curl.exe -X POST `
 
 ### Why the Original Format Failed
 ```
-api://786594a8-6b38-40cf-8c6b-d434b539dd46/.default
+api://{logic-app-client-id}/.default
 ```
 
 This format tells Entra ID: "I want a token for the audience api://...", but:
@@ -137,7 +137,7 @@ This format tells Entra ID: "I want a token for the audience api://...", but:
 
 ### Correct Format for Managed Identity
 ```
-786594a8-6b38-40cf-8c6b-d434b539dd46/.default
+{logic-app-client-id}/.default
 ```
 
 This tells Entra ID: "I want a token for the application (client ID) ...", which is what:

@@ -1,6 +1,5 @@
-WARNING: The behavior of this command has been altered by the following extension: authV2
 {
-  "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/sites/la-easyauth-lab-apim-dev-la-ec5ylfoo2rspq/config/authsettingsV2",
+  "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/sites/la-easyauth-lab-apim-dev-la-{unique-suffix}/config/authsettingsV2",
   "location": "West Europe",
   "name": "authsettingsV2",
   "properties": {

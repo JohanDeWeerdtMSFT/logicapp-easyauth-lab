@@ -3,13 +3,13 @@
   "bypass": "AzureServices",
   "defaultAction": "Deny",
   "ipRules": [],
-  "name": "laeasyauthlabapimdevec5y",
+  "name": "laeasyauthlabapimdev{storage-suffix}",
   "publicNetworkAccess": "Enabled",
   "virtualNetworkRules": [
     {
       "action": "Allow",
       "state": "Succeeded",
-      "virtualNetworkResourceId": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp"
+      "virtualNetworkResourceId": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp"
     }
   ]
 }

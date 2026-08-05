@@ -6,14 +6,14 @@
       ]
     },
     "enableDdosProtection": false,
-    "etag": "W/\"4e2fc0f0-7b02-4e31-9e5c-c043e1efd5ee\"",
-    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev",
+    "etag": "W/\"{resource-etag}\"",
+    "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev",
     "location": "westeurope",
     "name": "vnet-easyauth-apim-lab-dev",
     "privateEndpointVNetPolicies": "Disabled",
     "provisioningState": "Succeeded",
     "resourceGroup": "rg-la-easyauth-lab-apim-dev",
-    "resourceGuid": "bb5786f0-1b58-45ef-9548-9da0701aa859",
+    "resourceGuid": "{resource-guid}",
     "subnets": [
       {
         "addressPrefix": "10.20.1.0/26",
@@ -23,7 +23,7 @@
               "Microsoft.Network/virtualNetworks/subnets/action"
             ],
             "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
-            "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/delegations/0",
+            "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/delegations/0",
             "name": "0",
             "provisioningState": "Succeeded",
             "resourceGroup": "rg-la-easyauth-lab-apim-dev",
@@ -32,7 +32,7 @@
           }
         ],
         "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
-        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp",
+        "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp",
         "name": "snet-logicapp",
         "privateEndpointNetworkPolicies": "Disabled",
         "privateLinkServiceNetworkPolicies": "Enabled",
@@ -42,8 +42,8 @@
           {
             "allowDelete": false,
             "etag": "W/\"b3a1d336-1418-491b-a1c2-c2a2b2611b5f\"",
-            "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
-            "link": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-apim-dev-plan",
+            "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-apim-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
+            "link": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-apim-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-apim-dev-plan",
             "linkedResourceType": "Microsoft.Web/serverfarms",
             "locations": [],
             "name": "AppServiceLink",

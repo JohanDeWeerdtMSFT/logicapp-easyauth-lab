@@ -3,10 +3,10 @@
   "nextLink": null,
   "value": [
     {
-      "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-daaq6t5xzrpaw/workflows/httpTriggerWorkflow",
+      "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/sites/la-easyauth-lab-dev-la-{unique-suffix}/workflows/httpTriggerWorkflow",
       "kind": "Stateful",
       "location": "West Europe",
-      "name": "la-easyauth-lab-dev-la-daaq6t5xzrpaw/httpTriggerWorkflow",
+      "name": "la-easyauth-lab-dev-la-{unique-suffix}/httpTriggerWorkflow",
       "properties": {
         "flowState": "Enabled",
         "health": {

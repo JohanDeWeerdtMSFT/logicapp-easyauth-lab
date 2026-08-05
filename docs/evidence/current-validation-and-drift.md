@@ -19,8 +19,8 @@ This file records the current live classroom baseline. When older evidence or as
 | Workflow trigger | `When_a_HTTP_request_is_received` | Live workflow definition |
 | Easy Auth mode | `Return401` | Live `authsettingsV2` |
 | Easy Auth runtime exclusion | `/runtime/*` | Portal run-history API returned recent succeeded runs on 2026-08-05 |
-| Allowed audience | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` | Live `authsettingsV2` and B1 token claim |
-| Allowed principal | `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1` | Function managed identity and live `authsettingsV2` |
+| Allowed audience | `api://{logic-app-client-id}` | Live `authsettingsV2` and B1 token claim |
+| Allowed principal | `{function-managed-identity-object-id}` | Function managed identity and live `authsettingsV2` |
 | Anonymous Logic App call | HTTP 401 | Direct unsigned `POST` without a bearer token |
 | Presentation demo | Passed: direct Logic App 401, keyed Function 200, authenticated workflow principal | `scripts/demo-easyauth.ps1` on 2026-08-05 |
 | B1 managed-identity call | HTTP 200 and workflow `status: ok` | Assertion-rich validator on 2026-08-05 |

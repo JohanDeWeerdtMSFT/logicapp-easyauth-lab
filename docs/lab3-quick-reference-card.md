@@ -146,7 +146,7 @@ Use the caller response `tokenClaims` object. Do not copy a bearer token into an
 ```json
 {
   "audience": "api://11111111-1111-1111-1111-111111111111",
-  "iss": "https://login.microsoftonline.com/00922812-791e-41c8-a99e-45c3ed784cf5/v2.0",
+  "iss": "https://login.microsoftonline.com/{tenant-id}/v2.0",
   "objectId": "22222222-2222-2222-2222-222222222222",
   "expiresOn": "2026-08-04T18:00:00Z"
 }

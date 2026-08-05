@@ -4,16 +4,18 @@ param environmentName = 'dev'
 param location = 'westeurope'
 param easyAuthMode = 'Return401'
 
-// Lab 1 + Lab 3: Logic App Entra app registration
-// az ad app create --display-name "la-easyauth-lab-dev"
-param entraAppClientId = '786594a8-6b38-40cf-8c6b-d434b539dd46'
-param entraAppTenantId = '00922812-791e-41c8-a99e-45c3ed784cf5'
+// Replace these placeholders before deployment.
+// Tenant ID: Microsoft Entra ID > Overview > Tenant ID.
+// Logic App client ID: Microsoft Entra ID > App registrations > your Logic App
+// API registration > Overview > Application (client) ID.
+param entraAppClientId = 'REPLACE-WITH-LOGIC-APP-CLIENT-ID'
+param entraAppTenantId = 'REPLACE-WITH-TENANT-ID'
 
 param deployFunctionApp = false
 
 // ── Lab 3: Function App caller → Logic App via private endpoint ──
-// Function App caller Entra app registration for its own Easy Auth
-// az ad app create --display-name "la-easyauth-lab-caller-dev"
+// Caller client ID: Microsoft Entra ID > App registrations > your caller
+// Function registration > Overview > Application (client) ID.
 param deployFuncCallerDemo = true
 param enablePrivateAppNetworking = false
-param funcCallerEntraClientId = 'a571dbde-47f4-4e3d-a1f8-1b012d065786'
+param funcCallerEntraClientId = 'REPLACE-WITH-CALLER-APP-CLIENT-ID'

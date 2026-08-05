@@ -6,8 +6,8 @@
         "actions": [
           "Microsoft.Network/virtualNetworks/subnets/action"
         ],
-        "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
-        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/delegations/0",
+        "etag": "W/\"{resource-etag}\"",
+        "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/delegations/0",
         "name": "0",
         "provisioningState": "Succeeded",
         "resourceGroup": "rg-la-easyauth-lab-dev",
@@ -15,8 +15,8 @@
         "type": "Microsoft.Network/virtualNetworks/subnets/delegations"
       }
     ],
-    "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
-    "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp",
+    "etag": "W/\"{resource-etag}\"",
+    "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp",
     "name": "snet-logicapp",
     "privateEndpointNetworkPolicies": "Disabled",
     "privateLinkServiceNetworkPolicies": "Enabled",
@@ -25,9 +25,9 @@
     "serviceAssociationLinks": [
       {
         "allowDelete": false,
-        "etag": "W/\"250235f9-b9b8-4142-a621-c6b1c217522e\"",
-        "id": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
-        "link": "/subscriptions/6851693c-0b74-4462-8da8-cd498b088827/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-dev-plan",
+        "etag": "W/\"{resource-etag}\"",
+        "id": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Network/virtualNetworks/vnet-easyauth-lab-dev/subnets/snet-logicapp/serviceAssociationLinks/AppServiceLink",
+        "link": "/subscriptions/{subscription-id}/resourceGroups/rg-la-easyauth-lab-dev/providers/Microsoft.Web/serverfarms/la-easyauth-lab-dev-plan",
         "linkedResourceType": "Microsoft.Web/serverfarms",
         "locations": [],
         "name": "AppServiceLink",
