@@ -77,11 +77,15 @@ Write-Host "Package: $ZipPath"
 Write-Host ""
 Write-Host "=== Step 3: Deploy to Azure Function App ===" -ForegroundColor Cyan
 Write-Host "Target: $FunctionAppName (RG: $ResourceGroupName)"
-az functionapp deployment source config-zip `
+az webapp deploy `
     --name $FunctionAppName `
     --resource-group $ResourceGroupName `
-    --src $ZipPath
-if ($LASTEXITCODE -ne 0) { throw "az functionapp deployment failed" }
+    --src-path $ZipPath `
+    --type zip `
+    --clean true `
+    --restart true `
+    --track-status true
+if ($LASTEXITCODE -ne 0) { throw "az webapp deploy failed" }
 
 # ── 4. Configure application settings (NO SECRETS!) ────────────────────────────
 Write-Host ""

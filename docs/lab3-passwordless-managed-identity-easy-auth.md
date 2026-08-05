@@ -67,8 +67,8 @@ See [Secure access and data for workflows in Azure Logic Apps](https://learn.mic
 
 If you want the fastest completion path, do this first:
 
-1. Deploy infrastructure with `scripts/deploy.ps1` from [README.md](../README.md).
-2. Follow only the deployment/testing steps in [lab3-testing-and-verification.md](lab3-testing-and-verification.md).
+1. Follow the numbered [instructor walkthrough](lab3-instructor-walkthrough.md) from Step 1 through Step 17.
+2. Use [lab3-testing-and-verification.md](lab3-testing-and-verification.md) for deeper validation.
 3. Validate scenarios using [evidence/scenario-ids.md](evidence/scenario-ids.md).
 4. Return to this page for deeper architecture understanding.
 
@@ -174,139 +174,21 @@ Easy Auth checks:
 3. Token expiration
 4. Caller principal against `allowedPrincipals`
 
-## Deployment Steps
+## Implementation walkthrough
 
-### Deploy the Lab 3 infrastructure
+Use the canonical [numbered instructor walkthrough](lab3-instructor-walkthrough.md) for all setup and execution steps. It owns the current commands for:
 
-Set `AZURE_SUBSCRIPTION_ID` in `.env`, sign in to Azure, and preview before deploying:
+1. Creating both app registrations.
+2. Configuring the Logic App Application ID URI.
+3. Deploying infrastructure and Easy Auth.
+4. Publishing the workflow and Function code.
+5. Running the live Easy Auth proof.
+6. Showing run history and Application Insights.
+7. Cleaning up the lab.
 
-```powershell
-az login --tenant '<tenant-id>'
+Do not configure `allowedPrincipals` manually. The Bicep deployment obtains the Function managed-identity principal ID and configures the Easy Auth allow-list.
 
-./scripts/deploy.ps1 `
-  -EntraAppClientId '<logic-app-client-id>' `
-  -EntraAppTenantId '<tenant-id>' `
-  -DeployFuncCallerDemo `
-  -FuncCallerEntraClientId '<caller-function-client-id>' `
-  -WhatIf
-```
-
-Remove `-WhatIf` after reviewing the changes. The deployment must return the Logic App name and hostname, caller Function App name and hostname, and caller principal ID. Continue with [the canonical deployment and validation guide](lab3-testing-and-verification.md).
-
-### Step 1: Verify deployed resources
-
-```powershell
-$resourceGroup = "<resource-group-name>"
-
-az resource list --resource-group $resourceGroup --query "[].{name:name,type:type}" -o table
-```
-
-### Step 2: Deploy workflow definition
-
-Publish the Standard Logic Apps project as a ZIP artifact:
-
-```powershell
-./scripts/deploy-workflow.ps1 `
-  -SubscriptionId '<subscription-id>' `
-  -ResourceGroupName $resourceGroup `
-  -LogicAppName '<logic-app-name>'
-```
-
-The publisher verifies that the live trigger method is `POST`.
-
-### Step 3: Add Function App identity to Logic App `allowedPrincipals`
-
-```powershell
-$subscriptionId = "<subscription-id>"
-$resourceGroup = "<resource-group-name>"
-$functionAppName = "<function-app-name>"
-$logicAppName = "<logic-app-name>"
-
-$functionAppObjectId = az functionapp identity show `
-  --name $functionAppName `
-  --resource-group $resourceGroup `
-  --query principalId -o tsv
-
-az rest --method patch `
-  --uri "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$logicAppName/config/authsettingsv2?api-version=2023-12-01" `
-  --body @-<<EOF
-{
-  "properties": {
-    "identityProviders": {
-      "azureActiveDirectory": {
-        "validation": {
-          "allowedPrincipals": {
-            "identities": [
-              "$functionAppObjectId"
-            ]
-          }
-        }
-      }
-    }
-  }
-}
-EOF
-```
-
-### Step 4: Configure Function App settings and deploy code
-
-```powershell
-$functionAppName = "<function-app-name>"
-$resourceGroup = "<resource-group-name>"
-$logicAppHost = "<logic-app-hostname>"
-$logicAppAudience = "api://<logic-app-client-id>"
-$tenantId = "<tenant-id>"
-
-cd solution
-
-./deploy.ps1 `
-  -FunctionAppName $functionAppName `
-  -ResourceGroupName $resourceGroup `
-  -LogicAppUrl "https://$logicAppHost/api/httpTriggerWorkflow/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01" `
-  -LogicAppAudience $logicAppAudience `
-  -TenantId $tenantId
-```
-
-## Testing
-
-### Test 1: Invoke Function App endpoint
-
-```powershell
-$functionAppName = "<function-app-name>"
-$resourceGroup = "<resource-group-name>"
-
-$funcHost = az functionapp show --name $functionAppName --resource-group $resourceGroup --query defaultHostName -o tsv
-$functionKey = az functionapp keys list --name $functionAppName --resource-group $resourceGroup --query functionKeys.default -o tsv
-Invoke-RestMethod -Method Post -Uri "https://$funcHost/api/CallLogicApp" -Headers @{ 'x-functions-key' = $functionKey }
-Remove-Variable functionKey
-```
-
-Expected result: HTTP 200 and success payload. Keep the Function key in memory and do not record it in lab evidence.
-
-### Test 2: Query Application Insights
-
-```kusto
-traces
-| where message contains "Bearer token"
-| project timestamp, message, severityLevel
-| order by timestamp desc
-```
-
-Expected traces:
-
-- Bearer token acquired
-- Outbound Logic App request sent
-- Logic App response 200
-
-## Troubleshooting
-
-| Error | Typical Cause | What To Check |
-| --- | --- | --- |
-| 401 Unauthorized | Invalid signature, wrong audience, or expired token | `LOGIC_APP_AUDIENCE`, token claims, tenant alignment |
-| 403 Forbidden | Caller identity not in `allowedPrincipals` | Function App principal ID and Easy Auth policy |
-| Workflow not found | Workflow not deployed | `httpTriggerWorkflow` exists and is saved |
-| Credential unavailable | Managed identity disabled | Function App identity status is `On` |
-| Network resolution issues | Private storage DNS or VNet path misconfigured | Private DNS links and VNet integration |
+Use [Lab 3 testing and verification](lab3-testing-and-verification.md) for the extended scenario matrix and [Troubleshooting](troubleshooting.md) for detailed diagnosis.
 
 ## Pattern Comparison
 

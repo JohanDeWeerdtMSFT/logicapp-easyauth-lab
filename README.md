@@ -212,6 +212,7 @@ az login
 
 ### Step 3: Deploy code and validate
 
+- Instructor-led setup: [follow the numbered walkthrough](docs/lab3-instructor-walkthrough.md) from app registrations through run history and cleanup.
 - Follow: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Run the presentation-ready proof with `scripts/demo-easyauth.ps1` after deploying the workflow and Function code.
 - Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)

@@ -4,6 +4,8 @@ This repository is now focused on one trainee path:
 
 - Lab 3: secure Function App to Logic App calls with managed identity + Easy Auth.
 
+> **Instructor:** Use [the numbered instructor walkthrough](docs/lab3-instructor-walkthrough.md) as the single end-to-end presentation script. It starts with app registrations and ends with the live demo, run history, logs, and cleanup.
+
 Lab 1 and Lab 2 material is now background context only and is not required for completion of the active hands-on path.
 
 ## How To Use This Page
@@ -15,10 +17,9 @@ understand the deployment output and to diagnose 401 versus 403 responses later.
 | --- | --- | --- |
 | 1 | Understand the goal | Read [README.md](README.md), including **Before you deploy** |
 | 2 | Learn the concepts | Read [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) |
-| 3 | Review the walkthrough | Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) |
-| 4 | Deploy | Run `scripts/deploy.ps1` (Step 4 below) |
-| 5 | Validate | Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
-| 6 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
+| 3 | Follow the walkthrough | Use [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md) from Step 1 through Step 17 |
+| 4 | Run deeper validation | Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and check [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) |
+| 5 | Troubleshoot | Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Step 0 - If Using GitHub Codespaces
 
@@ -44,43 +45,17 @@ After reading it you should be able to explain, in your own words:
 - The difference between authentication (401) and authorization (403).
 - Why this lab uses an Entra access token instead of a SAS-signed callback URL.
 
-## Step 3 - Review What Gets Deployed
+## Step 3 - Follow the Numbered Walkthrough
 
-1. Read [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md).
-2. Read [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
+Follow [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md) from Step 1 through Step 17. It includes app registrations, infrastructure, Easy Auth, managed identity, deployment, testing, portal run history, logs, and cleanup.
 
-## Step 4 - Deploy Infrastructure
+## Step 4 - Run Deeper Validation
 
-Run:
-
-```powershell
-./scripts/deploy.ps1 -EntraAppClientId "{clientId}" -EntraAppTenantId "{tenantId}" `
-  -DeployFuncCallerDemo -FuncCallerEntraClientId "{callerClientId}"
-```
-
-`-DeployFuncCallerDemo` creates the caller Function App, the virtual network and private storage
-connectivity, and the caller principal allow-list. App endpoints remain public in the classroom default. Without it the deployment only creates the
-Logic App and its Easy Auth configuration, and Steps 5 and 6 below cannot be completed.
-`{callerClientId}` is the client ID of the **second** Entra app registration, the one that represents
-the caller Function App.
-
-For the optional private-ingress exercise, add `-EnablePrivateAppNetworking` and use a VNet-connected
-deployment executor. See [Private networking and CI/CD](docs/07-private-networking-and-cicd.md).
-
-Then confirm resource group `rg-la-easyauth-lab-dev` is created.
-
-## Step 5 - Deploy and Validate App Flow
-
-1. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md). It deploys the workflow and caller code, validates selected access-token claims without exposing the token, and proves Easy Auth behavior.
+1. Follow [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) for the extended B1/B2/B3/B4/B6 matrix.
 2. Validate outcomes in [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md).
 3. Compare the deployment with [the current validation and drift register](docs/evidence/current-validation-and-drift.md).
 
-## Step 6 - Confirm Success
-
-1. Check Application Insights traces for token acquisition and the outbound call.
-2. Check Logic App run history for successful execution.
-
-## Step 7 - Troubleshoot If Needed
+## Step 5 - Troubleshoot If Needed
 
 Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow) for 401, 403, invalid audience, and missing managed identity issues. Then use [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md).
 
@@ -99,7 +74,7 @@ Start with [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer
 
 1. [README.md](README.md)
 2. [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
-3. [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
+3. [docs/lab3-instructor-walkthrough.md](docs/lab3-instructor-walkthrough.md)
 4. [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 5. [docs/evidence/findings.md](docs/evidence/findings.md)
 
