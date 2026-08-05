@@ -225,6 +225,22 @@ Expected: approved storage private endpoints and linked private DNS zones for `b
 
 ## 6. Run the successful managed-identity test
 
+For a presentation-ready proof, run the demo script. It first proves that the Logic App rejects a request without a bearer token, then invokes the Function and validates the managed-identity token claims and authenticated workflow principal:
+
+```powershell
+./scripts/demo-easyauth.ps1 `
+  -SubscriptionId $subscriptionId `
+  -ResourceGroupName $resourceGroup `
+  -LogicAppName $logicAppName `
+  -FunctionAppName $functionAppName `
+  -LogicAppClientId $logicAppClientId `
+  -TenantId $tenantId
+```
+
+Expected: `passed` is `true`, `unauthenticatedLogicAppStatus` is `401`, `authenticatedFunctionStatus` is `200`, and every assertion is `true`. The script never prints the Function key or bearer token.
+
+To perform the same successful call manually:
+
 ```powershell
 $functionKey = az functionapp keys list `
   --resource-group $resourceGroup `

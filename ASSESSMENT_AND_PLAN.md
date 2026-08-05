@@ -1,10 +1,10 @@
 # Assessment and improvement plan
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 ## 1. Executive summary
 
-The active Lab 3 path is implemented and live-validated. It teaches a Function App calling a Logic App Standard workflow with a Microsoft Entra access token acquired through the Function's system-assigned managed identity.
+The active Lab 3 presentation path is implemented and live-validated. It teaches a Function App calling a Logic App Standard workflow with a Microsoft Entra access token acquired through the Function's system-assigned managed identity. `scripts/demo-easyauth.ps1` provides a repeatable proof that the uncredentialed Logic App call is rejected and the managed-identity call is accepted.
 
 Current classroom baseline:
 
@@ -49,14 +49,14 @@ The implemented learning journey is:
 | Critical | Subscription and caller-demo inputs were not reproducible | Explicit parameters and `.env` fallback implemented | `scripts/deploy.ps1` |
 | High | Scenario body did not correlate with the workflow run | Caller propagates `scenario` in the query string | `CallLogicApp.cs`; B1 assertions |
 | High | Audience documentation did not match Easy Auth | `api://<logic-app-client-id>` aligned across Entra, caller, and Easy Auth | B1 token claim and live `authsettingsV2` |
-| High | B6 could not safely mutate and restore authorization | Direct captured-policy mutation, complete restoration, and exact principal comparison implemented | `scripts/validate.ps1`; live B6 `403` |
+| High | B6 could not safely mutate and restore authorization | Restoration is safe, but runtime propagation remains open because the 2026-08-05 mutation returned HTTP 200 after ARM reported the temporary principal | Follow-up issue; original principal restoration confirmed |
 | High | Public Function harness could proxy anonymous internet calls | HTTP trigger now requires a Function key; teardown and production-hardening warnings added | `CallLogicApp.cs`; canonical learner docs |
-| High | WS1 storage account disabled required key access | Shared Key capability remains enabled for Workflow Service Plan compatibility while application storage settings use managed identity | `infra/modules/foundation.bicep`; Microsoft Learn hosting limitation |
+| High | WS1 storage account disabled required key access | Bicep requests Shared Key capability, but inherited `StorageAccount_DisableLocalAuth_Modify` policy keeps the effective value disabled | Follow-up issue; live policy and storage state inspected |
 | High | Private ingress blocked normal workstation publishing | Public app ingress is the classroom default | `enablePrivateAppNetworking=false` |
 | Medium | Private networking and CI/CD caveats were fragmented | Dedicated guide added | `docs/07-private-networking-and-cicd.md` |
 | Medium | Duplicate Lab 3 procedures drifted | Duplicate files now point to canonical guides | `labs/lab3-bearer-token/docs/` |
 
-No open critical or high findings remain for PR 6.
+PR 6 is complete and the presentation demo is not blocked. Two high-priority operational findings remain for a dedicated follow-up issue and Copilot PR.
 
 ## 5. Missing explanations for beginners
 
@@ -130,7 +130,12 @@ All PR 6 implementation changes are complete:
 
 ## 10. Open questions
 
-No open question blocks PR 6 review or merge.
+No open question blocks the Easy Auth presentation demo.
+
+Required follow-up work:
+
+- Make deployment detect and explain the inherited storage-policy conflict with WS1 hosting requirements.
+- Make B6 validate Easy Auth runtime enforcement and prove restoration with a successful B1 request.
 
 Future work outside PR 6:
 
