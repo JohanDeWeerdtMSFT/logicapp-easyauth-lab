@@ -25,6 +25,7 @@ Create a temporary text file or PowerShell session with these placeholders. Do n
 | `{logic-app-default-domain}` | Logic App Standard > **Overview** > **Default domain** |
 | `{lab-user-object-id}` | **Microsoft Entra ID** > **Users** > the lab user > **Object ID** |
 | `{function-managed-identity-object-id}` | Function App > **Settings** > **Identity** > **System assigned** > **Object (principal) ID** |
+| `{azure-cli-client-id}` | **Microsoft Entra ID** > **Enterprise applications** > **All applications** > search for **Microsoft Azure CLI** > **Overview** > **Application ID**. See the fallback discovery command below if the application isn't visible. |
 
 Confirm the Logic App API registration has this Application ID URI:
 
@@ -52,6 +53,7 @@ $subscriptionId = '{subscription-id}'
 $logicAppClientId = '{logic-app-client-id}'
 $logicAppDefaultDomain = '{logic-app-default-domain}'
 $labUserObjectId = '{lab-user-object-id}'
+$azureCliClientId = '{azure-cli-client-id}'
 
 $audience = "api://$logicAppClientId"
 $delegatedScope = "$audience/user_impersonation"
@@ -125,13 +127,47 @@ Pre-authorization suppresses the attendee consent prompt for this specific trust
 
 1. On the same **Expose an API** page, find **Authorized client applications**.
 2. Select **Add a client application**.
-3. Enter the Microsoft Azure CLI Application (client) ID:
+3. Enter `{azure-cli-client-id}` from Step 1.
 
-```text
-04b07795-8ddb-461a-bbee-02f9e1bf7b46
+### Find the Azure CLI client ID if it isn't visible in the portal
+
+Microsoft Azure CLI is a Microsoft first-party public client. Its Application ID is not a credential or secret, but this guide intentionally does not hard-code it.
+
+First try the portal:
+
+1. Open **Microsoft Entra ID** > **Enterprise applications**.
+2. Select **All applications**.
+3. Remove filters that hide Microsoft applications, if necessary.
+4. Search for **Microsoft Azure CLI**.
+5. Open the application and copy **Application ID** from **Overview**.
+
+If tenant permissions or portal filters prevent you from seeing the enterprise application, retrieve the client ID from the `appid` claim of your current Azure CLI management token. The token remains in memory and is removed immediately:
+
+```powershell
+$managementToken = az account get-access-token `
+  --tenant $tenantId `
+  --resource 'https://management.azure.com/' `
+  --query accessToken `
+  --output tsv
+
+try {
+  $payload = $managementToken.Split('.')[1].Replace('-', '+').Replace('_', '/')
+  $payload += '=' * ((4 - $payload.Length % 4) % 4)
+  $claims = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String($payload)
+  ) | ConvertFrom-Json
+
+  $azureCliClientId = [string]$claims.appid
+  $azureCliClientId
+}
+finally {
+  Remove-Variable managementToken, payload, claims -ErrorAction SilentlyContinue
+}
 ```
 
-This is Microsoft's public client ID for Azure CLI. It is not a tenant-specific ID, credential, or secret.
+Copy the displayed client ID into the `$azureCliClientId` variable from Step 2. Do not print or save the token itself.
+
+Return to **Authorized client applications** and enter the value of `$azureCliClientId`.
 
 1. Select the `user_impersonation` authorized scope.
 2. Select **Add application**.
