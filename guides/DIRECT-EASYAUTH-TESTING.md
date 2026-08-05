@@ -291,6 +291,10 @@ This proves that Easy Auth authenticated the token but rejected the principal du
 10. Select **Save** on the identity provider page. Selecting **OK** in the side pane does not save the identity provider by itself.
 11. Wait for the Azure portal save notification to report success before continuing.
 
+The following screenshot shows the lab configuration with **Allow requests from specific identities** selected and two allowed identities: the existing Function managed identity and the temporary lab user. All environment-specific values are intentionally redacted:
+
+![Logic App Easy Auth identity provider with two specific allowed identities configured](step-7-temporarily-allow-lab-user.png)
+
 Do not replace the Function identity. Add the user as a second temporary identity.
 
 For this isolated lab, leave **Client application requirement** set to **Allow requests from any application**. The exact audience, tenant, and allowed identities still constrain access. The portal labels this choice **Not recommended** because a production API should normally also restrict trusted client applications or enforce application roles/scopes. Client application IDs are not the same values as the principal Object IDs under **Allowed identities**.
