@@ -78,6 +78,13 @@ Select **Apply** if you changed a value, then confirm the restart.
 
 Explain that the Function requests `LOGIC_APP_AUDIENCE/.default` using its managed identity and sends the resulting token to `LOGIC_APP_URL`.
 
+The two operations are shown without framework abstractions in [call-logicapp-with-managed-identity.ps1](../scripts/call-logicapp-with-managed-identity.ps1):
+
+1. Request a token from the App Service `IDENTITY_ENDPOINT` for `LOGIC_APP_AUDIENCE`.
+2. Send `Authorization: Bearer <token>` to `LOGIC_APP_URL`.
+
+This script must run inside a managed-identity-enabled Function App or App Service app. Running it on a laptop cannot use the Function App's managed identity.
+
 ### Portal Step 6: Confirm the Function trigger exists
 
 1. In the Function App, select **Functions**.
