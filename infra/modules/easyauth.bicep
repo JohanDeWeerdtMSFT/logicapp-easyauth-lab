@@ -11,7 +11,7 @@ targetScope = 'resourceGroup'
 //
 // Key design decisions:
 // - Supports Return401 for the public classroom path so missing tokens are rejected.
-// - AllowAnonymous remains available for portal-manageability investigations.
+// - Excludes only /runtime/* so Logic Apps portal run-history calls reach the runtime.
 // - Requests with an Authorization header are validated by Easy Auth in either mode.
 // - platform.enabled + runtimeVersion ~1 are required for Easy Auth to function.
 // - MICROSOFT_PROVIDER_AUTHENTICATION_SECRET must be set as an app setting (Key Vault ref).
@@ -41,6 +41,11 @@ param allowedAudiences array = [
 @description('Allowed principal (object) IDs. Restricts access to these identities (e.g., APIM system-assigned managed identity principal ID).')
 param allowedPrincipals array = []
 
+@description('Paths excluded from Easy Auth. Logic Apps runtime endpoints validate their own run-history requests while workflow trigger paths remain protected.')
+param excludedPaths array = [
+  '/runtime/*'
+]
+
 @description('Name of the app setting that holds the client secret (typically a Key Vault reference). Leave empty to skip.')
 #disable-next-line secure-secrets-in-params
 param clientSecretSettingName string = 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'
@@ -62,6 +67,7 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     globalValidation: {
       requireAuthentication: true
       unauthenticatedClientAction: easyAuthMode
+      excludedPaths: excludedPaths
     }
     httpSettings: {
       requireHttps: true

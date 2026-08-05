@@ -18,6 +18,7 @@ This file records the current live classroom baseline. When older evidence or as
 | Workflow method | `POST` | ZIP publisher live verification |
 | Workflow trigger | `When_a_HTTP_request_is_received` | Live workflow definition |
 | Easy Auth mode | `Return401` | Live `authsettingsV2` |
+| Easy Auth runtime exclusion | `/runtime/*` | Portal run-history API returned recent succeeded runs on 2026-08-05 |
 | Allowed audience | `api://786594a8-6b38-40cf-8c6b-d434b539dd46` | Live `authsettingsV2` and B1 token claim |
 | Allowed principal | `82fc3b4f-e83c-42b4-9981-b3fb92ed25e1` | Function managed identity and live `authsettingsV2` |
 | Anonymous Logic App call | HTTP 401 | Direct unsigned `POST` without a bearer token |
@@ -51,6 +52,7 @@ The B1 response reported the expected audience, tenant issuer, Function managed-
 | B1 validator asserted only HTTP 200 | B1 now asserts scenario propagation, audience, managed-identity object ID, and authenticated workflow principal. |
 | Public classroom deployment retained dual app ingress | The retained Logic App private endpoint and App Service private DNS zone were removed; storage private endpoints remain. |
 | Tracked `infra/main.json` represented the old topology | Regenerated from the current Bicep source and verified to include `enablePrivateAppNetworking`. |
+| Strict Easy Auth blocked portal run history with HTTP 401 | Added the narrow `/runtime/*` exclusion; `/api/*` remains protected and an unsigned trigger call still returns HTTP 401. |
 
 ## Open non-blocking findings
 

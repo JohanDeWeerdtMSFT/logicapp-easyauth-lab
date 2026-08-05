@@ -10,6 +10,7 @@ Current classroom baseline:
 
 - Function App endpoint: public, with a Function-key-protected HTTP trigger and Easy Auth `AllowAnonymous` behind that lab guard.
 - Logic App endpoint: public, with Easy Auth `Return401`, audience validation, and `allowedPrincipals`.
+- Logic Apps runtime path: `/runtime/*` excluded from Easy Auth so portal run history works; `/api/*` trigger paths remain protected.
 - Shared storage: private, with Blob, Queue, Table, and File private endpoints and managed-identity RBAC.
 - Optional private Logic App ingress: enabled only with `-EnablePrivateAppNetworking`.
 - Workflow content: deployed as a Standard Logic Apps ZIP project.
@@ -55,6 +56,7 @@ The implemented learning journey is:
 | High | Private ingress blocked normal workstation publishing | Public app ingress is the classroom default | `enablePrivateAppNetworking=false` |
 | Medium | Private networking and CI/CD caveats were fragmented | Dedicated guide added | `docs/07-private-networking-and-cicd.md` |
 | Medium | Duplicate Lab 3 procedures drifted | Duplicate files now point to canonical guides | `labs/lab3-bearer-token/docs/` |
+| High | Strict Easy Auth blocked portal run history | Added `/runtime/*` to `excludedPaths`; live run-history API succeeded while unsigned trigger calls remained HTTP 401 | `infra/modules/easyauth.bicep`; live validation on 2026-08-05 |
 
 PR 6 is complete and the presentation demo is not blocked. Two high-priority operational findings remain for a dedicated follow-up issue and Copilot PR.
 

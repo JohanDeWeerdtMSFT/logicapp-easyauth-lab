@@ -40,11 +40,14 @@ Private ingress requires the `privatelink.azurewebsites.net` zone to be linked t
 
 ## Portal and run-history caveat
 
-The classroom baseline uses `Return401` so an anonymous trigger call proves HTTP 401. Strict Easy Auth can affect Logic Apps portal runtime operations such as callback URL retrieval or run details because those requests also traverse App Service authentication. Treat `AllowAnonymous` or carefully scoped excluded runtime paths as an advanced manageability investigation, not the secured classroom baseline.
+The classroom baseline uses `Return401` and excludes only `/runtime/*` from Easy Auth. Logic Apps run-history requests can therefore reach the runtime and use the runtime's own authorization, while the public workflow trigger under `/api/*` still requires a valid Entra bearer token. A direct unsigned trigger call continues to return HTTP 401.
+
+The Azure portal does not expose `excludedPaths`. Keep this setting in Bicep so later deployments do not restore the run-history HTTP 401 failure.
 
 References:
 
 - [App Service authentication and authorization](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization)
+- [Easy Auth configuration for Logic App Standard through CI/CD](https://techcommunity.microsoft.com/blog/integrationsonazureblog/easy-auth-configuration-for-logic-app-standard-through-cicd/4520539)
 - [Deploy files to App Service](https://learn.microsoft.com/azure/app-service/deploy-zip)
 - [App Service private endpoints](https://learn.microsoft.com/azure/app-service/overview-private-endpoint)
 - [Azure Pipelines agents](https://learn.microsoft.com/azure/devops/pipelines/agents/agents)

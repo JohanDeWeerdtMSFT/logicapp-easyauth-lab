@@ -294,6 +294,16 @@ Use all four signals, not only the caller's HTTP status:
 3. A new `httpTriggerWorkflow` run appears at the same time in Logic App run history.
 4. Application Insights contains the caller messages `Bearer token acquired`, `Token claims inspected locally`, and `Logic App response: HTTP 200`.
 
+The deployed Easy Auth policy keeps `Return401` for trigger paths and excludes only `/runtime/*`, which allows the portal run-history blade to use the Logic Apps runtime authorization. If the blade reports HTTP 401, verify:
+
+```powershell
+az rest --method get --uri $authUri `
+  --query "properties.globalValidation.{action:unauthenticatedClientAction,excludedPaths:excludedPaths}" `
+  --output json
+```
+
+Expected: `action` is `Return401` and `excludedPaths` contains `/runtime/*`.
+
 Application Insights query:
 
 ```kusto

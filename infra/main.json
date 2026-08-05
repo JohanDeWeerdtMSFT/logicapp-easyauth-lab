@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "12059203444398408678"
+      "templateHash": "2335334940312453281"
     }
   },
   "parameters": {
@@ -1387,7 +1387,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "12014023943005322155"
+              "templateHash": "3617224105518523466"
             }
           },
           "parameters": {
@@ -1436,6 +1436,15 @@
                 "description": "Allowed principal (object) IDs. Restricts access to these identities (e.g., APIM system-assigned managed identity principal ID)."
               }
             },
+            "excludedPaths": {
+              "type": "array",
+              "defaultValue": [
+                "/runtime/*"
+              ],
+              "metadata": {
+                "description": "Paths excluded from Easy Auth. Logic Apps runtime endpoints validate their own run-history requests while workflow trigger paths remain protected."
+              }
+            },
             "clientSecretSettingName": {
               "type": "string",
               "defaultValue": "MICROSOFT_PROVIDER_AUTHENTICATION_SECRET",
@@ -1459,7 +1468,8 @@
                 },
                 "globalValidation": {
                   "requireAuthentication": true,
-                  "unauthenticatedClientAction": "[parameters('easyAuthMode')]"
+                  "unauthenticatedClientAction": "[parameters('easyAuthMode')]",
+                  "excludedPaths": "[parameters('excludedPaths')]"
                 },
                 "httpSettings": {
                   "requireHttps": true,

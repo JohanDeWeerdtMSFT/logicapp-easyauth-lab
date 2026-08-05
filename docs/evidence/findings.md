@@ -20,18 +20,19 @@ Use this page to quickly understand:
 
 The public classroom path was validated end to end on 2026-08-04 with Logic App `Return401`, workflow method `POST`, and the Function App system-assigned managed identity in `allowedPrincipals`. See [current validation and drift](current-validation-and-drift.md).
 
-## Historical manageability findings
+## Portal manageability findings
 
-### 1) `Return401` breaks portal manageability for Logic App Standard hostruntime paths
+### 1) `Return401` requires a runtime-path exclusion for portal run history
 
-When Easy Auth is configured with `unauthenticatedClientAction: Return401`, several portal/runtime operations can fail because requests are blocked before they reach the Logic App runtime.
+When Easy Auth is configured with `unauthenticatedClientAction: Return401`, portal run-history requests fail unless `/runtime/*` is excluded from Easy Auth. The classroom baseline now deploys that narrow exclusion.
 
 What this means for trainees:
 
-- You may deploy successfully but still lose important run-management capabilities.
-- Debugging becomes harder because run details and replay-related actions can fail.
+- Run-history requests reach the Logic Apps runtime and use its own authorization.
+- Workflow trigger calls under `/api/*` remain protected by Easy Auth.
+- An unsigned trigger call still returns HTTP 401.
 
-### 2) `AllowAnonymous + allowedPrincipals` was a manageability experiment
+### 2) `AllowAnonymous + allowedPrincipals` was a historical manageability experiment
 
 Using `AllowAnonymous` can preserve some portal/runtime operations, but an anonymous request is not rejected at the Easy Auth edge. It is not the current secured classroom baseline.
 
