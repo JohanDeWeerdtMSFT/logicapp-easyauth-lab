@@ -3,11 +3,12 @@
 This page explains the identity concepts used in Lab 3 **before** you deploy anything.
 Read it end-to-end once. You do not need prior Microsoft Entra ID or OAuth experience.
 
-Implementation and validation steps live in the canonical guides:
+Implementation and validation steps live in the canonical walkthroughs:
 
+- [lab3-walkthrough.md](lab3-walkthrough.md)
 - [lab3-passwordless-managed-identity-easy-auth.md](lab3-passwordless-managed-identity-easy-auth.md)
+- [lab3-direct-pc-testing.md](lab3-direct-pc-testing.md)
 - [lab3-testing-and-verification.md](lab3-testing-and-verification.md)
-- [lab3-quick-reference-card.md](lab3-quick-reference-card.md)
 
 ## The scenario in one sentence
 

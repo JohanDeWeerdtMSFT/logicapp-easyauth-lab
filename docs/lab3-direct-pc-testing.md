@@ -134,7 +134,7 @@ If this configuration is missing, Step 5 fails with `AADSTS65001` (`consent_requ
 
 The following screenshot shows the **Add a scope** pane with the delegated scope fields completed. Identifier values are intentionally redacted:
 
-![Azure portal Add a scope pane configured for the user_impersonation delegated scope](step-5-prereq-add-delegated-scope.png)
+![Azure portal Add a scope pane configured for the user_impersonation delegated scope](images/step-5-prereq-add-delegated-scope.png)
 
 The resulting full scope is:
 
@@ -160,7 +160,7 @@ After saving, confirm that **Authorized client applications** contains a row wit
 
 The following screenshot highlights both required controls: the Azure CLI client ID field and the selected `user_impersonation` scope checkbox. Identifier values are intentionally redacted:
 
-![Azure portal Add a client application pane with the user_impersonation scope checkbox selected](step-5-prereq-preauthorize-azure-cli.png)
+![Azure portal Add a client application pane with the user_impersonation scope checkbox selected](images/step-5-prereq-preauthorize-azure-cli.png)
 
 ### Find the Azure CLI client ID if it isn't visible in the portal
 
@@ -293,7 +293,7 @@ This proves that Easy Auth authenticated the token but rejected the principal du
 
 The following screenshot shows the lab configuration with **Allow requests from specific identities** selected and two allowed identities: the existing Function managed identity and the temporary lab user. All environment-specific values are intentionally redacted:
 
-![Logic App Easy Auth identity provider with two specific allowed identities configured](step-7-temporarily-allow-lab-user.png)
+![Logic App Easy Auth identity provider with two specific allowed identities configured](images/step-7-temporarily-allow-lab-user.png)
 
 Do not replace the Function identity. Add the user as a second temporary identity.
 

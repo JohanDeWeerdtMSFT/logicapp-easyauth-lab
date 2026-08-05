@@ -21,11 +21,11 @@ The earlier private-first assessment is superseded by this baseline. Private ing
 
 1. Read [README.md](README.md) and [START-HERE.md](START-HERE.md).
 2. Learn the identity flow in [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md).
-3. Review the walkthrough in [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md).
-4. Preview and deploy infrastructure with `scripts/deploy.ps1`.
-5. Publish workflow content with `scripts/deploy-workflow.ps1`.
-6. Publish the caller Function with `solution/deploy.ps1`.
-7. Run the manual and automated checks in [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md).
+3. Use [docs/lab3-walkthrough.md](docs/lab3-walkthrough.md) for portal configuration on existing resources or Bicep deployment of a new environment.
+4. Review the architecture and Function code examples in [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md).
+5. Test Easy Auth directly from the learner PC with [docs/lab3-direct-pc-testing.md](docs/lab3-direct-pc-testing.md), then restore the Function-only allow-list.
+6. Publish workflow content with `scripts/deploy-workflow.ps1` and the caller Function with `solution/deploy.ps1` when using the new-environment path.
+7. Run the Function managed-identity and negative checks in [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md).
 8. Use [docs/troubleshooting.md](docs/troubleshooting.md) for 401, 403, routing, and storage failures.
 
 ## 3. Target learning journey
@@ -95,7 +95,8 @@ All PR 6 implementation changes are complete:
 
 | File or area | Status | Result |
 | --- | --- | --- |
-| `README.md`, `START-HERE.md` | Done | Linear beginner-first path |
+| `README.md`, `START-HERE.md`, `docs/README.md` | Done | Linear beginner-first path mapped to portal/IaC setup, direct PC testing, and Function code |
+| Historical `guides/` folder and deployment FAQ | Done | Active direct-PC walkthrough and screenshots consolidated into `docs/`; stale and contradictory reports removed |
 | `scripts/deploy.ps1` | Done | Reproducible public/private mode, Entra preflight, safe What-If, cleanup |
 | `scripts/deploy-workflow.ps1` | Done | Supported ZIP publisher and live method check |
 | `scripts/validate.ps1` | Done | B1 assertions and B2/B3/B4/B6 matrix with restoration |
@@ -124,11 +125,13 @@ All PR 6 implementation changes are complete:
 - [x] The mandatory learner path uses no SAS signature.
 - [x] Workflow content deploys through a supported Standard Logic Apps ZIP package.
 - [x] B1 asserts scenario, audience, issuer, managed-identity object ID, and authenticated workflow principal.
-- [x] B2/B3/B4 return `401` and B6 returns `403`.
+- [x] B2/B3/B4 return `401`.
 - [x] B6 restores the captured live Easy Auth policy and compares the original principal list.
+- [ ] B6 deterministically returns `403` after Easy Auth runtime propagation and proves restoration with a successful B1 request.
 - [x] Public classroom and optional private-ingress modes are distinct.
 - [x] Storage remains private in the classroom path.
 - [x] Canonical documentation is lint-clean and duplicate procedures are removed.
+- [x] Portal/IaC setup, direct PC testing, and Function managed-identity code are each mapped to one canonical walkthrough under `docs/`.
 
 ## 10. Open questions
 

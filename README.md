@@ -16,6 +16,22 @@ The primary learning scenario is:
 2. Implement bearer-token-based calls from Function App to Logic App.
 3. Validate and observe the request flow using logs and run history.
 
+## Choose Your Path
+
+The active lab supports three learner outcomes. Start with [START-HERE.md](START-HERE.md), then use the walkthrough that matches your goal:
+
+| Goal | Walkthrough | What it covers |
+| --- | --- | --- |
+| Configure Easy Auth on a Logic App | [Self-guided Lab 3 walkthrough](docs/lab3-walkthrough.md) | Portal setup for existing resources and Bicep deployment for a new environment |
+| Test Easy Auth from your own PC | [Direct PC testing](docs/lab3-direct-pc-testing.md) | Delegated scope, Azure CLI sign-in, and the `401` → `403` → `200` proof with mandatory cleanup |
+| Call the Logic App from a Function App | [Managed-identity implementation and code examples](docs/lab3-passwordless-managed-identity-easy-auth.md#code-flow) | C# token acquisition, bearer header, Function deployment settings, and the end-to-end managed-identity test |
+
+Canonical code examples:
+
+- [C# Function implementation](solution/CallerFunctionApp/CallLogicApp.cs)
+- [Minimal managed-identity PowerShell example](scripts/call-logicapp-with-managed-identity.ps1)
+- [Presentation and validation script](scripts/demo-easyauth.ps1)
+
 > APIM is the recommended enterprise gateway pattern in many real-world environments, but APIM is intentionally out of scope for this core lab.
 
 ---
@@ -120,10 +136,10 @@ Follow this order: **start here → concepts → deployment → validation → t
 | --- | --- | --- | --- |
 | 1 | Start here | [START-HERE.md](START-HERE.md) | Linear navigation for the whole lab |
 | 2 | Concepts | [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md) | Easy Auth, Entra ID, managed identity, tokens, audience/resource/scope, authn vs authz, SAS comparison |
-| 3 | Walkthrough | [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md) | Architecture, settings, deployment steps |
-| 4 | Direct user validation | [guides/DIRECT-EASYAUTH-TESTING.md](guides/DIRECT-EASYAUTH-TESTING.md) | Prove 401, 403, and 200 directly from a lab PC before relying on Function caller code |
+| 3 | Walkthrough | [docs/lab3-walkthrough.md](docs/lab3-walkthrough.md) | Portal configuration for existing resources or Bicep deployment for a new environment |
+| 4 | Direct user validation | [docs/lab3-direct-pc-testing.md](docs/lab3-direct-pc-testing.md) | Prove 401, 403, and 200 directly from a lab PC before relying on Function caller code |
 | 5 | Full validation | [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md) and [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md) | Prove the managed-identity service-to-service call and negative scenarios |
-| 6 | Troubleshooting | [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) and [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md) | Recover from 401, 403, invalid audience, route, and network failures |
+| 6 | Troubleshooting | [Troubleshooting the identity flow](docs/lab3-managed-identity-bearer-token-flow.md#troubleshooting-the-identity-flow), then [docs/troubleshooting.md](docs/troubleshooting.md) | Recover from 401, 403, invalid audience, route, and network failures |
 
 ### Key terms before you start
 
@@ -143,7 +159,8 @@ Full explanations: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-m
 
 - Overview and navigation: [START-HERE.md](START-HERE.md)
 - Identity and Easy Auth concepts: [docs/lab3-managed-identity-bearer-token-flow.md](docs/lab3-managed-identity-bearer-token-flow.md)
-- Main Lab 3 walkthrough: [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
+- Self-guided portal and Bicep walkthrough: [docs/lab3-walkthrough.md](docs/lab3-walkthrough.md)
+- Managed-identity architecture and code examples: [docs/lab3-passwordless-managed-identity-easy-auth.md](docs/lab3-passwordless-managed-identity-easy-auth.md)
 
 Microsoft Learn references:
 
@@ -155,7 +172,7 @@ Microsoft Learn references:
 ### 2) Deepen understanding within the active lab
 
 - Testing playbook: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
-- Quick reference card: [docs/lab3-quick-reference-card.md](docs/lab3-quick-reference-card.md)
+- Direct PC validation: [docs/lab3-direct-pc-testing.md](docs/lab3-direct-pc-testing.md)
 
 Additional Microsoft docs:
 
@@ -213,8 +230,8 @@ az login
 
 ### Step 3: Deploy code and validate
 
-- Instructor-led setup: [follow the numbered walkthrough](docs/lab3-instructor-walkthrough.md) from app registrations through run history and cleanup.
-- Test Easy Auth without Function caller code: [use the direct PC testing guide](guides/DIRECT-EASYAUTH-TESTING.md). It includes delegated-scope setup, Azure CLI preauthorization, sanitized portal screenshots, exact unsigned-route validation, status-specific diagnostics, and mandatory authorization cleanup.
+- Portal or Bicep setup: [follow the self-guided Lab 3 walkthrough](docs/lab3-walkthrough.md) from app registrations through run history. Run its cleanup only after all validation is complete.
+- Test Easy Auth without Function caller code: [use the direct PC testing walkthrough](docs/lab3-direct-pc-testing.md). It includes delegated-scope setup, Azure CLI preauthorization, sanitized portal screenshots, exact unsigned-route validation, status-specific diagnostics, and mandatory authorization cleanup.
 - Follow: [docs/lab3-testing-and-verification.md](docs/lab3-testing-and-verification.md)
 - Run the presentation-ready proof with `scripts/demo-easyauth.ps1` after deploying the workflow and Function code.
 - Validate expected outcomes against: [docs/evidence/scenario-ids.md](docs/evidence/scenario-ids.md)
@@ -248,7 +265,7 @@ The container includes Azure CLI, PowerShell, and .NET 8.
 ## Troubleshooting and Cleanup
 
 - Troubleshooting guide: [docs/troubleshooting.md](docs/troubleshooting.md)
-- Deployment FAQ and cleanup guidance: [DEPLOYMENT-FAQ.md](DEPLOYMENT-FAQ.md)
+- Cleanup: [Step 17 in the self-guided walkthrough](docs/lab3-walkthrough.md#step-17-clean-up-after-the-lab)
 
 To remove deployed resources when finished:
 
@@ -261,11 +278,12 @@ az group delete --name "rg-la-easyauth-lab-dev" --yes --no-wait
 ## Repository Structure (High Level)
 
 - [START-HERE.md](START-HERE.md): entry navigation for trainees
-- [docs/](docs): concept and lab walkthrough content
+- [docs/README.md](docs/README.md): index of all canonical concepts, self-guided walkthroughs, direct-PC testing, validation, troubleshooting, and maintainer evidence
+- [documentation/](documentation): browser-rendered architecture pages and sanitized operational artifacts; not the canonical learner procedure
 - [labs/](labs): lab-specific assets
 - [infra/](infra): Bicep templates
 - [scripts/](scripts): deployment and validation scripts
-- [solution/](solution): Function App code and deployment
+- [solution/](solution): canonical Function App code and deployment
 
 ---
 

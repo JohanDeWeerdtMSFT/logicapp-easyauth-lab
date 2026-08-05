@@ -67,10 +67,11 @@ See [Secure access and data for workflows in Azure Logic Apps](https://learn.mic
 
 If you want the fastest completion path, do this first:
 
-1. Follow the numbered [instructor walkthrough](lab3-instructor-walkthrough.md) from Step 1 through Step 17.
-2. Use [lab3-testing-and-verification.md](lab3-testing-and-verification.md) for deeper validation.
-3. Validate scenarios using [evidence/scenario-ids.md](evidence/scenario-ids.md).
-4. Return to this page for deeper architecture understanding.
+1. Follow the self-guided [Lab 3 walkthrough](lab3-walkthrough.md) through deployment, but leave its final resource-group cleanup until all tests are complete.
+2. Use [lab3-direct-pc-testing.md](lab3-direct-pc-testing.md) to test Easy Auth directly from your PC.
+3. Use [lab3-testing-and-verification.md](lab3-testing-and-verification.md) to validate the Function managed-identity path and negative scenarios.
+4. Validate scenarios using [evidence/scenario-ids.md](evidence/scenario-ids.md).
+5. Return to this page for deeper architecture understanding and code examples.
 
 ## Learn More (Microsoft Docs)
 
@@ -176,7 +177,7 @@ Easy Auth checks:
 
 ## Implementation walkthrough
 
-Use the canonical [numbered instructor walkthrough](lab3-instructor-walkthrough.md) for all setup and execution steps. It owns the current commands for:
+Use the canonical self-guided [Lab 3 walkthrough](lab3-walkthrough.md) for setup and deployment. It owns the current commands for:
 
 1. Creating both app registrations.
 2. Configuring the Logic App Application ID URI.
@@ -186,7 +187,7 @@ Use the canonical [numbered instructor walkthrough](lab3-instructor-walkthrough.
 6. Showing run history and Application Insights.
 7. Cleaning up the lab.
 
-Do not configure `allowedPrincipals` manually. The Bicep deployment obtains the Function managed-identity principal ID and configures the Easy Auth allow-list.
+For the Bicep path, do not configure `allowedPrincipals` manually. The deployment obtains the Function managed-identity principal ID and configures the Easy Auth allow-list. The portal-only path documents the equivalent manual setting for existing resources.
 
 Use [Lab 3 testing and verification](lab3-testing-and-verification.md) for the extended scenario matrix and [Troubleshooting](troubleshooting.md) for detailed diagnosis.
 

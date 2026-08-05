@@ -35,7 +35,7 @@ This file records the current live classroom baseline. When older evidence or as
 
 The B1 response reported the expected audience, tenant issuer, Function managed-identity object ID, scenario `B1`, and an authenticated Logic App principal. No bearer token was stored as evidence.
 
-The direct-user `200` test temporarily adds the lab user's Object ID as a second allowed principal. It is test state, not the canonical baseline. Complete Step 10 in [the direct PC testing guide](../../guides/DIRECT-EASYAUTH-TESTING.md) to remove that user and retain only the Function managed identity.
+The direct-user `200` test temporarily adds the lab user's Object ID as a second allowed principal. It is test state, not the canonical baseline. Complete Step 10 in [the direct PC testing walkthrough](../lab3-direct-pc-testing.md) to remove that user and retain only the Function managed identity.
 
 ## Drift resolved
 
@@ -70,10 +70,12 @@ The direct-user `200` test temporarily adds the lab user's Object ID as a second
 
 ## Historical material
 
-Files under `guides/` and older generated evidence can describe previous private-network or `AllowAnonymous` experiments. They are not the canonical deployment procedure. Duplicated Lab 3 guides under `labs/` now point to the canonical files. The active order is:
+Older generated evidence can describe previous private-network or `AllowAnonymous` experiments. It is not the canonical deployment procedure. Duplicated Lab 3 guides under `labs/` point to the canonical files. The active order is:
 
 1. [README](../../README.md)
 2. [START HERE](../../START-HERE.md)
-3. [Lab 3 walkthrough](../lab3-passwordless-managed-identity-easy-auth.md)
-4. [Deployment and validation](../lab3-testing-and-verification.md)
-5. [Troubleshooting](../troubleshooting.md)
+3. [Self-guided Lab 3 walkthrough](../lab3-walkthrough.md)
+4. [Direct PC testing](../lab3-direct-pc-testing.md)
+5. [Managed-identity implementation and code examples](../lab3-passwordless-managed-identity-easy-auth.md)
+6. [Deployment and validation](../lab3-testing-and-verification.md)
+7. [Troubleshooting](../troubleshooting.md)
